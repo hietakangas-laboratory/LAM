@@ -42,12 +42,14 @@ class settings:
     
     # Additional data to be collected from channels. Key must be the data column 
     # label and the following string for searching the csv. If multiple files are
-    # to be collected (e.g. intensities), the code expects a channel number after
+    # to be collected (e.g. intensities), the code expects an ID number after
     # the search string, separated by "_". E.g. "Intensity_Mean" => "Intensity_Mean_Ch=1"
     AddData = {"Area": "Area.csv",
                "Volume": "Volume.csv",
                "Intensity Mean": "Intensity_Mean"
                }
+    # If set to true, replaces the above mentioned (AddData) ID numbers with an
+    # alternative moniker as defined in channelID
     replaceID = True
     channelID = {"Ch=1": "Pros",
                  "Ch=2": "GFP",

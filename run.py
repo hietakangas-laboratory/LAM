@@ -24,18 +24,19 @@ Dependencies: Anaconda-included packages (Python 3.7), Shapely
 
 @author: Arto Viitanen
 """
-import system, analysis
+import system, analysis, process
 from system import store as store
 from settings import settings as Sett
 
 def main():
     PATHS = system.paths(Sett.workdir)
-    # If sample processing set to True, collect data etc.
+    # If sample processing set to True, collect data etc. Otherwise continue to
+    # plotting and group-wise operations.
     if Sett.process_samples:
         # Loop Through samples and collect relevant data
         for path in [p for p in Sett.workdir.iterdir() if p.is_dir() and p.stem 
                      != 'Analysis Data']:
-            sample = analysis.get_sample(path, PATHS.samplesdir)
+            sample = process.get_sample(path, PATHS.samplesdir)
             print("Processing {}  ...".format(sample.name))
             sample.vectData = sample.get_vectData(Sett.vectChannel)
             # Creation of vector for projection
@@ -47,7 +48,7 @@ def main():
                                                      Sett.secMP, PATHS.datadir)
             # Collection of data for each channel
             for path2 in sample.channelpaths:
-                channel = analysis.get_channel(path2, sample, Sett.AddData)
+                channel = process.get_channel(path2, sample, Sett.AddData)
                 sample.data = sample.project_channel(channel, PATHS.datadir)
                 sample.find_counts(channel.name, PATHS.datadir)
         # After all samples have been collected, find their respective MP bins
@@ -62,8 +63,12 @@ def main():
         for path in countpaths:
             # Aforementionad data is used to create arrays onto which each sample's
             # MP is anchored to the same row, allowing relative comparison
-            channelcounts = analysis.normalize(path)            
+            channelcounts = process.normalize(path)            
             channelcounts.normalize_samples(MPs, store.totalLength)
+        PATHS.save_AnalysisInfo(store.samples, store.samplegroups, store.channels)
+    else:
+        # TODO implement data collection when not using 'process_samples'
+        pass
 
     print('ANALYSIS COMPLETED')
 

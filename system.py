@@ -1,44 +1,36 @@
 # -*- coding: utf-8 -*-
 from settings import settings
-import pathlib as pl, shutil, pandas as pd, json
+import pathlib as pl, shutil, pandas as pd
 
 class paths:
     def __init__(self, workdir):
         """Creation of output folders."""
-        self.outputdir = workdir.joinpath('Analysis Data')
-        if self.outputdir.exists() == False:
-            pl.Path.mkdir(self.outputdir)
-        self.areadir = pl.Path(self.outputdir / 'Areas')
-        if self.areadir.exists() == False:
-            pl.Path.mkdir(self.areadir)
-        self.voldir = pl.Path(self.outputdir / 'Volumes')
-        if self.voldir.exists() == False:
-            pl.Path.mkdir(self.voldir)
-        self.datadir = pl.Path(self.outputdir / 'Data Files')
+        # If samples are to be processed and output data directory exists, the 
+        # directory will be removed with all files as not to interfere with analysis.
         if settings.process_samples == True and self.datadir.exists() == True:
             shutil.rmtree(self.datadir)
+        # Create path-variables necessary for the analysis
+        self.outputdir = workdir.joinpath('Analysis Data')
+        self.areadir = pl.Path(self.outputdir / 'Areas')
+        self.voldir = pl.Path(self.outputdir / 'Volumes')
+        self.datadir = pl.Path(self.outputdir / 'Data Files')   
         self.plotdir = pl.Path(self.outputdir / 'Plots')
-        if self.plotdir.exists() == False:
-            pl.Path.mkdir(self.plotdir)
         self.samplesdir = pl.Path(self.outputdir / 'Samples')
-        if self.samplesdir.exists() == False:
-            pl.Path.mkdir(self.samplesdir)
+        # Create output directories
+        pl.Path.mkdir(self.outputdir, exist_ok=True)
+        pl.Path.mkdir(self.areadir, exist_ok=True)
+        pl.Path.mkdir(self.voldir, exist_ok=True)
+        pl.Path.mkdir(self.plotdir, exist_ok=True)
+        pl.Path.mkdir(self.samplesdir, exist_ok=True)
+        pl.Path.mkdir(self.datadir, exist_ok=True)
         if settings.statistics == True:
-            self.statsdir = pl.Path(self.outputdir / 'Stats')
-            if self.statsdir.exists() == False:
-                pl.Path.mkdir(self.statsdir)
-        if self.datadir.exists() == False:
-            pl.Path.mkdir(self.datadir)
+            pl.Path.mkdir(self.statsdir, exist_ok=True)
 
-    def analysis_info(self, sample, group, channels):
+    def save_AnalysisInfo(self, sample, group, channels):
         """For saving information of all analyzed samples."""
-        
-        with open(str(pl.Path(self.outputdir / 'Sample list.txt')), 'w') as (file):
-            file.write(json.dumps((str(store.samplelist)), indent=0))
-        with open(str(pl.Path(self.outputdir / 'Sample groups.txt')), 'w') as (file):
-            file.write(json.dumps((str(store.samplegroups)), indent=0))
-        with open(str(pl.Path(self.outputdir / 'Channels.txt')), 'w') as (file):
-            file.write(json.dumps((str(store.channels)), indent=0))
+        pd.DataFrame(sample).to_csv(self.outputdir.joinpath("SampleList.csv"),index=False)
+        pd.DataFrame(group).to_csv(self.outputdir.joinpath("SampleGroups.csv"),index=False)
+        pd.DataFrame(channels).to_csv(self.outputdir.joinpath("Channels.csv"),index=False)
 
 def read_data(filepath, header = 2):
         """For reading csv-data."""
