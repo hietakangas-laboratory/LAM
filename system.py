@@ -37,6 +37,9 @@ def read_data(filepath, header = 2):
         try:
             data = pd.read_csv(filepath, header=header, index_col=False)
             data = data.loc[:, ~data.columns.str.contains('^Unnamed')]
+            data.loc[:,"ID"]
+        except KeyError:
+            print("Key not found. Wrong number for header row?")
         except FileNotFoundError:
             print("File {} is not found at {}".format(filepath.name, str(filepath.parent)))
             return

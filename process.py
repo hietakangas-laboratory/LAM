@@ -60,11 +60,13 @@ class get_sample:
     
     def SkeletonVector(self, X, Y, resize, BDiter, SigmaGauss):
         buffer = 100 * resize
-        coords = list(zip(X,Y))        
+        coords = list(zip(X,Y))  
+        
         miny, maxy = Y.min(), Y.max()
         rminy, rmaxy = get_sample.resize_minmax(miny, maxy, "y", resize)
         minx, maxx = X.min(), X.max()
         rminx, rmaxx = get_sample.resize_minmax(minx, maxx, "x", resize)
+        
         ylabels = np.arange(int(rminy)-buffer, int(rmaxy+(buffer+1)), 10)
         xlabels = np.arange(int(rminx)-buffer, int(rmaxx+(buffer+1)), 10)
         ylen, xlen = len(ylabels), len(xlabels)
@@ -81,6 +83,7 @@ class get_sample:
             BA = gaussian(BA, sigma=SigmaGauss)
             BA[BA > 0] = True
         BA = mp.binary_fill_holes(BA)
+        
         skeleton = skeletonize(BA)
         skelDF = pd.DataFrame(skeleton, index=BAind, columns=BAcol)
         skelValues = [(skelDF.index[y], skelDF.columns[x]) for y, x in zip(*np.where(skelDF.values == True))]
