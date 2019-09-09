@@ -36,7 +36,7 @@ def main():
         # Loop Through samples and collect relevant data
         for path in [p for p in Sett.workdir.iterdir() if p.is_dir() and p.stem 
                      != 'Analysis Data']:
-            sample = process.get_sample(path, PATHS.samplesdir)
+            sample = process.get_sample(path, PATHS.samplesdir, process=True)
             print("Processing {}  ...".format(sample.name))
             sample.vectData = sample.get_vectData(Sett.vectChannel)
             # Creation of vector for projection
@@ -51,25 +51,44 @@ def main():
                 channel = process.get_channel(path2, sample, Sett.AddData)
                 sample.data = sample.project_channel(channel, PATHS.datadir)
                 sample.find_counts(channel.name, PATHS.datadir)
-        # After all samples have been collected, find their respective MP bins
-        # and go through each channel
-        print("\nNormalizing sampledata ...")
-        MPs = system.read_data(next(PATHS.datadir.glob("MPS.csv")), header = 0)
-        MPmax, MPmin = MPs.max(axis=1).item(), MPs.min(axis=1).item()
-        MPdiff = MPmax - MPmin
-        store.totalLength = len(Sett.projBins) + MPdiff
-        store.centerpoint = MPmax
-        countpaths = PATHS.datadir.glob("All_*")
-        for path in countpaths:
-            # Aforementionad data is used to create arrays onto which each sample's
-            # MP is anchored to the same row, allowing relative comparison
-            channelcounts = process.normalize(path)            
-            channelcounts.normalize_samples(MPs, store.totalLength)
-        PATHS.save_AnalysisInfo(store.samples, store.samplegroups, store.channels)
     else:
-        # TODO implement data collection when not using 'process_samples'
-        pass
-
+        # When samples are not to be processed, the data is gathered from 
+        # "./Analysis Data/Samples".
+        print("\nGathering sample data  ...")
+        # For each sample, the data is collected, and cell numbers are quantified
+        # for each channel.
+        for path in [p for p in PATHS.samplesdir.iterdir() if p.is_dir()]:
+            sample = process.get_sample(path, PATHS.samplesdir, process=False)
+            # Looping through every channel found in the sample's directory
+            for channelPath in sample.channelpaths:
+                channelName = str(channelPath.stem)
+                if channelName != "MPs": # Collecting microscopy channel relevant data
+                    sample.data = system.read_data(channelPath, header = 0)
+                    sample.find_counts(channelName, PATHS.datadir)
+                else: # Collecting measurement point data for anchoring of samples
+                    if hasattr(sample, "MP"):
+                        system.saveToFile(sample.MP.rename(sample.name), 
+                                          PATHS.datadir, "MPs.csv")
+                    if hasattr(sample, "secMP"):
+                        system.saveToFile(sample.secMP.rename(sample.name), 
+                                          PATHS.datadir, "secMPs.csv")
+    # After all samples have been collected, find their respective MP bins
+    # and go through each channel
+    print("\nNormalizing sample data ...")
+    MPs = system.read_data(next(PATHS.datadir.glob("MPS.csv")), header = 0, test=False)
+    MPmax, MPmin = MPs.max(axis=1).item(), MPs.min(axis=1).item()
+    MPdiff = MPmax - MPmin
+    store.totalLength = len(Sett.projBins) + MPdiff
+    store.centerpoint = MPmax
+    countpaths = PATHS.datadir.glob("All_*")
+    for path in countpaths:
+        # Aforementionad data is used to create arrays onto which each sample's
+        # MP is anchored to the same row, allowing relative comparison
+        channelcounts = process.normalize(path)            
+        channelcounts.normalize_samples(MPs, store.totalLength)
+    # Storing of descriptive data of analysis, i.e. channels/samples/groups
+    PATHS.save_AnalysisInfo(store.samples, store.samplegroups, store.channels)
+    ### TODO add plotting and group-wise operations
     print('ANALYSIS COMPLETED')
 
 

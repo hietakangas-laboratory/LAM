@@ -18,15 +18,39 @@ class get_sample:
         self.name = str(path.stem)
         self.sampledir = samplesdir.joinpath(self.name)
         self.group = self.name.split('_')[0]
+        if self.name not in store.samples:
+            store.samples.append(self.name)
+        if self.group not in store.samplegroups:
+            store.samplegroups.append(self.group)
         if self.sampledir.exists() == False:
             pl.Path.mkdir(self.sampledir)
         if process == True:
             self.channelpaths = list([p for p in path.iterdir() if p.is_dir()])
             self.channels = [str(p).split('_')[(-2)] for p in self.channelpaths]
-        else:
-            # TODO create gathering of sample-wise data when not creating the
-            # vector from scratch etc.
-            pass
+        else: # If the samples are not to be processed, the data is only gathered
+              # from the csv-files in the sample's directory ("./Analysis Data/Samples/")
+            self.channelpaths = list([p for p in path.iterdir() if ".csv" in p.name and 
+                                      "Vector.csv" not in p.name])
+            self.channels = [p.stem for p in self.channelpaths]
+            for channel in self.channels:
+                if channel.lower() not in [c.lower() for c in store.channels]:
+                    store.channels.append(channel)
+            tempVect = pd.read_csv(self.sampledir.joinpath("Vector.csv"))
+            Vect = list(zip(tempVect.loc[:,"X"], tempVect.loc[:,"Y"]))
+            self.vector = gm.LineString(Vect)
+            try:
+                MPs = pd.read_csv(self.sampledir.joinpath("MPs.csv"))
+                if settings.useMP:
+                    self.MP = MPs.loc[:, "MP"]
+                try:
+                    if settings.useSecMP:
+                        self.secMP = MPs.loc[:, "secMP"]
+                except KeyError:
+                    pass
+            except FileNotFoundError:
+                print("MPs.csv NOT found for sample {}!".format(self.name))
+            except KeyError:
+                print("Measurement point for sample {} NOT found in MPs.csv!".format(self.name))
         
     def get_vectData(self, channel):
         try:
@@ -202,12 +226,18 @@ class get_sample:
                 print("Failed to find MP positions for sample {}".format(self.name))
             finally:
                 MPbin, secMPbin = None, None
+                MPs = pd.DataFrame()
                 if not self.MPdata.empty:
                     MPbin = self.project_MPs(self.MPdata, self.vector, datadir, 
                                              filename="MPs.csv")
-                if useSecMP and not self.secMPdata.empty:
+                    MP = pd.Series(MPbin, name = "MP")
+                    MPs = pd.concat([MPs, MP], axis=1)
+                if useSecMP and hasattr(self, "secMPdata"):
                     secMPbin = self.project_MPs(self.secMPdata, self.vector, datadir,
                                                  filename="secMPs.csv")
+                    secMP = pd.Series(secMPbin, name = "secMP")
+                    MPs = pd.concat([MPs, secMP], axis=1)
+                MPs.to_csv(self.sampledir.joinpath("MPs.csv"), index=False)
         else: MPbin = 0        
         return MPbin, secMPbin
         
@@ -292,7 +322,7 @@ class normalize:
     def __init__(self, path):
         self.path = pl.Path(path)
         self.channel = str(self.path.stem).split('_')[1]
-        self.counts = system.read_data(path, header = 0)
+        self.counts = system.read_data(path, header = 0, test=False)
         
     def normalize_samples(self, MPs, arrayLength):
         """ For inserting sample data into larger matrix, centered with MP."""
