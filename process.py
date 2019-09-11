@@ -327,7 +327,8 @@ class normalize:
     def normalize_samples(self, MPs, arrayLength):
         """ For inserting sample data into larger matrix, centered with MP."""
         cols = self.counts.columns
-        data = pd.DataFrame(np.zeros((arrayLength, len(cols))), columns = cols)       
+        data = pd.DataFrame(np.zeros((arrayLength, len(cols))), index = cols)
+        SampleStart = pd.Series(np.zeros(len(cols)), columns = cols)
         for col in self.counts.columns:
             handle = self.counts.loc[:, col]
             point = MPs.loc[0,col]
@@ -337,7 +338,13 @@ class normalize:
             insert = np.zeros(data.shape[0])
             insert[insert == 0]= np.nan
             insert[insx:end] = handle
-            data[col] = insert 
+            data[col] = insert
+            SampleStart.at[col] = insx
         filename = str("Norm_{}.csv".format(self.channel))
         data = data.sort_index(axis=1)
         system.saveToFile(data, self.path.parent, filename, append = False)
+        return SampleStart
+    
+    def Avg_AddData(self, samplesDir):
+        pass
+        
