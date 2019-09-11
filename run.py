@@ -98,6 +98,8 @@ def main():
     
     # After samples have been normalized, 
     ### TODO add plotting and group-wise operations
+    SampleGrps = analysis.Samplegroups(store.samplegroups, PATHS)
+    Grp = analysis.Group("Fed")
     print('ANALYSIS COMPLETED')
 
 
