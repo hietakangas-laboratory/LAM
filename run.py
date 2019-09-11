@@ -72,22 +72,31 @@ def main():
                     if hasattr(sample, "secMP"):
                         system.saveToFile(sample.secMP.rename(sample.name), 
                                           PATHS.datadir, "secMPs.csv")
-    # After all samples have been collected, find their respective MP bins
-    # and go through each channel
+                        
+    # After all samples have been collected, find their respective MP bins and
+    # normalize (anchor) cell count data. If MP's are not used, the samples are
+    # anchored at bin == 0.
     print("\nNormalizing sample data ...")
     MPs = system.read_data(next(PATHS.datadir.glob("MPS.csv")), header = 0, test=False)
+    # Find the smallest and largest bin-number of the dataset
     MPmax, MPmin = MPs.max(axis=1).item(), MPs.min(axis=1).item()
+    # Find the size of needed dataframe, i.e. so that all anchored samples fit
     MPdiff = MPmax - MPmin
     store.totalLength = len(Sett.projBins) + MPdiff
+    # Store the bin number of the row onto which samples are anchored to
     store.centerpoint = MPmax
     countpaths = PATHS.datadir.glob("All_*")
     for path in countpaths:
-        # Aforementionad data is used to create arrays onto which each sample's
-        # MP is anchored to the same row, allowing relative comparison
-        channelcounts = process.normalize(path)            
-        channelcounts.normalize_samples(MPs, store.totalLength)
+        # Aforementionad data is used to create dataframes onto which each sample's
+        # MP is anchored to one row, with bin-respective (index) cell counts in 
+        # each element of a sample (column) to allow relative comparison.
+        ChCounts= process.normalize(path)            
+        ChCounts.starts = ChCounts.normalize_samples(MPs, store.totalLength)
+        ChCounts.Avg_AddData(PATHS, Sett.AddData, store.totalLength)
     # Storing of descriptive data of analysis, i.e. channels/samples/groups
     PATHS.save_AnalysisInfo(store.samples, store.samplegroups, store.channels)
+    
+    # After samples have been normalized, 
     ### TODO add plotting and group-wise operations
     print('ANALYSIS COMPLETED')
 

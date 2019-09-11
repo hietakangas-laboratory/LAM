@@ -313,7 +313,7 @@ class get_channel:
                             temp = settings.channelID.get(IDstring)
                             IDstring = temp
                         except: pass
-                    rename = str(fstring + '_' + IDstring)
+                    rename = str(key + '_' + IDstring)
                     addData.rename(columns={key: rename}, inplace=True)
                 newData = pd.merge(newData, addData, on="ID")
         return newData
@@ -327,8 +327,8 @@ class normalize:
     def normalize_samples(self, MPs, arrayLength):
         """ For inserting sample data into larger matrix, centered with MP."""
         cols = self.counts.columns
-        data = pd.DataFrame(np.zeros((arrayLength, len(cols))), index = cols)
-        SampleStart = pd.Series(np.zeros(len(cols)), columns = cols)
+        data = pd.DataFrame(np.zeros((arrayLength, len(cols))), columns = cols)
+        SampleStart = pd.Series(np.zeros(len(cols)), index = cols)
         for col in self.counts.columns:
             handle = self.counts.loc[:, col]
             point = MPs.loc[0,col]
@@ -345,6 +345,34 @@ class normalize:
         system.saveToFile(data, self.path.parent, filename, append = False)
         return SampleStart
     
-    def Avg_AddData(self, samplesDir):
-        pass
+    def Avg_AddData(self, PATHS, dataNames, TotalLen):
+        # TODO Add try / exceptions
+        samples = self.starts.index
+        for sample in samples:
+            sampleDir = PATHS.samplesdir.joinpath(sample)
+            dataFile = sampleDir.glob(str(self.channel + ".csv"))
+#            try:
+            data = system.read_data(next(dataFile), header = 0)
+            for dataType in dataNames.keys():
+                sampleData = data.loc[:,data.columns.str.contains(str(dataType))]
+                binnedData = data.loc[:, "DistBin"]
+                bins = np.arange(1, len(settings.projBins) + 1)
+                for col in sampleData:
+                    avgS = pd.Series(np.zeros(TotalLen), name = sample).replace(
+                                                                    0, np.nan)
+                    with warnings.catch_warnings():
+                        warnings.simplefilter("ignore", category=RuntimeWarning)
+                        insert = [np.nanmean(sampleData.loc[binnedData==i, 
+                                    col]) for i in bins]
+                        insert = [0 if np.isnan(v) else v for v in insert]
+                    strt = int(self.starts.at[sample])
+                    end = int(strt + len(settings.projBins))
+                    avgS[strt:end] = insert
+                    filename = str("Avg_{}.csv".format(col))
+                    system.saveToFile(avgS, PATHS.datadir, filename)
+#            except TypeError:
+#                print("{}: {} not found on {}".format(self.channel, dataType, sample))
+#            except StopIteration:
+#                pass
+            
         
