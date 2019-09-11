@@ -75,7 +75,7 @@ def main():
                         
     # After all samples have been collected, find their respective MP bins and
     # normalize (anchor) cell count data. If MP's are not used, the samples are
-    # anchored at bin == 0.
+    # anchored at bin == 0.#
     print("\nNormalizing sample data ...")
     MPs = system.read_data(next(PATHS.datadir.glob("MPS.csv")), header = 0, test=False)
     # Find the smallest and largest bin-number of the dataset

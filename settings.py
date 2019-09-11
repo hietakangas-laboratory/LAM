@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 import numpy as np, pathlib as pl
-
+#
 class settings:
     """ A class for holding all user-end settings for the analysis."""
     ######################## PRIMARY SETTINGS ########################

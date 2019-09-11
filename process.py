@@ -12,7 +12,7 @@ import math
 from scipy.ndimage import morphology as mp
 from skimage.morphology import skeletonize
 from skimage.filters import gaussian
-
+#
 class get_sample:   
     def __init__(self, path, samplesdir, process=True):
         self.name = str(path.stem)
