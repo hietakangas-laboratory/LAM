@@ -15,7 +15,15 @@ from skimage.filters import gaussian
 import matplotlib.pyplot as plt
 import seaborn as sns
 
-class get_samplegroup:
-    # TODO create gathering of sample group data
-    def __init__(self, group, channel):
+class Samplegroups:
+    # TODO create gathering of all samplegroup data
+    def __init__(self, groups, channels):
+        self.groups = groups
+        self.channels = channels
+        return
+    
+class Group:
+    # TODO create gathering of data for one samplegroup
+    def __init__(self, group, channels):
+        super().__init__(group, channels)
         return
