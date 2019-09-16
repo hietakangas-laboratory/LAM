@@ -5,11 +5,13 @@ Created on Fri Aug 23 14:07:33 2019
 @author: artoviit
 """
 from settings import settings
+import pandas as pd
+import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 
 class plotter:
-    def __init__(self, sampleData, channel, savepath):
+    def __init__(self, sampleData, savepath, channel = None):
         self.name = sampleData.name
         if isinstance(channel, str):
             self.channel = channel
@@ -70,3 +72,14 @@ class plotter:
 #                filepath = system.samplesdir.joinpath(col,filename)
 #                figure.savefig(str(filepath), format=settings.saveformat)
 #                plt.close()
+        
+    def plot_Data(self, dataPath, savePath, plotfunc, group = None):
+        self.Data = pd.read_csv(dataPath)
+        if group:
+            namer = str(group+'_')
+            self.Data = self.Data.loc[:, self.Data.columns.str.contains(namer)]
+#        plotfunc(self)
+            
+    def boxPlot(self):
+        xticks = np.arange(0,self.Data.shape[0],5)
+        pass
