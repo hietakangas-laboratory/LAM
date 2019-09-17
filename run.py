@@ -25,8 +25,9 @@ Dependencies: Anaconda-included packages (Python 3.7), Shapely
 @author: Arto Viitanen
 """
 import system, analysis, process
-from system import store as store
+from system import store
 from settings import settings as Sett
+import pathlib as pl
 
 def main():
     PATHS = system.paths(Sett.workdir)
@@ -98,6 +99,19 @@ def main():
     
     # After samples have been normalized, 
     ### TODO add plotting and group-wise operations
+    SampleGrps = analysis.Samplegroups(store.samplegroups, PATHS)
+    SampleGrps.create_plots()
+#    for chanPath in SampleGrps._chanPaths:
+#        # TODO create facetgrid for channel plots
+#        continue
+#    for addPath in SampleGrps._addData:
+#        # TODO create facetgrid for addData plots
+#        continue
+    
+    Grp = analysis.Group("Holidic")
+#    print(Grp.groups)
+#    print(Grp.name)
+#    print(Grp2.addData)
     print('ANALYSIS COMPLETED')
 
 

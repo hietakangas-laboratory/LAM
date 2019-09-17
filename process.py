@@ -78,8 +78,8 @@ class get_sample:
         length = pd.Series(vector.length, name=self.name)
         system.saveToFile(length,datadir,"Length.csv")
         system.saveToFile(lineDF, self.sampledir, "Vector.csv", append=False)
-        create_plot = plotter(self, str(settings.vectChannel), self.sampledir)
-        create_plot.vector(vector, X, Y, binaryArray, skeleton)
+        create_plot = plotter(self, self.sampledir)
+        create_plot.vector(self.name, vector, X, Y, binaryArray, skeleton)
         return vector   
     
     def SkeletonVector(self, X, Y, resize, BDiter, SigmaGauss):
