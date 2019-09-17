@@ -14,19 +14,22 @@ import seaborn as sns
 import pathlib as pl
 
 class plotter:
-    def __init__(self, sampleData, savepath, color = 'b'):
+    __palette = settings.grpColors
+    
+    def __init__(self, plotData, savepath, palette = None, color = 'b'):
         #TODO add group etc arguments
-        if isinstance(sampleData, pl.Path):
-            self.data = system.read_data(sampleData, header = 0)
-            self.name = str(sampleData.name).split('_')[1]
-        else:
-            self.data = sampleData
-            self.name = sampleData.name
-        self.MPbin = store.centerpoint
+#        if isinstance(sampleData, pl.Path):
+#            self.data = system.read_data(sampleData, header = 0)
+#            self.name = str(sampleData.name).split('_')[1]
+#        else:
+        self.data = plotData
+        self.name = plotData.name
         self.savepath = savepath
+        self.palette = palette
         self.color = color
         try:
-            self.vmax = sampleData.max()
+            self.MPbin = store.centerpoint
+            self.vmax = plotData.max()
 #            self.palette = 
         except: pass
             # self.palette = 
@@ -54,41 +57,40 @@ class plotter:
         name = str('Vector_' + samplename + settings.figExt)
         fig.savefig(str(self.savepath.joinpath(name)), format=settings.saveformat)
         plt.close('all')
+    
+    def melt_data(self, **kws):
+        plotData = pd.melt(self.data, id_vars = kws.get('id_str'), value_vars = 
+                           kws.get('value_str'), var_name = kws.get('var_str'))
+        return plotData
         
-    def plot_Data(self, plotfunc, group = None):    
-        # TODO implement plotfuncs with self-call?
-        # TODO Change plotting into row-wise facetgrid?
-        # g = sns.FacetGrid(data, row = "Sample Group", hue = "Sample Group", 
-        #                  sharex=True, sharey=True)
-        if group is not None:
-            namer = str(group+'_')
-            plotData = self.Data.loc[:, self.Data.columns.str.contains(namer)]
-            plotName = str("{} {}".format(group, self.name))
-            # TODO add color picker
+    def plot_Data(self, plotfunc, hue = None, palette = None, **kws):
+#        if self.palette == None:
+#            total = self.data.loc[:,id_vars].unique().size
+#            palette = self.__palette[:total]
+        if 'id_str' in kws:
+            plotData = self.melt_data(**kws)
+            kws.update({'x': 'variable', 'y': 'value', 'data': plotData})
         else: 
-            plotData = self.Data
-            plotName = str(self.name)
-        g = sns.FacetGrid(data, row = "Sample Group", hue = "Sample Group", 
-                      sharex=True, sharey=True, palette = self.palette)
-#        fig, ax = plt.subplots(figsize=(10,5))
-        if hasattr(self, vmax):
-            ax.ylim(top = self.max)
-        ax = plotfunc(plotData, ax) # add color
-        ax = self.centerline(self, ax)
-        ax.set_title(plotName)
-        ax.set_ylabel(str(self.name)) # Change Y LABEL
-        ax.set_xlabel("Longitudinal Position")
-        filepath = self.savepath.joinpath(plotName+settings.figExt)
-        fig.savefig(str(filepath), format=settings.saveformat)
+            plotData = self.data
+        g = sns.FacetGrid(plotData, row = kws.get('row'), hue = kws.get('hue'), 
+                          sharex=True, sharey=True, height=5, aspect=3)
+        g = g.map_dataframe(plotfunc, self.palette, **kws)
+#        g = plotfunc(plotData, g) # add color
+#        ax = self.centerline(self, ax)
+        plt.suptitle(self.name)
+        g.set(xlabel = "Longitudinal Position", ylabel = "Value")
+        filepath = self.savepath.joinpath(self.name+settings.figExt)
+        g.savefig(str(filepath), format=settings.saveformat)
         plt.close()
         
-    def boxPlot(Data, axes, color = 'b', **kws):
-        xticks = np.arange(0, Data.shape[0], 5)
-        sns.boxplot(data=Data.T,  width=0.6, color = color, saturation=0.5, 
-                    linewidth=0.1, showmeans=False, ax=axes)
+    def boxPlot(palette, **kws):
+        axes = plt.gca()
+        data = kws.pop('data')
+        sns.boxplot(data=data, x=kws.get('x'), y=kws.get('y'), hue=kws.get('id_str'), 
+                    saturation=0.5, linewidth=0.1, showmeans=False, palette = palette, ax=axes)
+        xticks = np.arange(0, data.loc[:,kws.get('x')].unique().size, 5)
         plt.xticks(xticks)
         axes.set_xticklabels(xticks)
-        return axes
     
     def distPlot(self, axes, color = 'b', **kws):
         return axes

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 import numpy as np, pathlib as pl
-
+#
 class settings:
     """ A class for holding all user-end settings for the analysis."""
     ######################## PRIMARY SETTINGS ########################
@@ -9,7 +9,7 @@ class settings:
     workdir = pl.Path(r'\\ad.helsinki.fi\home\a\artoviit\Desktop\test')
     # Whether to gather data and create vectors. If False, expects to find pre-created
     # datafiles in the Analysis Data directory.
-    process_samples = True
+    process_samples = False
     # The channel based on which the vector is created
     vectChannel = "DAPI"
     # Make vector by creating binary image and then skeletonizing. If False, vector 
