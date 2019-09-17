@@ -10,29 +10,34 @@ import seaborn as sns
 
 class Samplegroups(object):
     # TODO create gathering of all samplegroup data
-    _instance = None
+    #_instance = None
+    _groups, _chanPaths, _samplePaths, _addData = [], [], [], []
+    _grpColors, _chColors = None, None
     
-    def __new__(cls, groups = None, PATHS = None):
-        print(cls.count)
-        cls.count += 1
-        if not cls._instance:
-            cls._instance = super(Samplegroups, cls).__new__(cls)
-        return cls._instance
+#    def __new__(cls, groups = None, PATHS = None):
+#        if not cls._instance:
+#            cls._instance = super(Samplegroups, cls).__new__(cls)
+#        return cls._instance
     
-    def __init__(self, groups, PATHS): 
-        self.groups = groups
-        self.chanPaths = list(PATHS.datadir.glob("Norm_*"))
-        self.samplePaths = [p for p in PATHS.samplesdir.iterdir() if p.is_dir()]
-        self.addData = list(PATHS.datadir.glob("Avg_*"))
-        self.grpColors = sns.color_palette("colorblind", len(groups))
-        self.chColors = sns.color_palette("colorblind", len(self.chanPaths))
+    def __init__(self, groups, PATHS):
+        Samplegroups._groups = groups
+        Samplegroups._chanPaths = list(PATHS.datadir.glob("Norm_*"))
+        Samplegroups._samplePaths = [p for p in PATHS.samplesdir.iterdir() if p.is_dir()]
+        Samplegroups._addData = list(PATHS.datadir.glob("Avg_*"))
+        Samplegroups._grpColors = sns.color_palette("colorblind", len(groups))
+        Samplegroups._chColors = sns.color_palette("colorblind", len(self._chanPaths))
     
-#    def read_channel(self, channel):
-#        chanData = system.read_data(header=0, test=False)
+    def read_channel(self, channel):
+        chanData = system.read_data(header=0, test=False)
     
 class Group(Samplegroups):
     # TODO create gathering of data for one samplegroup
+    
     def __init__(self, group):
-        super().__new__()
         self.name = group
-#        self.color = 
+        
+#    def __getattr__(self, name):
+#        try:
+#            return getattr(self.parent, name)
+#        except AttributeError:
+#            raise AttributeError("Group object {} has no attribute {}".format(self.name, name))

@@ -9,7 +9,7 @@ class settings:
     workdir = pl.Path(r'\\ad.helsinki.fi\home\a\artoviit\Desktop\test')
     # Whether to gather data and create vectors. If False, expects to find pre-created
     # datafiles in the Analysis Data directory.
-    process_samples = False
+    process_samples = True
     # The channel based on which the vector is created
     vectChannel = "DAPI"
     # Make vector by creating binary image and then skeletonizing. If False, vector 
@@ -44,6 +44,7 @@ class settings:
     # label and the following string for searching the csv. If multiple files are
     # to be collected (e.g. intensities), the code expects an ID number after
     # the search string, separated by "_". E.g. "Intensity_Mean" => "Intensity_Mean_Ch=1"
+    # TODO add units to AddData?
     AddData = {"Area": "Area.csv",
                "Volume": "Volume.csv",
                "Intensity Mean": "Intensity_Mean"
