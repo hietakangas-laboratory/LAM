@@ -12,6 +12,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 import pathlib as pl
+import warnings
 
 class plotter:
     __palette = settings.grpColors
@@ -63,7 +64,7 @@ class plotter:
                            kws.get('value_str'), var_name = kws.get('var_str'))
         return plotData
         
-    def plot_Data(self, plotfunc, hue = None, palette = None, **kws):
+    def plot_Data(self, plotfunc, palette = None, *args, **kws):
 #        if self.palette == None:
 #            total = self.data.loc[:,id_vars].unique().size
 #            palette = self.__palette[:total]
@@ -72,63 +73,63 @@ class plotter:
             kws.update({'x': 'variable', 'y': 'value', 'data': plotData})
         else: 
             plotData = self.data
-        g = sns.FacetGrid(plotData, row = kws.get('row'), hue = kws.get('hue'), 
-                          sharex=True, sharey=True, height=5, aspect=3)
-        g = g.map_dataframe(plotfunc, self.palette, **kws)
-#        g = plotfunc(plotData, g) # add color
-#        ax = self.centerline(self, ax)
-        plt.suptitle(self.name)
-        g.set(xlabel = "Longitudinal Position", ylabel = "Value")
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", category=UserWarning)
+            g = sns.FacetGrid(plotData, row = kws.get('row'), hue = kws.get('hue'), 
+                              sharex=True, sharey=True, gridspec_kws={'hspace': 0.2},
+                              height=5, aspect=3, legend_out=True)
+            g = (g.map_dataframe(plotfunc, self.palette, *args, **kws).add_legend())
+#            plt.legend(loc='upper right', markerscale = 2, fancybox = True, 
+#                       shadow = True, fontsize = 'large')
+        plt.suptitle(self.name, weight='bold', size = 24)
+        g.set(xlabel = kws.get('xlabel'), ylabel = kws.get('ylabel'))
         filepath = self.savepath.joinpath(self.name+settings.figExt)
         g.savefig(str(filepath), format=settings.saveformat)
         plt.close()
         
-    def boxPlot(palette, **kws):
+    def boxPlot(palette, *args, **kws):
         axes = plt.gca()
         data = kws.pop('data')
         sns.boxplot(data=data, x=kws.get('x'), y=kws.get('y'), hue=kws.get('id_str'), 
-                    saturation=0.5, linewidth=0.1, showmeans=False, palette = palette, ax=axes)
+                    saturation=0.5, linewidth=0.1, showmeans=False, palette=palette, 
+                    ax=axes)
+        if 'centerline' in kws.keys(): plotter.centerline(axes, kws.get('centerline'))
         xticks = np.arange(0, data.loc[:,kws.get('x')].unique().size, 5)
         plt.xticks(xticks)
         axes.set_xticklabels(xticks)
     
-    def distPlot(self, axes, color = 'b', **kws):
+    def distPlot(palette, *args, **kws):
+        axes = plt.gca()
         return axes
     
-    def linePlot(self, axes, color = 'b', **kws):
+    def linePlot(palette, *args, **kws):
+        axes = plt.gca()
+        data = kws.pop('data')
+        err_kws = {'alpha': 0.4}
+        sns.lineplot(data=data, x=kws.get('x'), y=kws.get('y'), hue=kws.get('id_str'), 
+                     alpha=0.5, dashes=False, err_style='band', ci='sd', palette=palette, 
+                     ax=axes, err_kws = err_kws)
+        if 'centerline' in kws.keys(): plotter.centerline(axes, kws.get('centerline'))
+        xticks = np.arange(0, data.loc[:,kws.get('x')].unique().size, 5)
+        plt.xticks(xticks)
+        axes.set_xticklabels(xticks)
         return axes
+    
+    def jointPlot(palette, *args, **kws):
+        axes = plt.gca()
+        data = kws.pop('data')
+        sns.jointplot(data=data, x=kws.get('x'), y=kws.get('y'), hue=kws.get('id_str'), 
+                    saturation=0.5, kind = 'kde', palette=palette, 
+                    ax=axes)
+        ticks = np.arange(0, data.loc[:,kws.get('x')].unique().size, 5)
+        plt.xticks(ticks)
+        axes.set_yticklabels(ticks)
+        plt.yticks(ticks)
+        axes.set_yticklabels(ticks)
         
-    def centerline(self, axes, **kws):
-        __, ytop = axes.ylim()
+    def centerline(axes, MPbin, **kws):
+        __, ytop = axes.get_ylim()
         ycoords = (0,ytop)
-        xcoords = (self.MPbin,self.MPbin)
-#        kws = dict(linewidth=settings.lw*3,alpha=.4)
+        xcoords = (MPbin,MPbin)
         axes.plot(xcoords,ycoords, 'r--',**kws)
         return axes
-    
-    def channelCounts(self):
-        end = len(settings.projBins)
-        plotbins = np.arange(0,end,1)
-        xticks = np.arange(0,end,10)
-#            
-#            
-#            for col in self.data.columns:
-#                MPpath = self.directory.joinpath(str(settings.R3name+".csv"))
-#                MP = pd.read_csv(MPpath,index_col=False)
-#                point = MP.loc[tuple([0,col])]
-#                figure, ax = plt.subplots(figsize=(5,5))
-#                counts = self.data.loc[:,col]
-#                sns.barplot(y=counts, x=plotbins, color=self.color,saturation=0.5,ax=ax)
-#                x = [point,point]
-#                y = [0,self.ylim]
-#                sns.lineplot(x=x,y=y, color='black', ax=ax)
-#                name = str('Counts_'+self.channel + '_' +col)
-#                ax.set_xlabel('Longitudinal position %') # X LABEL
-#                ax.set_ylabel(str(col+" cells")) # Y LABEL
-#                plt.xticks(xticks, xticks)
-#                ax.set_title(name)
-#                ax.set_ylim(bottom=0, top=self.ylim)
-#                filename = str(name+settings.figExt)
-#                filepath = system.samplesdir.joinpath(col,filename)
-#                figure.savefig(str(filepath), format=settings.saveformat)
-#                plt.close()

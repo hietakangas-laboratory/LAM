@@ -10,11 +10,14 @@ class settings:
     # Whether to gather data and create vectors. If False, expects to find pre-created
     # datafiles in the Analysis Data directory.
     process_samples = False
+    
+    
+    ### VECTOR CREATION & PROJECTION ###
     # The channel based on which the vector is created
     vectChannel = "DAPI"
     # Make vector by creating binary image and then skeletonizing. If False, vector 
     # is created by finding middle point between smallest and largest Y-axis position in bin.
-    SkeletonVector = True
+    SkeletonVector = False
     SkeletonResize = 0.5    # Binary image resize for reprocessing, e.g. smoothing. Keep at steps of ten.
     BDiter = 0             # Number of iterations for binary dilation (set to 0 if not needed)
     SigmaGauss = 0.5       # Sigma for gaussian smoothing (set to 0 if not needed)
@@ -25,29 +28,28 @@ class settings:
     # Number of bins used for projection unto vector. Typical value for whole midgut is 100,
     # for R1-2 or R4-5 is 45, and R3 is 10
     projBins = np.linspace(0, 1, 100)
-    # The name of the file used for normalizing between samples, i.e. R3 measurement point
-    MPname = "MP"
+
+
+    ## MEASUREMENT POINTS ##
     # Whether to use measurement point coordinates for normalization. If False,
     # the samples will be handled as perfectly aligned from beginning to end.
     useMP = True
+    # The name of the file used for normalizing between samples, i.e. R3 measurement point
+    MPname = "MP"
     # Include secondary measurement point. Used to see e.g. proportional change.
     useSecMP = False
     # Name of secondary measurement point
     secMP = 'R45'
-    # Whether to perform group-wise stat analysis.
-    statistics = False
-    alpha = 0.05
-    # The name of the control group that the statistics are run against.
-    cntrlGroup = "starv"    # CASE-SENSITIVE!
     
     # Additional data to be collected from channels. Key must be the data column 
     # label and the following string for searching the csv. If multiple files are
     # to be collected (e.g. intensities), the code expects an ID number after
-    # the search string, separated by "_". E.g. "Intensity_Mean" => "Intensity_Mean_Ch=1"
+    # the search string, separated by "_". E.g. "Intensity_Mean" => "Intensity_Mean_Ch=1".
+    # The last value is the unit of the values, eg um^2 for area.
     # TODO add units to AddData?
-    AddData = {"Area": "Area.csv",
-               "Volume": "Volume.csv",
-               "Intensity Mean": "Intensity_Mean"
+    AddData = {"Area": ["Area.csv", "Area $\u03BCm^2$"], # um^2
+               "Volume": ["Volume.csv", "Volume $\u03BCm^3$"],
+               "Intensity Mean": ["Intensity_Mean", "Intensity"]
                }
     # If set to true, replaces the above mentioned (AddData) ID numbers with an
     # alternative moniker as defined in channelID
@@ -57,6 +59,43 @@ class settings:
                  "Ch=3": "SuH",
                  "Ch=4": "DAPI",}
     ###################################################################
+    
+    ### PLOTTING OPTIONS ###
+    Create_Channel_Plots = False
+    Create_AddData_Plots = False
+    Create_ChanVSChan_Plots = True
+    Create_ChanVSAdd_Plots = True
+    
+    # Whether to drop outliers from plots ONLY, and the standard deviation limit
+    # for considering what is an outlier.
+    Drop_Outliers = True
+    dropSTD = 3
+    
+    
+    ### STATISTICS OPTIONS ###
+    # Whether to perform group-wise stat analysis.
+    statistics = False
+    alpha = 0.05
+    # The name of the control group that the statistics are run against.
+    cntrlGroup = "starv"    # CASE-SENSITIVE!
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
     
     #### DATA COLLECTION AND PLOT SETTINGS ####
     # Whether to make plots for individual samples (does NOT include heatmaps)

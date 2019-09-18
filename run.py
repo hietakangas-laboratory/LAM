@@ -38,7 +38,7 @@ def main():
         process.Gather_Samples(PATHS)                        
     # After all samples have been collected/created, find their respective MP bins and
     # normalize (anchor) cell count data. If MP's are not used, the samples are
-    # anchored at bin == 0.#
+    # anchored at bin == 0.
     process.Create_Counts(PATHS)
     # Storing of descriptive data of analysis, i.e. channels/samples/groups
     PATHS.save_AnalysisInfo(store.samples, store.samplegroups, store.channels)

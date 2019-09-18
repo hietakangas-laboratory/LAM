@@ -69,7 +69,7 @@ def Create_Counts(PATHS):
     countpaths = PATHS.datadir.glob("All_*")
     for path in countpaths:
         name = str(path.stem).split('_')[1]
-        print("Channel {}  ...".format(name))
+        print("{}  ...".format(name))
         # Aforementionad data is used to create dataframes onto which each sample's
         # MP is anchored to one row, with bin-respective (index) cell counts in 
         # each element of a sample (column) to allow relative comparison.
@@ -364,7 +364,7 @@ class get_channel:
         # Loop through pre-defined keys and find respective data files, e.g. Area data
         newData = self.data
         for key in dataKeys:
-            fstring = dataKeys.get(key)
+            fstring = dataKeys.get(key)[0]
             finder = str("*{}*".format(fstring))
             paths = list(self.path.glob(finder))
             for path in paths:

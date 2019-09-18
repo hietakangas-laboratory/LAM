@@ -7,7 +7,7 @@ import pandas as pd
 import numpy as np
 import pathlib as pl
 import seaborn as sns
-import re
+import re, warnings
 
 class Samplegroups(object):
     # TODO create gathering of all samplegroup data
@@ -36,27 +36,68 @@ class Samplegroups(object):
             Samplegroups._chanPalette.update({chan: chancolors[i]})
         
     def create_plots(self):
-        for chanPath in self._chanPaths:
-            plotData = self.read_channel(chanPath, self._groups)
-            make_plots = plotter(plotData, self._plotDir, palette=self._grpPalette)
-            kws = {'id_str': 'Sample Group', 'hue': 'Sample Group', 
-                   'row': 'Sample Group'}
-            make_plots.plot_Data(plotter.boxPlot, **kws)
-        for addPath in self._addData:
-            # TODO create facetgrid for addData plots
-            continue
+        if settings.Create_Channel_Plots:
+            print("\nPlotting channels  ...")
+            for chanPath in self._chanPaths:
+                plotData = self.read_channel(chanPath, self._groups)
+                make_plots = plotter(plotData, self._plotDir, palette=self._grpPalette)
+                kws = {'id_str': 'Sample Group', 'hue': 'Sample Group', 
+                       'row': 'Sample Group', 'centerline': make_plots.MPbin,
+                       'xlabel':"Longitudinal Position", 'ylabel': 'Cell Count'}
+                make_plots.plot_Data(plotter.boxPlot, **kws)
+        if settings.Create_AddData_Plots:
+            print("\nPlotting additional data  ...")
+            for addPath in self._addData:
+                plotData = self.read_channel(addPath, self._groups)
+                make_plots = plotter(plotData, self._plotDir, palette=self._grpPalette)
+                ylabel = settings.AddData.get(plotData.name.split('_')[0])[1]
+                kws = {'id_str': 'Sample Group', 'hue': 'Sample Group', 
+                       'row': 'Sample Group', 'centerline': make_plots.MPbin, 
+                       'xlabel':"Longitudinal Position", 'ylabel': ylabel}
+                make_plots.plot_Data(plotter.linePlot, **kws)
+        if settings.Create_ChanVSChan_Plots:    
+            # TODO make joinplots of chan vs. chan     
+            pass
+        if settings.Create_ChanVSAdd_Plots:    
+            # TODO make joinplots of chan vs. Add
+            print("\nPlotting channel VS additional data  ...")
+            for chanPath in self._chanPaths:
+                chanData = self.read_channel(chanPath, self._groups)
+                chanData.loc[:, "Name"] = chanData.name
+                for addPath in self._addData:
+                    addData = self.read_channel(addPath, self._groups)
+                    addData.name = settings.AddData.get(addData.name.split('_')[0])[1]
+                    addData.loc[:, "Name"] = addData.name
+                    plotData = pd.concat([chanData, addData])
+                    plotData.name = "{} VS {}".format(chanData.name, addData.name)
+                    print(plotData)
+                    make_plots = plotter(plotData, self._plotDir, palette=self._grpPalette)
+                    kws = {'id_str': ['Sample Group', 'Name'], 'hue': 'Sample Group', 
+                           'row': 'Sample Group', 'xlabel':chanData.name, 
+                           'ylabel': addData.name}
+                    make_plots.plot_Data(plotter.jointPlot, **kws)
     
     def read_channel(self, path, groups):
+        def __Drop(Data):
+            Mean = np.nanmean(Data.values)
+            std = np.nanstd(Data.values)
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore", category=RuntimeWarning)
+                Data = np.abs(Data.values-Mean) <= (settings.dropSTD*std)
+            return Data
+        
         Data = system.read_data(path, header=0, test=False)
         plotData = pd.DataFrame()
         for grp in groups:
             namer = str(grp+'_')
             namerreg = re.compile(namer, re.I)
             temp = Data.loc[:, Data.columns.str.contains(namerreg)].T
+            if settings.Drop_Outliers:
+                temp = temp.where(__Drop, np.nan)
             temp.loc[:,"Sample Group"] = grp
             if plotData.empty: plotData = temp
             else: plotData = pd.concat([plotData, temp])
-        plotData.name = str(path.stem).split("_")[1]
+        plotData.name = '_'.join(str(path.stem).split("_")[1:])
         return plotData
         
 class Group(Samplegroups):
