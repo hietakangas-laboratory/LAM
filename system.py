@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 from settings import settings
 import pathlib as pl, shutil, pandas as pd
+import inspect
 
 class paths:
     def __init__(self, workdir):
@@ -43,9 +44,14 @@ def read_data(filepath, header = 2, test=True):
             if test:
                 data.loc[:,"ID"]
         except KeyError:
-            print("Key not found. Wrong number for header row? Path: {}".format(filepath))
+            print("WARNING: read_data() call from {} line {}".format(
+                                inspect.stack()[1][1], inspect.stack()[1][2]))
+            print("Key not found. Wrong header row? \nPath: {}".format(filepath))
         except FileNotFoundError:
-            print("File {} is not found at {}".format(filepath.name, str(filepath.parent)))
+            print("WARNING: read_data() call from {} line {}".format(
+                                inspect.stack()[1][1], inspect.stack()[1][2]))
+            print("File {} is not found at {}".format(filepath.name, 
+                  str(filepath.parent)))
             return
         return data
 

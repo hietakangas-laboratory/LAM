@@ -41,14 +41,16 @@ class settings:
     # Name of secondary measurement point
     secMP = 'R45'
     
+    
+    ### DATA GATHERING ###
     # Additional data to be collected from channels. Key must be the data column 
     # label and the following string for searching the csv. If multiple files are
     # to be collected (e.g. intensities), the code expects an ID number after
     # the search string, separated by "_". E.g. "Intensity_Mean" => "Intensity_Mean_Ch=1".
     # The last value is the unit of the values, eg um^2 for area.
     # TODO add units to AddData?
-    AddData = {"Area": ["Area.csv", "Area $\u03BCm^2$"], # um^2
-               "Volume": ["Volume.csv", "Volume $\u03BCm^3$"],
+    AddData = {"Area": ["Area.csv", "$\u03BCm^2$"], # um^2 = "$\u03BCm^2$"
+               "Volume": ["Volume.csv", "$\u03BCm^3$"], # um^3 = "$\u03BCm^3$"
                "Intensity Mean": ["Intensity_Mean", "Intensity"]
                }
     # If set to true, replaces the above mentioned (AddData) ID numbers with an
@@ -60,17 +62,9 @@ class settings:
                  "Ch=4": "DAPI",}
     ###################################################################
     
-    ### PLOTTING OPTIONS ###
-    Create_Channel_Plots = False
-    Create_AddData_Plots = False
-    Create_ChanVSChan_Plots = True
-    Create_ChanVSAdd_Plots = True
-    
-    # Whether to drop outliers from plots ONLY, and the standard deviation limit
-    # for considering what is an outlier.
-    Drop_Outliers = True
-    dropSTD = 3
-    
+    ### ANALYSIS OPTIONS ###
+    Find_Distances = True
+    Distance_Channels = ["GFP"]
     
     ### STATISTICS OPTIONS ###
     # Whether to perform group-wise stat analysis.
@@ -78,6 +72,24 @@ class settings:
     alpha = 0.05
     # The name of the control group that the statistics are run against.
     cntrlGroup = "starv"    # CASE-SENSITIVE!
+    
+    ### PLOTTING OPTIONS ###
+    Create_Channel_Plots = False
+    Create_AddData_Plots = False
+    Create_ChanVSChan_Plots = False
+    Create_ChanVSAdd_Plots = False
+    Create_AddVSAdd_Plots = False
+    
+    seaborn_style = 'whitegrid'   # Different styles of plots, e.g. background
+    #[white, dark, whitegrid, darkgrid, ticks]
+    seaborn_context = 'talk'  # Defines plot object sizes, e.g. text
+    # size order small to large: 'paper', 'talk', 'poster'
+    
+    # Whether to drop outliers from plots ONLY, and the standard deviation limit
+    # for considering what is an outlier.
+    Drop_Outliers = True
+    dropSTD = 3
+    
     
     
     

@@ -27,6 +27,7 @@ Dependencies: Anaconda-included packages (Python 3.7), Shapely
 import system, analysis, process
 from system import store
 from settings import settings
+import seaborn as sns
 
 def main():
     PATHS = system.paths(settings.workdir)
@@ -45,14 +46,14 @@ def main():
     
     # After samples have been counted and normalized, 
     ### TODO add plotting and group-wise operations
-    SampleGrps = analysis.Samplegroups(store.samplegroups, store.channels, PATHS)
-    SampleGrps.create_plots()
-    
-    Grp = analysis.Group("Holidic")
+    SampleGroups = analysis.Samplegroups(store.samplegroups, store.channels, 
+                                         PATHS, child = False)
+   
+#    Group = analysis.Group("Holidic")
 #    print(Grp.groups)
 #    print(Grp.name)
 #    print(Grp2.addData)
-    print('ANALYSIS COMPLETED')
+    print('\nANALYSIS COMPLETED')
 
 
 if __name__ == '__main__':

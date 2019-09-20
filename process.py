@@ -33,6 +33,7 @@ def Create_Samples(PATHS):
             channel = get_channel(path2, sample, settings.AddData)
             sample.data = sample.project_channel(channel, PATHS.datadir)
             sample.find_counts(channel.name, PATHS.datadir)
+    print("\nAll samples processed")
 
 def Gather_Samples(PATHS):
 # When samples are not to be processed, the data is gathered from 
