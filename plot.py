@@ -5,35 +5,34 @@ Created on Fri Aug 23 14:07:33 2019
 @author: artoviit
 """
 from settings import settings
-import system
+import system, analysis
 from system import store
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 import pathlib as pl
+import warnings
 
 class plotter:
-    def __init__(self, sampleData, savepath, color = 'b'):
-        #TODO add group etc arguments
-        if isinstance(sampleData, pl.Path):
-            self.data = system.read_data(sampleData, header = 0)
-            self.name = str(sampleData.name).split('_')[1]
-        else:
-            self.data = sampleData
-            self.name = sampleData.name
+    __palette = settings.grpColors
+    
+    def __init__(self, plotData, savepath, title=None, palette=None, color='b'):
+        sns.set_style(settings.seaborn_style, {"xtick.major.size": 8, "ytick.major.size": 8})
+        sns.set_context(settings.seaborn_context)
+        self.data = plotData
+        self.name = plotData.name
         self.savepath = savepath
+        self.palette = palette
         self.color = color
+        if title is not None: self.title = title
+        else: self.title = self.name
         try:
             self.MPbin = store.centerpoint
-            self.vmax = sampleData.max()
-#            self.palette = 
-        except: pass
-            # self.palette = 
-        # TODO create dictionary palette from samplegroups
-        #   e.g. palette ={"A":"C0","B":"C1","C":"C2", "Total":"k"}        
+            self.vmax = plotData.max()
+        except: pass    
         return
-    
+
     def vector(self, samplename, vectordata, X, Y, binaryArray = None, skeleton = None):
         if skeleton is not None: 
             fig, axes = plt.subplots(nrows=1, ncols=2, figsize=(12, 6),
@@ -55,78 +54,80 @@ class plotter:
         fig.savefig(str(self.savepath.joinpath(name)), format=settings.saveformat)
         plt.close('all')
         
-    def plot_Data(self, plotfunc, group = None):    
-        # TODO implement plotfuncs with self-call?
-        # TODO Change plotting into row-wise facetgrid?
-        # g = sns.FacetGrid(data, row = "Sample Group", hue = "Sample Group", 
-        #                  sharex=True, sharey=True)
-        if group is not None:
-            namer = str(group+'_')
-            plotData = self.Data.loc[:, self.Data.columns.str.contains(namer)]
-            plotName = str("{} {}".format(group, self.name))
-            # TODO add color picker
-        else: 
-            plotData = self.Data
-            plotName = str(self.name)
-        g = sns.FacetGrid(data, row = "Sample Group", hue = "Sample Group", 
-                      sharex=True, sharey=True, palette = self.palette)
-#        fig, ax = plt.subplots(figsize=(10,5))
-        if hasattr(self, vmax):
-            ax.ylim(top = self.max)
-        ax = plotfunc(plotData, ax) # add color
-        ax = self.centerline(self, ax)
-        ax.set_title(plotName)
-        ax.set_ylabel(str(self.name)) # Change Y LABEL
-        ax.set_xlabel("Longitudinal Position")
-        filepath = self.savepath.joinpath(plotName+settings.figExt)
-        fig.savefig(str(filepath), format=settings.saveformat)
-        plt.close()
+    def plot_Data(self, plotfunc, savepath, palette = None, *args, **kws):
+        def __melt_data(Data, **kws):
+            plotData = pd.melt(self.data, id_vars = kws.get('id_str'), value_vars = 
+                               kws.get('value_str'), var_name = kws.get('var_str'))
+            return plotData
         
-    def boxPlot(Data, axes, color = 'b', **kws):
-        xticks = np.arange(0, Data.shape[0], 5)
-        sns.boxplot(data=Data.T,  width=0.6, color = color, saturation=0.5, 
-                    linewidth=0.1, showmeans=False, ax=axes)
+        if 'id_str' in kws:
+            plotData = __melt_data(self.data, **kws)
+            kws.update({'x': 'variable', 'y': 'value', 'data': plotData})
+        else: 
+            plotData = self.data
+            kws.update({'data': plotData})
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", category=UserWarning)
+            if plotfunc.__name__ == "jointPlot": # If jointplot:
+                # Seaborn unfortunately doesn't support multi-axis jointplots,
+                # consequently these are created as individual files.
+                key = plotData.iat[0, 0]
+                g = sns.jointplot(data=plotData, x = plotData.loc[:, kws.get('X')], 
+                          y = plotData.loc[:,kws.get('Y')], kind='kde', 
+                          color= palette.get(key), joint_kws={'shade_lowest':False})
+                
+            else: # Creation of plot grids containing each sample group.
+                g = sns.FacetGrid(plotData, row = kws.get('row'),hue = kws.get('hue'), 
+                              sharex=True, sharey=True, gridspec_kws={'hspace': 0.2},
+                              height=kws.get('height'), aspect=kws.get('aspect'), 
+                              legend_out=True,row_order = analysis.Samplegroups._groups)
+                g = (g.map_dataframe(plotfunc, self.palette, *args, **kws).add_legend())
+                g.set(xlabel = kws.get('xlabel'), ylabel = kws.get('ylabel'))
+        # Giving a title and then saving the plot
+        plt.suptitle(self.title, weight='bold', size = 20)
+        filepath = savepath.joinpath(self.title+settings.figExt)
+        g.savefig(str(filepath), format=settings.saveformat)
+        plt.close('all')
+        
+    def boxPlot(palette, *args, **kws):
+        axes = plt.gca()
+        data = kws.pop('data')
+        sns.boxplot(data=data, x=kws.get('x'), y=kws.get('y'), hue=kws.get('id_str'), 
+                    saturation=0.5, linewidth=0.1, showmeans=False, palette=palette, 
+                    ax=axes)
+        if 'centerline' in kws.keys(): plotter.centerline(axes, kws.get('centerline'))
+        xticks = np.arange(0, data.loc[:,kws.get('x')].unique().size, 5)
+        plt.xticks(xticks)
+        axes.set_xticklabels(xticks)
+    
+    def distPlot(palette, *args, **kws):
+        axes = plt.gca()
+        return axes
+    
+    def linePlot(palette, *args, **kws):
+        axes = plt.gca()
+        data = kws.pop('data')
+        err_kws = {'alpha': 0.4}
+        sns.lineplot(data=data, x=kws.get('x'), y=kws.get('y'), hue=kws.get('hue'), 
+                     alpha=0.5, dashes=False, err_style='band', ci='sd', palette=palette, 
+                     ax=axes, err_kws = err_kws)
+        if 'centerline' in kws.keys(): plotter.centerline(axes, kws.get('centerline'))
+        xticks = np.arange(0, data.loc[:,kws.get('x')].unique().size, 5)
         plt.xticks(xticks)
         axes.set_xticklabels(xticks)
         return axes
     
-    def distPlot(self, axes, color = 'b', **kws):
-        return axes
-    
-    def linePlot(self, axes, color = 'b', **kws):
-        return axes
+    def jointPlot(palette, *args, **kws):
+        axes = plt.gca()
+        data = kws.pop('data')
+        key = data.iat[0, 0]
+        sns.jointplot(data=data, x = data.loc[:, kws.get('X')], y = data.loc[:, 
+                       kws.get('Y')], kind = 'kde', color= palette.get(key), 
+                        ax = axes, joint_kws={'shade_lowest':False})
         
-    def centerline(self, axes, **kws):
-        __, ytop = axes.ylim()
+    def centerline(axes, MPbin, **kws):
+        __, ytop = axes.get_ylim()
         ycoords = (0,ytop)
-        xcoords = (self.MPbin,self.MPbin)
-#        kws = dict(linewidth=settings.lw*3,alpha=.4)
+        xcoords = (MPbin,MPbin)
         axes.plot(xcoords,ycoords, 'r--',**kws)
         return axes
-    
-    def channelCounts(self):
-        end = len(settings.projBins)
-        plotbins = np.arange(0,end,1)
-        xticks = np.arange(0,end,10)
-#            
-#            
-#            for col in self.data.columns:
-#                MPpath = self.directory.joinpath(str(settings.R3name+".csv"))
-#                MP = pd.read_csv(MPpath,index_col=False)
-#                point = MP.loc[tuple([0,col])]
-#                figure, ax = plt.subplots(figsize=(5,5))
-#                counts = self.data.loc[:,col]
-#                sns.barplot(y=counts, x=plotbins, color=self.color,saturation=0.5,ax=ax)
-#                x = [point,point]
-#                y = [0,self.ylim]
-#                sns.lineplot(x=x,y=y, color='black', ax=ax)
-#                name = str('Counts_'+self.channel + '_' +col)
-#                ax.set_xlabel('Longitudinal position %') # X LABEL
-#                ax.set_ylabel(str(col+" cells")) # Y LABEL
-#                plt.xticks(xticks, xticks)
-#                ax.set_title(name)
-#                ax.set_ylim(bottom=0, top=self.ylim)
-#                filename = str(name+settings.figExt)
-#                filepath = system.samplesdir.joinpath(col,filename)
-#                figure.savefig(str(filepath), format=settings.saveformat)
-#                plt.close()

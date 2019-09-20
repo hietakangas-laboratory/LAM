@@ -12,7 +12,72 @@ import math
 from scipy.ndimage import morphology as mp
 from skimage.morphology import skeletonize
 from skimage.filters import gaussian
-#
+import re
+
+def Create_Samples(PATHS):
+    # Loop Through samples and collect relevant data
+    for path in [p for p in settings.workdir.iterdir() if p.is_dir() and p.stem 
+                 != 'Analysis Data']:
+        sample = get_sample(path, PATHS.samplesdir, process=True)
+        print("Processing {}  ...".format(sample.name))
+        sample.vectData = sample.get_vectData(settings.vectChannel)
+        # Creation of vector for projection
+        sample.vector = sample.create_vector(settings.medianBins, PATHS.datadir, 
+                                             settings.SkeletonVector, settings.SkeletonResize, 
+                                             settings.BDiter, settings.SigmaGauss)
+        # Finding measurement points for normalization between samples
+        sample.MP, sample.secMP = sample.get_MPs(settings.MPname, settings.useMP, settings.useSecMP, 
+                                                 settings.secMP, PATHS.datadir)
+        # Collection of data for each channel
+        for path2 in sample.channelpaths:
+            channel = get_channel(path2, sample, settings.AddData)
+            sample.data = sample.project_channel(channel, PATHS.datadir)
+            sample.find_counts(channel.name, PATHS.datadir)
+    print("\nAll samples processed")
+
+def Gather_Samples(PATHS):
+# When samples are not to be processed, the data is gathered from 
+    # "./Analysis Data/Samples".
+    print("\nGathering sample data  ...")
+    # For each sample, the data is collected, and cell numbers are quantified
+    # for each channel.
+    for path in [p for p in PATHS.samplesdir.iterdir() if p.is_dir()]:
+        sample = get_sample(path, PATHS.samplesdir, process=False)
+        # Looping through every channel found in the sample's directory
+        for channelPath in sample.channelpaths:
+            channelName = str(channelPath.stem)
+            if channelName != "MPs": # Collecting microscopy channel relevant data
+                sample.data = system.read_data(channelPath, header = 0)
+                sample.find_counts(channelName, PATHS.datadir)
+            else: # Collecting measurement point data for anchoring of samples
+                if hasattr(sample, "MP"):
+                    system.saveToFile(sample.MP.rename(sample.name), 
+                                      PATHS.datadir, "MPs.csv")
+                if hasattr(sample, "secMP"):
+                    system.saveToFile(sample.secMP.rename(sample.name), 
+                                      PATHS.datadir, "secMPs.csv")
+
+def Create_Counts(PATHS):
+    print("\nNormalizing sample data ...")
+    MPs = system.read_data(next(PATHS.datadir.glob("MPS.csv")), header = 0, test=False)
+    # Find the smallest and largest bin-number of the dataset
+    MPmax, MPmin = MPs.max(axis=1).item(), MPs.min(axis=1).item()
+    # Find the size of needed dataframe, i.e. so that all anchored samples fit
+    MPdiff = MPmax - MPmin
+    store.totalLength = len(settings.projBins) + MPdiff
+    # Store the bin number of the row onto which samples are anchored to
+    store.centerpoint = MPmax
+    countpaths = PATHS.datadir.glob("All_*")
+    for path in countpaths:
+        name = str(path.stem).split('_')[1]
+        print("{}  ...".format(name))
+        # Aforementionad data is used to create dataframes onto which each sample's
+        # MP is anchored to one row, with bin-respective (index) cell counts in 
+        # each element of a sample (column) to allow relative comparison.
+        ChCounts = normalize(path)            
+        ChCounts.starts = ChCounts.normalize_samples(MPs, store.totalLength)
+        ChCounts.Avg_AddData(PATHS, settings.AddData, store.totalLength)
+
 class get_sample:   
     def __init__(self, path, samplesdir, process=True):
         self.name = str(path.stem)
@@ -54,8 +119,10 @@ class get_sample:
         
     def get_vectData(self, channel):
         try:
-            dirPath = [self.channelpaths.pop(i) for i, s in enumerate(self.channelpaths) 
-                        if str('_'+channel+'_') in str(s)][0]
+            namer = str('_'+channel+'_')
+            namerreg = re.compile(namer, re.I)
+            dirPath = [self.channelpaths[i] for i, s in enumerate(self.channelpaths) \
+                       if namerreg.search(str(s))][0]
             vectPath = next(dirPath.glob("*_Position.csv"))
             vectData = system.read_data(vectPath)
         except:
@@ -298,7 +365,7 @@ class get_channel:
         # Loop through pre-defined keys and find respective data files, e.g. Area data
         newData = self.data
         for key in dataKeys:
-            fstring = dataKeys.get(key)
+            fstring = dataKeys.get(key)[0]
             finder = str("*{}*".format(fstring))
             paths = list(self.path.glob(finder))
             for path in paths:
