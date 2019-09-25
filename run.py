@@ -30,27 +30,29 @@ from settings import settings
 
 def main():
     PATHS = system.paths(settings.workdir)
-    # If sample processing set to True, collect data etc. Otherwise continue to
-    # plotting and group-wise operations.
+    # If sample processing set to True, collect data etc. Otherwise collect 
+    # data from "./Analysis Data/Samples".
     if settings.process_samples:
         process.Create_Samples(PATHS)
     else:
         process.Gather_Samples(PATHS)                        
-    # After all samples have been collected/created, find their respective MP bins and
-    # normalize (anchor) cell count data. If MP's are not used, the samples are
-    # anchored at bin == 0.
+    # After all samples have been collected/created, find their respective MP 
+    # bins and normalize (anchor) cell count data. If MP's are not used, the 
+    # samples are anchored at bin == 0.
     process.Create_Counts(PATHS)
     # Storing of descriptive data of analysis, i.e. channels/samples/groups
     PATHS.save_AnalysisInfo(store.samples, store.samplegroups, store.channels)
     
     # After samples have been counted and normalized, 
-    ### TODO add plotting and group-wise operations
-
     SampleGroups = analysis.Samplegroups(store.samplegroups, store.channels, 
-                                         PATHS, child = False)
+                                PATHS, child=False, length=store.totalLength,
+                                center=store.centerpoint)
+    if settings.Find_Distances:
+        SampleGroups.Get_DistanceMean()
     SampleGroups.create_plots()
 
     print('\nANALYSIS COMPLETED')
+
 
 if __name__ == '__main__':
     main()

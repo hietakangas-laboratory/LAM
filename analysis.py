@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 from settings import settings
 from plot import plotter
-import system
+import system, process
 from system import store as store
 import pandas as pd
 import numpy as np
@@ -9,30 +9,39 @@ import pathlib as pl
 import seaborn as sns
 import re, warnings
 from itertools import product, combinations
+from pycg3d.cg3d_point import CG3dPoint
+from pycg3d import utils
 
 class Samplegroups:
     _instance = None
     _groups, _chanPaths, _samplePaths, _addData, _channels = [], [], [], [], []
+    _plotDir, _dataDir = pl.Path("./"), pl.Path("./")
     _grpPalette, _chanPalette = {}, {}
-    _plotDir = pl.Path("./")
     _AllMPs = None
+    _length = 0
+    _center = int(len(settings.projBins/2))
     
 #    def __new__(cls, groups = None, channels = None, PATHS = None, child = True):
 #        if not cls._instance:
 #            cls._instance = super().__new__(cls)
 #        return cls._instance
     
-    def __init__(self, groups=None, channels=None, PATHS=None, child=True):
+    def __init__(self, groups=None, channels=None, PATHS=None, child=True,
+                 length=0, center = None):
         if not child:
             Samplegroups._groups = groups
             Samplegroups._channels = channels
             Samplegroups._chanPaths = list(PATHS.datadir.glob("Norm_*"))
-            Samplegroups._samplePaths = [p for p in PATHS.samplesdir.iterdir() if p.is_dir()]
+            Samplegroups._samplePaths = [p for p in PATHS.samplesdir.iterdir()\
+                                         if p.is_dir()]
             Samplegroups._addData = list(PATHS.datadir.glob("Avg_*"))
             Samplegroups._plotDir = PATHS.plotdir
+            Samplegroups._dataDir = PATHS.datadir
+            Samplegroups._length = length
+            if center is not None: Samplegroups._center = center
             MPpath = PATHS.datadir.joinpath("MPs.csv")
-            Samplegroups._AllMPs = system.read_data(MPpath, header=0, test=False)
-            groupcolors = sns.color_palette("colorblind", len(groups), desat=.5)
+            Samplegroups._AllMPs = system.read_data(MPpath,header=0,test=False)
+            groupcolors = sns.color_palette("colorblind", len(groups),desat=.5)
             for i, grp in enumerate(groups):
                 Samplegroups._grpPalette.update({grp: groupcolors[i]})
             chancolors = sns.color_palette("colorblind", len(self._chanPaths))
@@ -44,30 +53,35 @@ class Samplegroups:
         if settings.Create_Channel_Plots:
             print("\nPlotting channels  ...")
             for chanPath in self._chanPaths:
-                plotData = self.read_channel(chanPath, self._groups, drop = True)
-                plot_maker = plotter(plotData, self._plotDir, palette=self._grpPalette)
+                plotData = self.read_channel(chanPath, self._groups, drop=True)
+                plot_maker = plotter(plotData, self._plotDir, 
+                                     palette=self._grpPalette)
                 self.title = plotData.name
                 kws = {'id_str': 'Sample Group', 'hue': 'Sample Group', 
                        'row': 'Sample Group', 'centerline': plot_maker.MPbin,
                        'xlabel':"Longitudinal Position", 'ylabel': 'Cell Count', 
-                       'title': self.title, 'height':5, 'aspect':3}
+                       'title': self.title, 'height':5, 'aspect':3, 
+                       'xlen':self._length}
                 savepath = self._plotDir
                 plot_maker.plot_Data(plotter.boxPlot, savepath, **kws)
         # Creation of lineplots for additional data
         if settings.Create_AddData_Plots:
             print("\nPlotting additional data  ...")
             for addPath in self._addData:
-                plotData = self.read_channel(addPath, self._groups, drop = True)
-                plot_maker = plotter(plotData, self._plotDir, palette=self._grpPalette)
+                plotData = self.read_channel(addPath, self._groups, drop=True)
+                plot_maker = plotter(plotData, self._plotDir, 
+                                     palette=self._grpPalette)
                 ylabel = settings.AddData.get(plotData.name.split('_')[0])[1]
                 self.title = plotData.name
                 kws = {'id_str': 'Sample Group', 'hue': 'Sample Group', 
                        'row': 'Sample Group', 'centerline': plot_maker.MPbin, 
                        'xlabel':"Longitudinal Position", 'ylabel': ylabel, 
-                       'title': self.title, 'height':5, 'aspect':3}
+                       'title': self.title, 'height':5, 'aspect':3, 
+                       'xlen':self._length}
                 savepath = self._plotDir
                 plot_maker.plot_Data(plotter.linePlot, savepath, **kws)
         # Creation of channel vs. channel jointplots
+        # TODO drop chanVSchan, and instead do scatter plot matrix
         if settings.Create_ChanVSChan_Plots:
             savepath = self._plotDir.joinpath("Chan VS Chan")
             savepath.mkdir(exist_ok=True)
@@ -78,12 +92,13 @@ class Samplegroups:
             savepath = self._plotDir.joinpath("Chan VS AddData")
             savepath.mkdir(exist_ok=True)
             print("\nPlotting channel VS additional data  ...")
-            self.Joint_looper(self._chanPaths, savepath, self._addData, addit = True)
+            self.Joint_looper(self._chanPaths, savepath, self._addData, addit=True)
         if settings.Create_AddVSAdd_Plots:
             savepath = self._plotDir.joinpath("AddData VS AddData")
             savepath.mkdir(exist_ok=True)
             print("\nPlotting additional data VS additional data  ...")
             self.Joint_looper(self._addData, savepath, addit = True)
+        # TODO Create DistMean plotting
     
     def read_channel(self, path, groups, drop = False):
         def __Drop(Data):
@@ -93,7 +108,7 @@ class Samplegroups:
                 warnings.simplefilter("ignore", category=RuntimeWarning)
                 Data = np.abs(Data.values-Mean) <= (settings.dropSTD*std)
             return Data
-        
+        # -------- #
         Data = system.read_data(path, header=0, test=False)
         plotData = pd.DataFrame()
         for grp in groups:
@@ -102,7 +117,7 @@ class Samplegroups:
             temp = Data.loc[:, Data.columns.str.contains(namerreg)].T
             if settings.Drop_Outliers and drop:
                 temp = temp.where(__Drop, np.nan)
-            temp["Sample Group"] = grp
+            temp.loc[:,'Sample Group'] = grp
             if plotData.empty: plotData = temp
             else: plotData = pd.concat([plotData, temp])
         plotData.name = '_'.join(str(path.stem).split("_")[1:])
@@ -117,11 +132,11 @@ class Samplegroups:
         else: pairs = combinations(inputPaths, 2)
         for pair in pairs:
             Path1, Path2 = pair[0], pair[1]
-            # Find channel-data and add sample/channel-specific names for plotting
+            # Find channel-data and add specific names for plotting
             Data1 = self.read_channel(Path1, self._groups)
             Data2 = self.read_channel(Path2, self._groups)
-            Data1["Sample"] = Data1.index
-            Data2["Sample"] = Data2.index
+            Data1 = Data1.assign({"Sample": Data1.index})
+            Data2 = Data2.assign({"Sample": Data2.index})
             namer1 = Data1.name
             namer2 = Data2.name
             if addit: # Find unit of additional data from settings
@@ -148,6 +163,33 @@ class Samplegroups:
                 # Create plot
                 plot_maker.plot_Data(plotter.jointPlot, savepath, 
                                  palette = self._grpPalette, **kws)
+                
+    def subset_data(self, Data, compare, volIncl):
+        """Get indexes of cells based on volume."""
+        if not isinstance(Data, pd.DataFrame):
+            print("Wrong datatype for find_distance(), has to be pandas DataFrame.")
+            return None
+        ErrorM = "Volume not found in {}_{}'s {}".format(self.group, 
+                                      self.name, Data.name)
+        if compare.lower() == 'greater':
+            try: 
+                subInd = Data[(Data["Volume"] >= volIncl)].index
+            except KeyError: print(ErrorM)
+        else:
+            try: 
+                subInd = Data[(Data["Volume"] <= volIncl)].index
+            except KeyError: print(ErrorM)
+        return subInd
+                
+    def Get_DistanceMean(self):
+        for grp in self._groups:
+            print("\nFinding nearest cells for group {}  ...".format(grp))
+            SampleGroup = Group(grp)
+            SampleGroup.get_info()
+            for path in SampleGroup._groupPaths:
+                Smpl = Sample(path, Group._name)
+                print("{}  ...".format(Smpl.name))
+                Smpl.DistanceMean(settings.maxDist)
         
         
 class Group(Samplegroups):
@@ -164,7 +206,143 @@ class Group(Samplegroups):
     
     def get_info(self):
         namerreg = re.compile(self.namer, re.I)
-        Group._groupPaths = [p for p in self._samplePaths if namerreg.search(p.name)]
+        Group._groupPaths = [p for p in self._samplePaths if namerreg.search(
+                            p.name)]
         Group._color = self._grpPalette.get(self._name)
-        Group._MPs = self._AllMPs.loc[:, self._AllMPs.columns.str.contains(self.namer)]
-
+        Group._MPs = self._AllMPs.loc[:, self._AllMPs.columns.str.contains(
+                                    self.namer)]
+    
+class Sample(Group):
+    def __init__(self, path, grp):
+        super().__init__(grp)        
+        self.name = str(path.stem)
+        self.path = path
+        self.channelPaths = [p for p in path.iterdir() if p.suffix == ".csv" and
+                            p.stem not in ["vector", "MPs"]]
+        self.color = Group._color
+        self.group = Group._name
+        self.MP = self._MPs.loc[0, self.name]
+    
+    def DistanceMean(self, dist = 5):
+        kws = {'Dist': dist}
+        distChans = [p for p in self.channelPaths for t in 
+                     settings.Distance_Channels if t == p.stem]
+        if settings.use_target:
+            target = settings.target_chan
+            targetPath = [p for p in self.channelPaths if p.stem == target]
+            tData = system.read_data(targetPath, header = 0)
+            kws.update({'tData': tData})
+        for path in distChans:
+            Data = system.read_data(path, header = 0)
+            Prev_labels = Data.columns.str.contains("Nearest_")
+            Data.drop(labels=Prev_labels, axis=1, inplace=True, errors='ignore')
+            Data.name = path.stem
+            Data = self.find_distances(Data, volIncl = settings.Vol_inclusion, 
+                                      compare = settings.incl_type, **kws)
+            
+    def Clusters(self):
+        # TODO combine cluster finding with distmean.
+        pass
+        
+    def find_distances(self, Data, volIncl = 200, compare = "smaller", 
+                       clusters = False, **kws):
+        """Calculate distances between cells to either find the nearest cell 
+        and distance means per bin, or to find cell clusters. Argument "Data" 
+        is channel data from a sample."""
+        
+        def __get_nearby(ind, row, target, rmv_self=False, **kws):
+            """Within an iterator, find all cells near the current cell."""
+            maxDist = kws.get('Dist')# the distance used for subsetting target
+            point = CG3dPoint(row.x,row.y,row.z)
+            # When finding nearest in the same channel, remove the current
+            # cell from the frame, otherwise nearest cell would be itself.
+            if rmv_self == True: 
+                target = target.loc[target.index.difference([ind]),:]
+            # Find cells within the accepted limits (settings.maxDist)
+            near = target[(abs(target.x-row.x) <= maxDist) & 
+                          (abs(target.y-row.y) <= maxDist) & 
+                          (abs(target.z-row.z) <= maxDist)].index
+            if not near.empty: # Then get distances to nearby cells:
+                cols = ['XYZ','Dist','ID']
+                nearby = pd.DataFrame(columns=cols)
+                for i2, row2 in target.loc[near, :].iterrows():
+                    point2 = CG3dPoint(row2.x,row2.y,row2.z)
+                    dist = utils.distance(point, point2)
+                    if dist <= maxDist:# If distance is acceptable, store data
+                        temp = pd.Series([(row2.x,row2.y,row2.z), dist, row2.ID], 
+                                        index=cols, name = i2)
+                        nearby = nearby.append(temp, ignore_index=True)
+                if not nearby.empty: return nearby
+            return None
+        
+        def __find_clusters():
+            # TODO
+            pass
+        
+        def __find_nearest():
+            """For iterating the passed data to determine the nearest cells."""
+            # Creation of DataFrame for collecting the nearest cells.
+            if 'targetXY' in locals():
+                target = targetXY
+                comment = settings.target_chan
+                filename = "{}_vs_{}_DistanceMeans.csv".format(Data.name, comment)
+            else:
+                target = XYpos
+                rmv = True
+                comment = Data.name
+                filename = "{}_DistanceMeans.csv".format(Data.name)
+            cols = ["Nearest_XYZ_{}".format(comment), "Nearest_Dist_{}".format(
+                    comment), "Nearest_ID_{}".format(comment)]
+            pointData = pd.DataFrame(columns=cols, index=XYpos.index)
+            # Iterate over each cell (row) in the data
+            for i, row in XYpos.iterrows():
+                nearby = __get_nearby(i, row, target, rmv_self=rmv, **kws)
+                if nearby is not None:
+                    nearest = nearby.Dist.idxmin()
+                    pointData.loc[i,cols] = nearby.loc[nearest].values
+            # Concatenate the obtained data with the read data.
+            NewData = pd.concat([Data, pointData], axis=1)
+            # Get bin and distance to nearest cell for each cell, then calculate
+            # average distance within each bin.
+            binnedData = NewData.loc[:,"DistBin"]
+            distances = NewData.loc[:,cols[1]].astype('float64')
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore", category=RuntimeWarning)
+                means=[np.nanmean(distances[binnedData.values==k]) for k in 
+                       np.arange(0,len(settings.projBins))]
+            return NewData, means, filename
+        
+        # -------- #
+        if volIncl > 0: # Subsetting of data based on cell volume
+            dInd = self.subset_data(Data, compare, volIncl)
+            if 'tData' in kws.keys(): # Obtain target channel if used.
+                tData = kws.pop('tData')
+                tInd = self.subset_data(tData, compare, volIncl)
+        elif 'tData' in kws.keys():
+            tData = kws.pop('tData')
+            tInd = tData.index
+        else: dInd = Data.index
+        # Accessing the data for the analysis via the indexes taken before.
+        # Cells for which the nearest cells will be found:
+        XYpos = Data.loc[dInd,['Position X','Position Y','Position Z','ID', 
+                               'DistBin']]
+        renames = {'Position X':'x','Position Y':'y','Position Z':'z'}
+        XYpos.rename(columns=renames, inplace=True) # renaming for dot notation
+        if 'tInd' in locals(): # Get data from target channel, if used
+            targetXY = tData.loc[tInd,['Position X','Position Y','Position Z',
+                                       'ID']]
+            targetXY.rename(columns=renames, inplace=True)
+        if clusters == False: # Find nearest cells
+            NewData, Means, filename = __find_nearest()
+            # TODO fix mean array length problem in regards to relate_data()
+            # i.e. sometimes sample is longer than expected ???
+            insert, _ = process.relate_data(Means, self.MP, self._center, 
+                                            self._length)
+            SMeans = pd.Series(data=insert, name=self.name)
+            system.saveToFile(SMeans, self._dataDir, filename, overwrite=True)
+            OW_name = "{}.csv".format(Data.name)
+        else: # TODO add cluster finding
+#            __find_clusters()
+            pass
+        # Overwrite the original data with the data containing new columns.
+        system.saveToFile(NewData, self.path, OW_name, append = False)

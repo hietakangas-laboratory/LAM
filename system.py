@@ -41,7 +41,7 @@ def read_data(filepath, header = 2, test=True):
         try:
             data = pd.read_csv(filepath, header=header, index_col=False)
             data = data.loc[:, ~data.columns.str.contains('^Unnamed')]
-            if test:
+            if test: # Test if data contains cell ID's, i.e. correct input file
                 data.loc[:,"ID"]
         except KeyError:
             print("WARNING: read_data() call from {} line {}".format(
@@ -50,24 +50,26 @@ def read_data(filepath, header = 2, test=True):
         except FileNotFoundError:
             print("WARNING: read_data() call from {} line {}".format(
                                 inspect.stack()[1][1], inspect.stack()[1][2]))
-            print("File {} is not found at {}".format(filepath.name, 
+            print("File {} not found at {}".format(filepath.name, 
                   str(filepath.parent)))
             return
         return data
 
-def saveToFile(data, directory, filename, append = True):
-    """Takes a Series and saves it to a file with a DataFrame"""
+def saveToFile(data, directory, filename, append=True, overwrite=False):
+    """Takes a Series and saves it to a DataFrame file, or alternatively saves
+    a DataFrame to a file"""
     path = directory.joinpath(filename)
     if append == False:
         data.to_csv(str(path),index=False)
     elif path.exists():
         file = pd.read_csv(str(path),index_col=False)
-        if data.name not in file.columns:
+        if overwrite:
+            file.loc[:,data.name] = data
+        elif data.name not in file.columns:
             file = pd.concat([file,data],axis=1)
             file = file.sort_index(axis=1)
             file.to_csv(str(path),index=False)
-    else:
-        data.to_frame().to_csv(str(path),index=False)
+    else: data.to_frame().to_csv(str(path),index=False)
 
 class store:
     samplegroups = []

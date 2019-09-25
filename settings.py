@@ -48,11 +48,10 @@ class settings:
     # to be collected (e.g. intensities), the code expects an ID number after
     # the search string, separated by "_". E.g. "Intensity_Mean" => "Intensity_Mean_Ch=1".
     # The last value is the unit of the values, eg um^2 for area.
-    # TODO add units to AddData?
-    AddData = {"Area": ["Area.csv", "$\u03BCm^2$"], # um^2 = "$\u03BCm^2$"
-               "Volume": ["Volume.csv", "$\u03BCm^3$"], # um^3 = "$\u03BCm^3$"
+    AddData = {"Area": ["Area.csv", "$\u03BCm^2$"], 
+               "Volume": ["Volume.csv", "$\u03BCm^3$"],
                "Intensity Mean": ["Intensity_Mean", "Intensity"]
-               }
+               } # um^2 = "$\u03BCm^2$"  ;   um^3 = "$\u03BCm^3$"
     # If set to true, replaces the above mentioned (AddData) ID numbers with an
     # alternative moniker as defined in channelID
     replaceID = True
@@ -63,8 +62,23 @@ class settings:
     ###################################################################
     
     ### ANALYSIS OPTIONS ###
-    Find_Distances = True
+    # Find nearest cell of each cell. Distance estimation is performed for all 
+    # channels in Distance_Channels -list. If use target is True, the nearest
+    # cell is found on the channel defined by target_chan, otherwise they are
+    # found within the channel undergoing analysis.
+    Find_Distances = False
     Distance_Channels = ["GFP"]
+    use_target = False
+    target_chan = "DAPI"
+    # The maximum distance the nearest cell will be looked at. Increase greatly
+    # diminishes performance, depending on the size of the dataset and the 
+    # density of cells.
+    maxDist = 15    # Radius around the cell
+    # Whether to look only at cells of certain size. Default is to include cells 
+    # smaller than Vol_inclusion. If cells of greater volume are wanted, 
+    # designate incl_type to be 'greater'. Otherwise, the string can be left empty.
+    incl_type = ''
+    Vol_inclusion = 500     # Set as zero if not wanted.
     
     ### STATISTICS OPTIONS ###
     # Whether to perform group-wise stat analysis.
@@ -76,9 +90,9 @@ class settings:
     ### PLOTTING OPTIONS ###
     Create_Channel_Plots = True
     Create_AddData_Plots = True
-    Create_ChanVSChan_Plots = True
-    Create_ChanVSAdd_Plots = True
-    Create_AddVSAdd_Plots = True
+    Create_ChanVSChan_Plots = False
+    Create_ChanVSAdd_Plots = False
+    Create_AddVSAdd_Plots = False
     
     seaborn_style = 'whitegrid'   # Different styles of plots, e.g. background
     #[white, dark, whitegrid, darkgrid, ticks]

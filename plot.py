@@ -32,7 +32,7 @@ class plotter:
             self.vmax = plotData.max()
         except: pass    
         return
-
+    
     def vector(self, samplename, vectordata, X, Y, binaryArray = None, skeleton = None):
         if skeleton is not None: 
             fig, axes = plt.subplots(nrows=1, ncols=2, figsize=(12, 6),
@@ -60,6 +60,22 @@ class plotter:
                                kws.get('value_str'), var_name = kws.get('var_str'))
             return plotData
         
+        def __set_xtick():
+            xticks = np.arange(0, kws.get('xlen'), 5)
+            for ax in g.axes.flat:
+                plt.xticks(xticks)
+                ax.set_xticklabels(xticks)
+            return g.axes.flat
+        
+        def __centerline():
+            MPbin = kws.get('centerline')
+            __, ytop = plt.ylim()
+            for ax in g.axes.flat:
+                ycoords = (0,ytop)
+                xcoords = (MPbin,MPbin)
+                ax.plot(xcoords,ycoords, 'r--')
+            return g.axes.flat
+        # -------- #
         if 'id_str' in kws:
             plotData = __melt_data(self.data, **kws)
             kws.update({'x': 'variable', 'y': 'value', 'data': plotData})
@@ -69,7 +85,7 @@ class plotter:
         with warnings.catch_warnings():
             warnings.simplefilter("ignore", category=UserWarning)
             if plotfunc.__name__ == "jointPlot": # If jointplot:
-                # Seaborn unfortunately doesn't support multi-axis jointplots,
+                # Seaborn doesn't unfortunately support multi-axis jointplots,
                 # consequently these are created as individual files.
                 key = plotData.iat[0, 0]
                 g = sns.jointplot(data=plotData, x = plotData.loc[:, kws.get('X')], 
@@ -82,6 +98,8 @@ class plotter:
                               height=kws.get('height'), aspect=kws.get('aspect'), 
                               legend_out=True,row_order = analysis.Samplegroups._groups)
                 g = (g.map_dataframe(plotfunc, self.palette, *args, **kws).add_legend())
+                if 'xlen' in kws.keys(): __set_xtick()
+                if 'centerline' in kws.keys(): __centerline()
                 g.set(xlabel = kws.get('xlabel'), ylabel = kws.get('ylabel'))
         # Giving a title and then saving the plot
         plt.suptitle(self.title, weight='bold', size = 20)
@@ -95,10 +113,7 @@ class plotter:
         sns.boxplot(data=data, x=kws.get('x'), y=kws.get('y'), hue=kws.get('id_str'), 
                     saturation=0.5, linewidth=0.1, showmeans=False, palette=palette, 
                     ax=axes)
-        if 'centerline' in kws.keys(): plotter.centerline(axes, kws.get('centerline'))
-        xticks = np.arange(0, data.loc[:,kws.get('x')].unique().size, 5)
-        plt.xticks(xticks)
-        axes.set_xticklabels(xticks)
+        return axes
     
     def distPlot(palette, *args, **kws):
         axes = plt.gca()
@@ -111,10 +126,6 @@ class plotter:
         sns.lineplot(data=data, x=kws.get('x'), y=kws.get('y'), hue=kws.get('hue'), 
                      alpha=0.5, dashes=False, err_style='band', ci='sd', palette=palette, 
                      ax=axes, err_kws = err_kws)
-        if 'centerline' in kws.keys(): plotter.centerline(axes, kws.get('centerline'))
-        xticks = np.arange(0, data.loc[:,kws.get('x')].unique().size, 5)
-        plt.xticks(xticks)
-        axes.set_xticklabels(xticks)
         return axes
     
     def jointPlot(palette, *args, **kws):
@@ -129,5 +140,5 @@ class plotter:
         __, ytop = axes.get_ylim()
         ycoords = (0,ytop)
         xcoords = (MPbin,MPbin)
-        axes.plot(xcoords,ycoords, 'r--',**kws)
+        axes.plot(xcoords,ycoords, 'r--')
         return axes

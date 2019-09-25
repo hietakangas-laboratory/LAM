@@ -134,8 +134,7 @@ class get_sample:
     def create_vector(self, creationBins, datadir, Skeletonize, resize, BDiter, SigmaGauss):
         """For creating the vector from the running median of the DAPI-positions."""
         positions = self.vectData
-        X = positions.loc[:,'Position X']
-        Y = positions.loc[:,'Position Y']
+        X, Y = positions.loc[:,'Position X'], positions.loc[:,'Position Y']
         if Skeletonize:
             vector, binaryArray, skeleton, lineDF = self.SkeletonVector(X, Y, resize, BDiter, SigmaGauss)            
         else:
@@ -150,13 +149,18 @@ class get_sample:
         return vector   
     
     def SkeletonVector(self, X, Y, resize, BDiter, SigmaGauss):
+        def resize_minmax(minv, maxv, axis, resize):
+            rminv =  math.floor((minv * resize) / 10) * 10
+            rmaxv =  math.ceil((maxv * resize) / 10) * 10
+            return rminv, rmaxv
+        
         buffer = 100 * resize
         coords = list(zip(X,Y))  
         
         miny, maxy = Y.min(), Y.max()
-        rminy, rmaxy = get_sample.resize_minmax(miny, maxy, "y", resize)
         minx, maxx = X.min(), X.max()
-        rminx, rmaxx = get_sample.resize_minmax(minx, maxx, "x", resize)
+        rminy, rmaxy = resize_minmax(miny, maxy, "y", resize)
+        rminx, rmaxx = resize_minmax(minx, maxx, "x", resize)
         
         ylabels = np.arange(int(rminy)-buffer, int(rmaxy+(buffer+1)), 10)
         xlabels = np.arange(int(rminx)-buffer, int(rmaxx+(buffer+1)), 10)
@@ -232,11 +236,6 @@ class get_sample:
         vector = vector.simplify(settings.simplifyTol)
         linedf = pd.DataFrame(line, columns =['X', 'Y']) 
         return vector, BA, skeleton, linedf
-        
-    def resize_minmax(minv, maxv, axis, resize):
-        rminv =  math.floor((minv * resize) / 10) * 10
-        rmaxv =  math.ceil((maxv * resize) / 10) * 10
-        return rminv, rmaxv
            
     def MedianVector(self, X, Y, creationBins):
         # Find the minimal and maximum values of X in the cell positions, and 
@@ -395,16 +394,12 @@ class normalize:
         """ For inserting sample data into larger matrix, centered with MP."""
         cols = self.counts.columns
         data = pd.DataFrame(np.zeros((arrayLength, len(cols))), columns = cols)
-        SampleStart = pd.Series(np.zeros(len(cols)), index = cols)
+        SampleStart = pd.Series(np.full(len(cols), np.nan), index = cols)
         for col in self.counts.columns:
-            handle = self.counts.loc[:, col]
-            point = MPs.loc[0,col]
+            handle = self.counts.loc[:, col].values
+            mp = MPs.loc[0,col]
             # Creation of dataframe insert
-            insx = int(store.centerpoint - point)
-            end = insx+len(handle)
-            insert = np.zeros(data.shape[0])
-            insert[insert == 0]= np.nan
-            insert[insx:end] = handle
+            insert, insx = relate_data(handle,mp,store.centerpoint,arrayLength)
             data[col] = insert
             SampleStart.at[col] = insx
         filename = str("Norm_{}.csv".format(self.channel))
@@ -425,8 +420,7 @@ class normalize:
                 binnedData = data.loc[:, "DistBin"]
                 bins = np.arange(1, len(settings.projBins) + 1)
                 for col in sampleData:
-                    avgS = pd.Series(np.zeros(TotalLen), name = sample).replace(
-                                                                    0, np.nan)
+                    avgS = pd.Series(np.full(TotalLen, np.nan), name = sample)
                     with warnings.catch_warnings():
                         warnings.simplefilter("ignore", category=RuntimeWarning)
                         insert = [np.nanmean(sampleData.loc[binnedData==i, 
@@ -441,5 +435,17 @@ class normalize:
 #                print("{}: {} not found on {}".format(self.channel, dataType, sample))
 #            except StopIteration:
 #                pass
+                    
+def relate_data(data, MP=0, center=50, TotalLength=100):
+    """Sets the passed data into the context of all samples, ie. places the
+    data into an empty array with the exact length required to fit all 
+    samples"""
+    try: length = data.shape[0]
+    except: length = len(data)
+    insx = int(center - MP)
+    end = int(insx+length)
+    insert = np.full(TotalLength, np.nan)
+    insert[insx:end] = data
+    return insert, insx
             
         
