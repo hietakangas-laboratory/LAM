@@ -94,7 +94,7 @@ class settings:
     Create_ChanVSAdd_Plots = False
     Create_AddVSAdd_Plots = False
     
-    seaborn_style = 'whitegrid'   # Different styles of plots, e.g. background
+    seaborn_style = 'ticks'   # Different styles of plots, e.g. background
     #[white, dark, whitegrid, darkgrid, ticks]
     seaborn_context = 'talk'  # Defines plot object sizes, e.g. text
     # size order small to large: 'paper', 'talk', 'poster'

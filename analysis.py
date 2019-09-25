@@ -50,6 +50,9 @@ class Samplegroups:
         
     def create_plots(self):
         # Creation of boxplots of channel-specific cell counts
+        basekws = {'id_str': 'Sample Group', 'hue': 'Sample Group', 
+                       'row': 'Sample Group','height':5, 'aspect':3, 
+                       'var_str': 'Longitudinal Position'}
         if settings.Create_Channel_Plots:
             print("\nPlotting channels  ...")
             for chanPath in self._chanPaths:
@@ -57,11 +60,9 @@ class Samplegroups:
                 plot_maker = plotter(plotData, self._plotDir, 
                                      palette=self._grpPalette)
                 self.title = plotData.name
-                kws = {'id_str': 'Sample Group', 'hue': 'Sample Group', 
-                       'row': 'Sample Group', 'centerline': plot_maker.MPbin,
-                       'xlabel':"Longitudinal Position", 'ylabel': 'Cell Count', 
-                       'title': self.title, 'height':5, 'aspect':3, 
-                       'xlen':self._length}
+                kws = {'centerline': plot_maker.MPbin, 'ylabel': 'Cell Count', 
+                       'title': self.title, 'xlen':self._length}
+                kws.update(basekws)
                 savepath = self._plotDir
                 plot_maker.plot_Data(plotter.boxPlot, savepath, **kws)
         # Creation of lineplots for additional data
@@ -73,11 +74,9 @@ class Samplegroups:
                                      palette=self._grpPalette)
                 ylabel = settings.AddData.get(plotData.name.split('_')[0])[1]
                 self.title = plotData.name
-                kws = {'id_str': 'Sample Group', 'hue': 'Sample Group', 
-                       'row': 'Sample Group', 'centerline': plot_maker.MPbin, 
-                       'xlabel':"Longitudinal Position", 'ylabel': ylabel, 
-                       'title': self.title, 'height':5, 'aspect':3, 
-                       'xlen':self._length}
+                kws = {'centerline': plot_maker.MPbin, 'ylabel': ylabel, 
+                       'title': self.title, 'xlen':self._length}
+                kws.update(basekws)
                 savepath = self._plotDir
                 plot_maker.plot_Data(plotter.linePlot, savepath, **kws)
         # Creation of channel vs. channel jointplots
@@ -117,7 +116,7 @@ class Samplegroups:
             temp = Data.loc[:, Data.columns.str.contains(namerreg)].T
             if settings.Drop_Outliers and drop:
                 temp = temp.where(__Drop, np.nan)
-            temp.loc[:,'Sample Group'] = grp
+            temp['Sample Group'] = grp
             if plotData.empty: plotData = temp
             else: plotData = pd.concat([plotData, temp])
         plotData.name = '_'.join(str(path.stem).split("_")[1:])
@@ -135,8 +134,8 @@ class Samplegroups:
             # Find channel-data and add specific names for plotting
             Data1 = self.read_channel(Path1, self._groups)
             Data2 = self.read_channel(Path2, self._groups)
-            Data1 = Data1.assign({"Sample": Data1.index})
-            Data2 = Data2.assign({"Sample": Data2.index})
+            Data1["Sample"] = Data1.index
+            Data2["Sample"] = Data2.index
             namer1 = Data1.name
             namer2 = Data2.name
             if addit: # Find unit of additional data from settings
@@ -157,7 +156,7 @@ class Samplegroups:
                 plot_maker = plotter(grpData, self._plotDir, title=self.title,
                                      palette=self._grpPalette)
                 # Keyword arguments for plotting operations.
-                kws = {'X': namer1, 'Y': namer2, 'row': 'Sample Group', 
+                kws = {'x': namer1, 'y': namer2, 'row': 'Sample Group', 
                        'hue':'Sample Group', 'xlabel':namer1, 'ylabel':ylabel, 
                        'title': self.title, 'height':5, 'aspect':1}
                 # Create plot

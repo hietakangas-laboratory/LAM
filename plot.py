@@ -5,20 +5,17 @@ Created on Fri Aug 23 14:07:33 2019
 @author: artoviit
 """
 from settings import settings
-import system, analysis
+import analysis
 from system import store
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
-import pathlib as pl
 import warnings
 
 class plotter:
-    __palette = settings.grpColors
-    
     def __init__(self, plotData, savepath, title=None, palette=None, color='b'):
-        sns.set_style(settings.seaborn_style, {"xtick.major.size": 8, "ytick.major.size": 8})
+        sns.set_style(settings.seaborn_style)
         sns.set_context(settings.seaborn_context)
         self.data = plotData
         self.name = plotData.name
@@ -54,18 +51,18 @@ class plotter:
         fig.savefig(str(self.savepath.joinpath(name)), format=settings.saveformat)
         plt.close('all')
         
-    def plot_Data(self, plotfunc, savepath, palette = None, *args, **kws):
+    def plot_Data(self, plotfunc, savepath, palette = None, **kws):
         def __melt_data(Data, **kws):
-            plotData = pd.melt(self.data, id_vars = kws.get('id_str'), value_vars = 
-                               kws.get('value_str'), var_name = kws.get('var_str'))
-            return plotData
+            if 'var_str' in kws.keys(): varname = kws.get('var_str')
+            else: varname = 'variable'
+            plotData = pd.melt(self.data, id_vars=kws.get('id_str'),value_vars= 
+                               kws.get('value_str'), var_name=varname)
+            return plotData, varname
         
         def __set_xtick():
-            xticks = np.arange(0, kws.get('xlen'), 5)
-            for ax in g.axes.flat:
-                plt.xticks(xticks)
-                ax.set_xticklabels(xticks)
-            return g.axes.flat
+            length = kws.get('xlen')
+            xtick = np.arange(0, length, 5)
+            plt.xticks(xtick, xtick)
         
         def __centerline():
             MPbin = kws.get('centerline')
@@ -74,40 +71,41 @@ class plotter:
                 ycoords = (0,ytop)
                 xcoords = (MPbin,MPbin)
                 ax.plot(xcoords,ycoords, 'r--')
-            return g.axes.flat
         # -------- #
         if 'id_str' in kws:
-            plotData = __melt_data(self.data, **kws)
-            kws.update({'x': 'variable', 'y': 'value', 'data': plotData})
+            plotData, varname = __melt_data(self.data, **kws)
+            kws.update({'x': varname, 'y': 'value', 'data': plotData})
         else: 
             plotData = self.data
             kws.update({'data': plotData})
         with warnings.catch_warnings():
             warnings.simplefilter("ignore", category=UserWarning)
             if plotfunc.__name__ == "jointPlot": # If jointplot:
-                # Seaborn doesn't unfortunately support multi-axis jointplots,
+                # Seaborn unfortunately doesn't support multi-axis jointplots,
                 # consequently these are created as individual files.
                 key = plotData.iat[0, 0]
-                g = sns.jointplot(data=plotData, x = plotData.loc[:, kws.get('X')], 
-                          y = plotData.loc[:,kws.get('Y')], kind='kde', 
+                g = sns.jointplot(data=plotData, x = plotData.loc[:, kws.get('x')], 
+                          y = plotData.loc[:,kws.get('y')], kind='kde', 
                           color= palette.get(key), joint_kws={'shade_lowest':False})
                 
             else: # Creation of plot grids containing each sample group.
                 g = sns.FacetGrid(plotData, row = kws.get('row'),hue = kws.get('hue'), 
-                              sharex=True, sharey=True, gridspec_kws={'hspace': 0.2},
+                              sharex=True, sharey=True, gridspec_kws={'hspace': 0.3},
                               height=kws.get('height'), aspect=kws.get('aspect'), 
-                              legend_out=True,row_order = analysis.Samplegroups._groups)
-                g = (g.map_dataframe(plotfunc, self.palette, *args, **kws).add_legend())
-                if 'xlen' in kws.keys(): __set_xtick()
+                              row_order=analysis.Samplegroups._groups, 
+                              legend_out=True, dropna=False)
+                g = (g.map_dataframe(plotfunc, self.palette, **kws).add_legend())
                 if 'centerline' in kws.keys(): __centerline()
-                g.set(xlabel = kws.get('xlabel'), ylabel = kws.get('ylabel'))
+                if 'xlen' in kws.keys(): __set_xtick()
+                g.set(ylabel=kws.get('ylabel'))
+                plt.xlabel(kws.get('x'), labelpad=20)
         # Giving a title and then saving the plot
         plt.suptitle(self.title, weight='bold', size = 20)
         filepath = savepath.joinpath(self.title+settings.figExt)
         g.savefig(str(filepath), format=settings.saveformat)
         plt.close('all')
         
-    def boxPlot(palette, *args, **kws):
+    def boxPlot(palette, **kws):
         axes = plt.gca()
         data = kws.pop('data')
         sns.boxplot(data=data, x=kws.get('x'), y=kws.get('y'), hue=kws.get('id_str'), 
@@ -115,11 +113,11 @@ class plotter:
                     ax=axes)
         return axes
     
-    def distPlot(palette, *args, **kws):
+    def distPlot(palette, **kws):
         axes = plt.gca()
         return axes
     
-    def linePlot(palette, *args, **kws):
+    def linePlot(palette, **kws):
         axes = plt.gca()
         data = kws.pop('data')
         err_kws = {'alpha': 0.4}
@@ -128,17 +126,10 @@ class plotter:
                      ax=axes, err_kws = err_kws)
         return axes
     
-    def jointPlot(palette, *args, **kws):
+    def jointPlot(palette, **kws):
         axes = plt.gca()
         data = kws.pop('data')
         key = data.iat[0, 0]
         sns.jointplot(data=data, x = data.loc[:, kws.get('X')], y = data.loc[:, 
                        kws.get('Y')], kind = 'kde', color= palette.get(key), 
                         ax = axes, joint_kws={'shade_lowest':False})
-        
-    def centerline(axes, MPbin, **kws):
-        __, ytop = axes.get_ylim()
-        ycoords = (0,ytop)
-        xcoords = (MPbin,MPbin)
-        axes.plot(xcoords,ycoords, 'r--')
-        return axes
