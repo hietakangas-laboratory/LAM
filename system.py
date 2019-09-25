@@ -67,8 +67,8 @@ def saveToFile(data, directory, filename, append=True, overwrite=False):
             file.loc[:,data.name] = data
         elif data.name not in file.columns:
             file = pd.concat([file,data],axis=1)
-            file = file.sort_index(axis=1)
-            file.to_csv(str(path),index=False)
+        file = file.sort_index(axis=1)
+        file.to_csv(str(path),index=False)
     else: data.to_frame().to_csv(str(path),index=False)
 
 class store:

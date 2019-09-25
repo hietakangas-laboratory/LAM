@@ -53,51 +53,60 @@ class Samplegroups:
         basekws = {'id_str': 'Sample Group', 'hue': 'Sample Group', 
                        'row': 'Sample Group','height':5, 'aspect':3, 
                        'var_str': 'Longitudinal Position'}
+        def __base(paths, func, ylabel=None, **kws):
+            savepath = self._plotDir
+            for path in paths:
+                plotData = self.read_channel(path, self._groups, drop=True)
+                plot_maker = plotter(plotData, self._plotDir, 
+                                 title=plotData.name, palette=self._grpPalette)
+                kws = {'centerline': plot_maker.MPbin, 'title': plot_maker.title, 
+                       'xlen':self._length, 'ylabel': ylabel}
+                kws.update(basekws)
+                if ylabel is None:
+                    ylabel = settings.AddData.get(plot_maker.title.split('_')[0])[1]
+                    kws.update({'ylabel': ylabel})
+                plot_maker.plot_Data(func, savepath, **kws)
+        
+        def __versus(folder):
+            """Creation of bivariant jointplots."""
+            savepath = self._plotDir.joinpath(folder)
+            savepath.mkdir(exist_ok=True)
+            self.Joint_looper(self._chanPaths, savepath)
+            
+        def __nearestDist():
+            paths = self._dataDir.glob("DistanceMeans_*")
+            savepath = self._plotDir
+            for path in paths:
+                plotData = self.read_channel(path, self._groups)
+                plotData.name = ' '.join(str(path.stem).split('_'))
+                plot_maker = plotter(plotData, self._plotDir, 
+                                 title=plotData.name, palette=self._grpPalette)
+                kws = {'centerline': plot_maker.MPbin, 'ylabel': 'Distance', 
+                       'title': plot_maker.title, 'xlen':self._length}
+                kws.update(basekws)
+                plot_maker.plot_Data(plotter.linePlot, savepath, **kws)
+                        
+        #---------#
         if settings.Create_Channel_Plots:
             print("\nPlotting channels  ...")
-            for chanPath in self._chanPaths:
-                plotData = self.read_channel(chanPath, self._groups, drop=True)
-                plot_maker = plotter(plotData, self._plotDir, 
-                                     palette=self._grpPalette)
-                self.title = plotData.name
-                kws = {'centerline': plot_maker.MPbin, 'ylabel': 'Cell Count', 
-                       'title': self.title, 'xlen':self._length}
-                kws.update(basekws)
-                savepath = self._plotDir
-                plot_maker.plot_Data(plotter.boxPlot, savepath, **kws)
-        # Creation of lineplots for additional data
+            __base(self._chanPaths, plotter.boxPlot, ylabel='Cell Count')           
         if settings.Create_AddData_Plots:
             print("\nPlotting additional data  ...")
-            for addPath in self._addData:
-                plotData = self.read_channel(addPath, self._groups, drop=True)
-                plot_maker = plotter(plotData, self._plotDir, 
-                                     palette=self._grpPalette)
-                ylabel = settings.AddData.get(plotData.name.split('_')[0])[1]
-                self.title = plotData.name
-                kws = {'centerline': plot_maker.MPbin, 'ylabel': ylabel, 
-                       'title': self.title, 'xlen':self._length}
-                kws.update(basekws)
-                savepath = self._plotDir
-                plot_maker.plot_Data(plotter.linePlot, savepath, **kws)
-        # Creation of channel vs. channel jointplots
+            __base(self._addData, plotter.linePlot)  
         # TODO drop chanVSchan, and instead do scatter plot matrix
         if settings.Create_ChanVSChan_Plots:
-            savepath = self._plotDir.joinpath("Chan VS Chan")
-            savepath.mkdir(exist_ok=True)
             print("\nPlotting channel VS channel data  ...")
-            self.Joint_looper(self._chanPaths, savepath)
-        # Creation of channel vs. additional data jointplots
+            __versus("Chan VS Chan")
         if settings.Create_ChanVSAdd_Plots:
-            savepath = self._plotDir.joinpath("Chan VS AddData")
-            savepath.mkdir(exist_ok=True)
             print("\nPlotting channel VS additional data  ...")
-            self.Joint_looper(self._chanPaths, savepath, self._addData, addit=True)
+            __versus("Chan VS AddData")
         if settings.Create_AddVSAdd_Plots:
-            savepath = self._plotDir.joinpath("AddData VS AddData")
-            savepath.mkdir(exist_ok=True)
             print("\nPlotting additional data VS additional data  ...")
-            self.Joint_looper(self._addData, savepath, addit = True)
+            __versus("AddData VS AddData")
+        if settings.Create_NearestDist_Plots:
         # TODO Create DistMean plotting
+            print("\nPlotting average distances  ...")
+            __nearestDist()    
     
     def read_channel(self, path, groups, drop = False):
         def __Drop(Data):
@@ -134,10 +143,8 @@ class Samplegroups:
             # Find channel-data and add specific names for plotting
             Data1 = self.read_channel(Path1, self._groups)
             Data2 = self.read_channel(Path2, self._groups)
-            Data1["Sample"] = Data1.index
-            Data2["Sample"] = Data2.index
-            namer1 = Data1.name
-            namer2 = Data2.name
+            Data1["Sample"], Data2["Sample"] = Data1.index, Data2.index
+            namer1, namer2 = Data1.name, Data2.name
             if addit: # Find unit of additional data from settings
                 ylabel = settings.AddData.get(Data2.name.split('_')[0])[1]
             else: ylabel = namer2
@@ -222,7 +229,7 @@ class Sample(Group):
         self.group = Group._name
         self.MP = self._MPs.loc[0, self.name]
     
-    def DistanceMean(self, dist = 5):
+    def DistanceMean(self, dist = 10):
         kws = {'Dist': dist}
         distChans = [p for p in self.channelPaths for t in 
                      settings.Distance_Channels if t == p.stem]
@@ -233,8 +240,7 @@ class Sample(Group):
             kws.update({'tData': tData})
         for path in distChans:
             Data = system.read_data(path, header = 0)
-            Prev_labels = Data.columns.str.contains("Nearest_")
-            Data.drop(labels=Prev_labels, axis=1, inplace=True, errors='ignore')
+            Data = Data.loc[:, ~Data.columns.str.contains("Nearest_")]
             Data.name = path.stem
             Data = self.find_distances(Data, volIncl = settings.Vol_inclusion, 
                                       compare = settings.incl_type, **kws)
@@ -284,12 +290,12 @@ class Sample(Group):
             if 'targetXY' in locals():
                 target = targetXY
                 comment = settings.target_chan
-                filename = "{}_vs_{}_DistanceMeans.csv".format(Data.name, comment)
+                filename = "DistanceMeans_{}_vs_{}.csv".format(Data.name, comment)
             else:
                 target = XYpos
                 rmv = True
                 comment = Data.name
-                filename = "{}_DistanceMeans.csv".format(Data.name)
+                filename = "DistanceMeans_{}.csv".format(Data.name)
             cols = ["Nearest_XYZ_{}".format(comment), "Nearest_Dist_{}".format(
                     comment), "Nearest_ID_{}".format(comment)]
             pointData = pd.DataFrame(columns=cols, index=XYpos.index)
@@ -333,11 +339,10 @@ class Sample(Group):
             targetXY.rename(columns=renames, inplace=True)
         if clusters == False: # Find nearest cells
             NewData, Means, filename = __find_nearest()
-            # TODO fix mean array length problem in regards to relate_data()
-            # i.e. sometimes sample is longer than expected ???
             insert, _ = process.relate_data(Means, self.MP, self._center, 
                                             self._length)
             SMeans = pd.Series(data=insert, name=self.name)
+            print(SMeans.size)
             system.saveToFile(SMeans, self._dataDir, filename, overwrite=True)
             OW_name = "{}.csv".format(Data.name)
         else: # TODO add cluster finding

@@ -20,7 +20,7 @@ directory should also be created for the normalization of samples. This director
 should contain position csv for one coordinate, typically in the middle of R3-region
 so that the samples have a point to anchor for group-wise analysis.
 
-Dependencies: Anaconda-included packages (Python 3.7), Shapely
+Dependencies: Anaconda-included packages (Python 3.7), Shapely, pycg3d
 
 @author: Arto Viitanen
 """
@@ -39,7 +39,7 @@ def main():
     # After all samples have been collected/created, find their respective MP 
     # bins and normalize (anchor) cell count data. If MP's are not used, the 
     # samples are anchored at bin == 0.
-    process.Create_Counts(PATHS)
+    process.Get_Counts(PATHS)
     # Storing of descriptive data of analysis, i.e. channels/samples/groups
     PATHS.save_AnalysisInfo(store.samples, store.samplegroups, store.channels)
     

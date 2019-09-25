@@ -7,9 +7,13 @@ class settings:
     # DEFINE PATH TO ANALYSIS FOLDER:
     # (Use input r'PATH' where PATH is your path)
     workdir = pl.Path(r'\\ad.helsinki.fi\home\a\artoviit\Desktop\test')
-    # Whether to gather data and create vectors. If False, expects to find pre-created
-    # datafiles in the Analysis Data directory.
+    # Whether to gather raw data and create vectors. If False, expects to find 
+    # pre-created datafiles in the Analysis Data directory, i.e. a previous 
+    # full run has been made, and there has been no edits to the data files.
     process_samples = False
+    # Whether to count and normalize data. If set to False, expect all data to
+    # be in place. Can be used to e.g. create additional plots faster.
+    process_counts = False
     
     
     ### VECTOR CREATION & PROJECTION ###
@@ -66,19 +70,20 @@ class settings:
     # channels in Distance_Channels -list. If use target is True, the nearest
     # cell is found on the channel defined by target_chan, otherwise they are
     # found within the channel undergoing analysis.
-    Find_Distances = False
+    Find_Distances = True
     Distance_Channels = ["GFP"]
     use_target = False
     target_chan = "DAPI"
     # The maximum distance the nearest cell will be looked at. Increase greatly
     # diminishes performance, depending on the size of the dataset and the 
     # density of cells.
-    maxDist = 15    # Radius around the cell
+    maxDist = 20    # Radius around the cell
     # Whether to look only at cells of certain size. Default is to include cells 
     # smaller than Vol_inclusion. If cells of greater volume are wanted, 
     # designate incl_type to be 'greater'. Otherwise, the string can be left empty.
+    Vol_inclusion = 0    # Set to zero if not wanted.
     incl_type = ''
-    Vol_inclusion = 500     # Set as zero if not wanted.
+    
     
     ### STATISTICS OPTIONS ###
     # Whether to perform group-wise stat analysis.
@@ -93,6 +98,7 @@ class settings:
     Create_ChanVSChan_Plots = False
     Create_ChanVSAdd_Plots = False
     Create_AddVSAdd_Plots = False
+    Create_NearestDist_Plots = True
     
     seaborn_style = 'ticks'   # Different styles of plots, e.g. background
     #[white, dark, whitegrid, darkgrid, ticks]

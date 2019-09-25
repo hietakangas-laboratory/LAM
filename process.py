@@ -57,8 +57,7 @@ def Gather_Samples(PATHS):
                     system.saveToFile(sample.secMP.rename(sample.name), 
                                       PATHS.datadir, "secMPs.csv")
 
-def Create_Counts(PATHS):
-    print("\nNormalizing sample data ...")
+def Get_Counts(PATHS):
     MPs = system.read_data(next(PATHS.datadir.glob("MPS.csv")), header = 0, test=False)
     # Find the smallest and largest bin-number of the dataset
     MPmax, MPmin = MPs.max(axis=1).item(), MPs.min(axis=1).item()
@@ -67,6 +66,9 @@ def Create_Counts(PATHS):
     store.totalLength = len(settings.projBins) + MPdiff
     # Store the bin number of the row onto which samples are anchored to
     store.centerpoint = MPmax
+    if settings.process_counts == False and settings.process_samples == False:
+        return
+    print("\nCounting and normalizing sample data ...")
     countpaths = PATHS.datadir.glob("All_*")
     for path in countpaths:
         name = str(path.stem).split('_')[1]
