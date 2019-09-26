@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 import numpy as np, pathlib as pl
-#
 class settings:
     """ A class for holding all user-end settings for the analysis."""
     ######################## PRIMARY SETTINGS ########################
@@ -72,8 +71,8 @@ class settings:
     # found within the channel undergoing analysis.
     Find_Distances = True
     Distance_Channels = ["GFP"]
-    use_target = False
-    target_chan = "DAPI"
+    use_target = True
+    target_chan = "Pros"
     # The maximum distance the nearest cell will be looked at. Increase greatly
     # diminishes performance, depending on the size of the dataset and the 
     # density of cells.
@@ -93,11 +92,13 @@ class settings:
     cntrlGroup = "starv"    # CASE-SENSITIVE!
     
     ### PLOTTING OPTIONS ###
+    Create_Plots = False     # ON / OFF switch for plots
+    
     Create_Channel_Plots = True
-    Create_AddData_Plots = True
-    Create_ChanVSChan_Plots = True
-    Create_ChanVSAdd_Plots = True
-    Create_AddVSAdd_Plots = True
+    Create_AddData_Plots = False
+    Create_ChanVSChan_Plots = False
+    Create_ChanVSAdd_Plots = False
+    Create_AddVSAdd_Plots = False
     Create_NearestDist_Plots = True
     
     seaborn_style = 'ticks'   # Different styles of plots, e.g. background

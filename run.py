@@ -20,7 +20,7 @@ directory should also be created for the normalization of samples. This director
 should contain position csv for one coordinate, typically in the middle of R3-region
 so that the samples have a point to anchor for group-wise analysis.
 
-Dependencies: Anaconda-included packages (Python 3.7), Shapely, pycg3d
+Dependencies: Anaconda-included packages (Python 3.7), Shapely
 
 @author: Arto Viitanen
 """
@@ -30,27 +30,32 @@ from settings import settings
 
 def main():
     PATHS = system.paths(settings.workdir)
-    # If sample processing set to True, collect data etc. Otherwise collect 
-    # data from "./Analysis Data/Samples".
+    # If sample processing set to True, collect data etc. Otherwise continue to
+    # plotting and group-wise operations.
     if settings.process_samples:
         process.Create_Samples(PATHS)
     else:
         process.Gather_Samples(PATHS)                        
-    # After all samples have been collected/created, find their respective MP 
-    # bins and normalize (anchor) cell count data. If MP's are not used, the 
-    # samples are anchored at bin == 0.
+    # After all samples have been collected/created, find their respective MP bins and
+    # normalize (anchor) cell count data. If MP's are not used, the samples are
+    # anchored at bin == 0.
     process.Get_Counts(PATHS)
     # Storing of descriptive data of analysis, i.e. channels/samples/groups
     PATHS.save_AnalysisInfo(store.samples, store.samplegroups, store.channels)
     
     # After samples have been counted and normalized, 
-    SampleGroups = analysis.Samplegroups(store.samplegroups, store.channels, 
-                                PATHS, child=False, length=store.totalLength,
-                                center=store.centerpoint)
+    ### TODO add plotting and group-wise operations
+    SampleGroups = analysis.Samplegroups(store.samplegroups, store.channels,
+                                         store.totalLength, store.center,PATHS)
     if settings.Find_Distances:
         SampleGroups.Get_DistanceMean()
-    SampleGroups.create_plots()
-
+    if settings.Create_Plots:
+        SampleGroups.create_plots()
+    
+#    Group = analysis.Group("Holidic")
+#    print(Grp.groups)
+#    print(Grp.name)
+#    print(Grp2.addData)
     print('\nANALYSIS COMPLETED')
 
 
