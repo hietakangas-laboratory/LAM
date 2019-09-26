@@ -438,7 +438,7 @@ class normalize:
 #            except StopIteration:
 #                pass
                     
-def relate_data(data, MP=0, center=50, TotalLength=100):
+def relate_data(data, MP=0, center=50, TotalLength=100, start = False):
     """Sets the passed data into the context of all samples, ie. places the
     data into an empty array with the exact length required to fit all 
     samples"""

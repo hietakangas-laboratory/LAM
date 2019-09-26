@@ -95,9 +95,9 @@ class settings:
     ### PLOTTING OPTIONS ###
     Create_Channel_Plots = True
     Create_AddData_Plots = True
-    Create_ChanVSChan_Plots = False
-    Create_ChanVSAdd_Plots = False
-    Create_AddVSAdd_Plots = False
+    Create_ChanVSChan_Plots = True
+    Create_ChanVSAdd_Plots = True
+    Create_AddVSAdd_Plots = True
     Create_NearestDist_Plots = True
     
     seaborn_style = 'ticks'   # Different styles of plots, e.g. background

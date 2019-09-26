@@ -2,7 +2,6 @@
 from settings import settings
 from plot import plotter
 import system, process
-from system import store as store
 import pandas as pd
 import numpy as np
 import pathlib as pl
@@ -18,6 +17,7 @@ class Samplegroups:
     _plotDir, _dataDir = pl.Path("./"), pl.Path("./")
     _grpPalette, _chanPalette = {}, {}
     _AllMPs = None
+    _AllStarts = None
     _length = 0
     _center = int(len(settings.projBins/2))
     
@@ -38,9 +38,12 @@ class Samplegroups:
             Samplegroups._plotDir = PATHS.plotdir
             Samplegroups._dataDir = PATHS.datadir
             Samplegroups._length = length
-            if center is not None: Samplegroups._center = center
             MPpath = PATHS.datadir.joinpath("MPs.csv")
             Samplegroups._AllMPs = system.read_data(MPpath,header=0,test=False)
+            if center is not None: 
+                Samplegroups._center = center
+                Samplegroups._AllStarts = Samplegroups._AllMPs.applymap(
+                        lambda x: int(center - x))
             groupcolors = sns.color_palette("colorblind", len(groups),desat=.5)
             for i, grp in enumerate(groups):
                 Samplegroups._grpPalette.update({grp: groupcolors[i]})
@@ -53,6 +56,7 @@ class Samplegroups:
         basekws = {'id_str': 'Sample Group', 'hue': 'Sample Group', 
                        'row': 'Sample Group','height':5, 'aspect':3, 
                        'var_str': 'Longitudinal Position'}
+        
         def __base(paths, func, ylabel=None, **kws):
             savepath = self._plotDir
             for path in paths:
@@ -129,6 +133,7 @@ class Samplegroups:
             if plotData.empty: plotData = temp
             else: plotData = pd.concat([plotData, temp])
         plotData.name = '_'.join(str(path.stem).split("_")[1:])
+        plotData.center = self._center
         return plotData
     
     def Joint_looper(self, paths1, savepath, paths2 = None, addit = False):
@@ -339,11 +344,11 @@ class Sample(Group):
             targetXY.rename(columns=renames, inplace=True)
         if clusters == False: # Find nearest cells
             NewData, Means, filename = __find_nearest()
+            Means = pd.Series(Means, name=self.name)
             insert, _ = process.relate_data(Means, self.MP, self._center, 
                                             self._length)
             SMeans = pd.Series(data=insert, name=self.name)
-            print(SMeans.size)
-            system.saveToFile(SMeans, self._dataDir, filename, overwrite=True)
+            system.saveToFile(SMeans, self._dataDir, filename)
             OW_name = "{}.csv".format(Data.name)
         else: # TODO add cluster finding
 #            __find_clusters()

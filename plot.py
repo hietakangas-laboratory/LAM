@@ -25,7 +25,7 @@ class plotter:
         if title is not None: self.title = title
         else: self.title = self.name
         try:
-            self.MPbin = store.centerpoint
+            self.MPbin = plotData.center
             self.vmax = plotData.max()
         except: pass    
         return

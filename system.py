@@ -55,18 +55,19 @@ def read_data(filepath, header = 2, test=True):
             return
         return data
 
-def saveToFile(data, directory, filename, append=True, overwrite=False):
+def saveToFile(data, directory, filename, append=True):
     """Takes a Series and saves it to a DataFrame file, or alternatively saves
-    a DataFrame to a file"""
+    a DataFrame to a file. Expects the Series to be of same length as the data
+    in the csv"""
     path = directory.joinpath(filename)
     if append == False:
         data.to_csv(str(path),index=False)
     elif path.exists():
         file = pd.read_csv(str(path),index_col=False)
-        if overwrite:
-            file.loc[:,data.name] = data
-        elif data.name not in file.columns:
-            file = pd.concat([file,data],axis=1)
+        if data.name not in file.columns:
+            file = pd.concat([file,data], axis=1)
+        else:
+            file[data.name] = data
         file = file.sort_index(axis=1)
         file.to_csv(str(path),index=False)
     else: data.to_frame().to_csv(str(path),index=False)
