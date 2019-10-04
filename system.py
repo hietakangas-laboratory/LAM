@@ -8,8 +8,6 @@ class paths:
         """Creation of output folders."""
         # Create path-variables necessary for the analysis
         self.outputdir = workdir.joinpath('Analysis Data')
-        self.areadir = pl.Path(self.outputdir / 'Areas')
-        self.voldir = pl.Path(self.outputdir / 'Volumes')
         self.datadir = pl.Path(self.outputdir / 'Data Files')
         self.plotdir = pl.Path(self.outputdir / 'Plots')
         self.samplesdir = pl.Path(self.outputdir / 'Samples')
@@ -20,8 +18,6 @@ class paths:
             shutil.rmtree(self.datadir)
         # Create output directories
         pl.Path.mkdir((self.outputdir), exist_ok=True)
-        pl.Path.mkdir((self.areadir), exist_ok=True)
-        pl.Path.mkdir((self.voldir), exist_ok=True)
         pl.Path.mkdir((self.plotdir), exist_ok=True)
         pl.Path.mkdir((self.samplesdir), exist_ok=True)
         pl.Path.mkdir((self.datadir), exist_ok=True)

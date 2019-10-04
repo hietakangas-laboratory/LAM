@@ -1,11 +1,14 @@
 # -*- coding: utf-8 -*-
 from settings import settings
 from plot import plotter
-import system, process, pandas as pd, numpy as np, pathlib as pl, seaborn as sns, re, warnings
-from itertools import product, combinations
+import system, process, numpy as np, pathlib as pl, seaborn as sns, re, warnings
+from itertools import product, combinations, chain
 from pycg3d.cg3d_point import CG3dPoint
 from pycg3d import utils
 import scipy.stats as ss, statsmodels.stats.multitest as multi
+with warnings.catch_warnings():
+    warnings.simplefilter('ignore', category=FutureWarning)
+    import pandas as pd
 
 class Samplegroups:
     _instance = None
@@ -38,133 +41,169 @@ class Samplegroups:
             Samplegroups._AllMPs = system.read_data(MPpath, header=0, test=False)
             if center is not None:
                 Samplegroups._center = center
-                Samplegroups._AllStarts = Samplegroups._AllMPs.applymap(lambda x: int(center - x))
-            groupcolors = sns.color_palette('colorblind', (len(groups)), desat=0.5)
+                Samplegroups._AllStarts = Samplegroups._AllMPs.applymap(
+                                                    lambda x: int(center - x))
+            groupcolors = sns.xkcd_palette(settings.palette_colors)
             for i, grp in enumerate(groups):
                 Samplegroups._grpPalette.update({grp: groupcolors[i]})
 
-            chancolors = sns.color_palette('colorblind', len(self._chanPaths))
-            for i, chan in enumerate(self._chanPaths):
-                Samplegroups._chanPalette.update({chan: chancolors[i]})
-
     def create_plots(self):
         basekws = {'id_str':'Sample Group',  'hue':'Sample Group',  
-                   'row':'Sample Group', 'height':5,  'aspect':3,  
-                   'var_str':'Longitudinal Position'}
+                   'row':'Sample Group', 'height':5, 'aspect':3,  
+                   'var_str':'Longitudinal Position', 'flierS': 3}
+        
+        def _select(paths, adds=True):
+            retPaths = []
+            if adds: targets = settings.vs_adds
+            else: targets = settings.vs_channels
+            for trgt in targets:
+                if adds: namer = "^Avg_.*_{}.*".format(trgt)
+                else: namer = "^Norm_{}_.*".format(trgt)
+                reg = re.compile(namer, re.I)
+                selected = [p for p in paths if reg.search(str(p.stem))]
+                retPaths.extend(selected)
+            return retPaths
 
         def __base(paths, func, ylabel=None, **kws):
             savepath = self._plotDir
             for path in paths:
-                plotData = self.read_channel(path, (self._groups), drop=True)
-                plotData.center = self._center
-                plot_maker = plotter(plotData, (self._plotDir), 
-                             title=(plotData.name), palette=(self._grpPalette))
-                kws = {'centerline':plot_maker.MPbin,  'title':plot_maker.title,  
-                       'xlen':self._length, 'ylabel':ylabel}
+                dropB = settings.Drop_Outliers
+                plotData, name, cntr = self.read_channel(path, self._groups, 
+                                                           drop=dropB)
+                plot_maker = plotter(plotData, self._plotDir, center=cntr,
+                             title=name, palette=self._grpPalette)
+                kws = {'centerline':plot_maker.MPbin, 'title':plot_maker.title,  
+                       'value_str': 'Cell Count', 'xlen': self._length, 
+                       'ylabel':ylabel}
                 kws.update(basekws)
                 if ylabel is None:
-                    ylabel = settings.AddData.get(plot_maker.title.split('_')[0])[1]
+                    ylabel = settings.AddData.get(plot_maker.title)
                     kws.update({'ylabel': ylabel})
                 plot_maker.plot_Data(func, savepath, **kws)
 
-        def __versus(folder):
+        def __versus(paths1, paths2=None, folder=None):
             """Creation of bivariant jointplots."""
-            savepath = self._plotDir.joinpath(folder)
+            if folder:
+                savepath = self._plotDir.joinpath(folder)
+            else: savepath = self._plotDir
             savepath.mkdir(exist_ok=True)
-            self.Joint_looper(self._chanPaths, savepath)
+            self.Joint_looper(paths1, paths2, savepath)
+            
+        def __pair():
+            allData = pd.DataFrame()
+            for path in Samplegroups._chanPaths:
+                dropB = settings.Drop_Outliers
+                plotData, __, cntr = self.read_channel(path, self._groups, 
+                                                           drop=dropB)
+                channel = str(path.stem).split('_')[1]
+                plotData['Sample'] = plotData.index
+                plotData = pd.melt(plotData, id_vars=['Sample','Sample Group'],
+                                   var_name='Longitudinal Position',
+                                   value_name=channel)
+                if allData.empty: allData = plotData
+                else: 
+                    allData = allData.merge(plotData, how='outer', copy=False,
+                                            on=['Sample', 'Sample Group', 
+                                                'Longitudinal Position'])
+            name = 'All Channels Pairplots'
+            plot_maker = plotter(allData, self._plotDir, title=name, center=cntr,
+                                 palette=self._grpPalette)
+            kws = {'hue':'Sample Group', 'kind': 'reg', 'diag_kind': 'kde',
+                   'height':3.5, 'aspect':1}
+            plot_maker.plot_Data(plotter.pairPlot, self._plotDir, **kws)
 
         def __nearestDist():
-            paths = self._dataDir.glob('DistanceMeans_*')
+            paths = self._dataDir.glob('Avg_DistanceMeans_*')
             savepath = self._plotDir
             for path in paths:
-                plotData = self.read_channel(path, self._groups)
-                plotData.name = ' '.join(str(path.stem).split('_'))
-                plotData.center = self._center
-                plot_maker = plotter(plotData, (self._plotDir), title=(plotData.name),
-                  palette=(self._grpPalette))
-                print(self.length)
+                plotData, name, cntr = self.read_channel(path, self._groups)
+                plot_maker = plotter(plotData, self._plotDir, center=cntr, 
+                                     title=name, palette=self._grpPalette)
                 kws = {'centerline':plot_maker.MPbin,  'ylabel':'Distance',  
                        'title':plot_maker.title, 'xlen':self._length}
                 kws.update(basekws)
                 (plot_maker.plot_Data)((plotter.linePlot), savepath, **kws)
         #-------#
+        print("\n---Creating plots---")
         if settings.Create_Channel_Plots:
             print('\nPlotting channels  ...')
-            __base((self._chanPaths), (plotter.boxPlot), ylabel='Cell Count')
+            __base(self._chanPaths, plotter.boxPlot, ylabel='Cell Count')
         if settings.Create_AddData_Plots:
             print('\nPlotting additional data  ...')
             __base(self._addData, plotter.linePlot)
-        if settings.Create_ChanVSChan_Plots:
-            print('\nPlotting channel VS channel data  ...')
-            __versus('Chan VS Chan')
+        if settings.Create_Channel_PairPlots:
+            print('\nPlotting channel pairs  ...')
+            __pair()
         if settings.Create_ChanVSAdd_Plots:
             print('\nPlotting channel VS additional data  ...')
-            __versus('Chan VS AddData')
+            paths1 = _select(self._chanPaths, adds=False)
+            paths2 = _select(self._addData)
+            __versus(paths1, paths2, 'Chan VS AddData')
         if settings.Create_AddVSAdd_Plots:
             print('\nPlotting additional data VS additional data  ...')
-            __versus('AddData VS AddData')
+            paths = _select(self._addData)
+            __versus(paths, folder = 'AddData VS AddData')
         if settings.Create_NearestDist_Plots:
             print('\nPlotting average distances  ...')
             __nearestDist()
+        # TODO add sample group total counts / plots & stats
 
     def read_channel(self, path, groups, drop=False):
-        def __Drop(Data):
-            Mean = np.nanmean(Data.values)
-            std = np.nanstd(Data.values)
-            with warnings.catch_warnings():
-                warnings.simplefilter('ignore', category=RuntimeWarning)
-                Data = np.abs(Data.values - Mean) <= settings.dropSTD * std
-            return Data
-        #--------#
         Data = system.read_data(path, header=0, test=False)
         plotData = pd.DataFrame()
         for grp in groups:
             namer = str(grp + '_')
             namerreg = re.compile(namer, re.I)
-            temp = Data.loc[:, Data.columns.str.contains(namerreg)].T
-            if settings.Drop_Outliers:
-                if drop:
-                    temp = temp.where(__Drop, np.nan)
+            temp = Data.loc[:, Data.columns.str.contains(namerreg, regex=True)].T
+            if settings.Drop_Outliers and drop:
+                temp = DropOutlier(temp)
             temp['Sample Group'] = grp
             if plotData.empty: plotData = temp
             else: plotData = pd.concat([plotData, temp])
-        plotData.name = '_'.join(str(path.stem).split('_')[1:])
-        plotData.center = self._center
-        return plotData
+        name = '_'.join(str(path.stem).split('_')[1:])
+        center = self._center
+        return plotData, name, center
 
-    def Joint_looper(self, paths1, savepath, paths2=None, addit=False):
+    def Joint_looper(self, paths1, paths2 = None, savepath = pl.PurePath()):
+        def __label(name):
+            """Gets unit of data from settings based on file name, if found."""
+            test = name.split('-')
+            try:
+                label = settings.AddData.get(test[0].split('_')[1])[1]                
+                return label
+            except: return 
+            
         # Loop through all combinations of data sources:
-        inputPaths = paths1
-        if paths2 is not None:
+        if paths1 == paths2 or paths2 == None:
+            pairs = combinations(paths1, 2)
+        else:
             inputPaths = [paths1, paths2]
             pairs = product(*inputPaths)
-        else:pairs = combinations(inputPaths, 2)
         for pair in pairs:
             (Path1, Path2) = pair
             # Find channel-data and add specific names for plotting
-            Data1 = self.read_channel(Path1, self._groups)
-            Data2 = self.read_channel(Path2, self._groups)
+            Data1, name, cntr = self.read_channel(Path1, self._groups)
+            Data2, name2, __ = self.read_channel(Path2, self._groups)
             Data1['Sample'], Data2['Sample'] = Data1.index, Data2.index
-            namer1, namer2 = Data1.name, Data2.name
-            if addit: # Find unit of additional data from settings
-                ylabel = settings.AddData.get(Data2.name.split('_')[0])[1]
-            else: ylabel = namer2
+            name = ' '.join(name.split('_'))
+            name2 = ' '.join(name2.split('_'))
+            # Find unit of additional data from settings
+            ylabel = __label(name)
+            xlabel = __label(name2)
             # Melt data to long-form, and then merge to have one obs per row.
             Data1 = Data1.melt(id_vars=['Sample Group', 'Sample'], 
-                               value_name=(Data1.name), var_name='Bin')
+                               value_name=name, var_name='Bin')
             Data2 = Data2.melt(id_vars=['Sample Group', 'Sample'], 
-                               value_name=(Data2.name), var_name='Bin')
-            fullData = Data1.merge(Data2, on=['Sample Group',
-             'Sample', 'Bin'])
+                               value_name=name2, var_name='Bin')
+            fullData = Data1.merge(Data2, on=['Sample Group', 'Sample', 'Bin'])
             for group in self._groups:
-                self.title = '{}_{} VS {}'.format(group, namer1, namer2)
+                title = '{} {} VS {}'.format(group, name, name2)
                 grpData = fullData.where(fullData['Sample Group'] == group).dropna()
-                grpData.name = self.title
-                plot_maker = plotter(grpData, (self._plotDir), title=(self.title), 
-                                     palette=(self._grpPalette))
-                kws = {'x':namer1, 'y':namer2,  'row':'Sample Group', 
-                       'hue':'Sample Group', 'xlabel':namer1,  'ylabel':ylabel,  
-                       'title':self.title, 'height':5,  'aspect':1}
+                plot_maker = plotter(grpData, self._plotDir, title=title, 
+                                     palette=self._grpPalette)
+                kws = {'x': name, 'y': name2, 'hue':'Sample Group', 
+                       'xlabel': xlabel, 'ylabel':ylabel, 'title':title, 
+                       'height':5,  'aspect':1}
                 plot_maker.plot_Data(plotter.jointPlot, savepath, 
                                      palette=self._grpPalette, **kws)
 
@@ -195,23 +234,37 @@ class Samplegroups:
                 Smpl.DistanceMean(settings.maxDist)
 
     def Get_Statistics(self):
-        print('\nCalculating statistics  ...')
+        if settings.Create_Plots:
+            print('\n---Calculating and plotting statistics---')
+        else: print('\n---Calculating statistics---')
         control = settings.cntrlGroup
         cntrlName = re.compile(control, re.I)
         others = [g for g in self._groups if not cntrlName.fullmatch(g)]
         grouping = [[control], others]
         pairs = product(*grouping)
+        current = ''
         for pair in pairs:
             temp, testgroup = pair
             Cntrl = Group(control)
             Grp = Group(testgroup)
+            if current != Grp.group:
+                current = Grp.group
+                print("{} Vs. {}  ...".format(Cntrl.group, Grp.group))
             Stats = statistics(Cntrl, Grp)
-            for path in Stats.chanPaths:
-                Stats.MWW_test(path)
-
-            for path in Stats.avgPaths:
-                Stats.MWW_test(path)
-
+            for path in chain(Stats.chanPaths,Stats.avgPaths):
+                Stats = Stats.MWW_test(path)
+                if settings.Create_Plots and settings.Create_Statistics_Plots:
+                    addChan_name = str(path.stem).split('_')[1:]
+                    Stats.plottitle = "{} = {}".format(Stats.title, 
+                                       '-'.join(addChan_name))
+                    ylabel = "Count" 
+                    if len(addChan_name) > 2:
+                        temp = addChan_name.split('-')
+                        try:
+                            ylabel = settings.AddData.get(temp[0].split('_')[1])[1] 
+                        except: pass
+                    Stats.Create_Plots(Stats.statData, ylabel, 
+                                       palette=self._grpPalette)
 
 class Group(Samplegroups):
     _color = 'b'
@@ -225,16 +278,16 @@ class Group(Samplegroups):
         if not child:
             self.color = self._grpPalette.get(self.group)
             namerreg = re.compile(self.namer, re.I)
-            self.groupPaths = [p for p in self._samplePaths if namerreg.search(p.name)]
+            self.groupPaths = [p for p in self._samplePaths if namerreg.search(
+                                                                        p.name)]
             self.MPs = self._AllMPs.loc[:,
             self._AllMPs.columns.str.contains(self.namer)]
-            Group._color = (self.color,)
+            Group._color = (self.color)
             Group._groupPaths = self.groupPaths
             Group._MPs = self.MPs
 
 
 class Sample(Group):
-
     def __init__(self, path, grp):
         super().__init__(grp, child=True)
         self.name = str(path.stem)
@@ -274,7 +327,8 @@ class Sample(Group):
     def Clusters(self):
         pass
 
-    def find_distances(self, Data, volIncl=200, compare='smaller', clusters=False, **kws):
+    def find_distances(self, Data, volIncl=200, compare='smaller', clusters=False, 
+                       **kws):
         """Calculate distances between cells to either find the nearest cell 
         and distance means per bin, or to find cell clusters. Argument "Data" 
         is channel data from a sample."""
@@ -313,7 +367,8 @@ class Sample(Group):
             if 'targetXY' in locals():
                 target = targetXY
                 comment = settings.target_chan
-                filename = 'Avg_DistanceMeans_{}_vs_{}.csv'.format(Data.name, comment)
+                filename = 'Avg_DistanceMeans_{}_vs_{}.csv'.format(Data.name, 
+                                                                  comment)
                 rmv = False
             else:
                 target = XYpos
@@ -378,53 +433,110 @@ class Sample(Group):
 
 
 class statistics:
-
     def __init__(self, control, group2):
         """Takes two Group-objects and creates statistics based on their 
-        normalized channel counts."""
-        self.cntrl = control.group
+        normalized channel counts and additional data."""
+        # Control group variables
+        self.cntrlGroup = control.group
         self.cntrlNamer = control.namer
-        self.cntrlColor = control.color
         self.cntrlSamples = control.groupPaths
+        # Test group variables
         self.tstGroup = group2.group
         self.tstNamer = group2.namer
-        self.tstColor = group2.color
         self.tstSamples = control.groupPaths
+        # Common / Stat object variables
         self.center = control._center
         self.length = control._length
-        self.title = '{} VS. {}'.format(self.cntrl, self.tstGroup)
+        self.title = '{} VS. {}'.format(self.cntrlGroup, self.tstGroup)
         self.dataDir = control._dataDir
         self.statsDir = control._statsDir
+        self.plotDir = control._plotDir.joinpath("Stat Plots")
+        self.plotDir.mkdir(exist_ok=True)
         self.chanPaths = self.dataDir.glob('Norm_*')
         self.avgPaths = self.dataDir.glob('Avg_*')
+        self.palette = {control.group: control.color, group2.group: group2.color}
+        # Statistics and data
+        self.statData = None
+        self.cntrlData = None
+        self.tstData = None
 
     def MWW_test(self, Path):
-        channel = str(Path.stem).split('_')[1]
-        print('{}: {}  ...'.format(self.title, channel))
+#        def __get_stats():
+                  
+        self.channel = ' '.join(str(Path.stem).split('_')[1:])
         Data = system.read_data(Path, header=0, test=False)
-        cntrlData = Data.loc[:, Data.columns.str.contains(self.cntrlNamer)]
+        cntrlData = Data.loc[:, Data.columns.str.contains(self.cntrlNamer, regex=True)]
         tstData = Data.loc[:, Data.columns.str.contains(self.tstNamer)]
-        statData = pd.DataFrame(index=(Data.index), columns=['Score Greater',
+        statData = pd.DataFrame(index=Data.index, columns=['Score Greater',
          'Corrected Greater', 'P Greater', 'Reject Greater',
          'Score Lesser', 'Corrected Lesser', 'P Lesser',
          'Reject Lesser'])
+        # TODO try implementing rollin window
+#        if settings.windowed:
+#            for i, __ in cntrlData.loc[settings.trail-1:-(settings.lead+1), 
+#                                       :].iterrows():
+#                sInd = i - settings.trail
+#                eInd = i + settings.lead
+#                cntrlVals = cntrlData.loc[sInd:eInd, :].values().flatten()
+#                tstVals = tstData.loc[sInd:eInd, :].values().flatten()
+                
         for ind, row in cntrlData.iterrows():
             row2 = tstData.loc[ind, :]
             if row.any() == True or row2.any() == True:
                 if np.array_equal(row.values, row2.values) == False:
-                    stat, pval = ss.mannwhitneyu(row, row2, alternative='greater')
-                    stat2, pval2 = ss.mannwhitneyu(row, row2, alternative='less')
-                    statData.iat[(ind, 0)], statData.iat[(ind, 2)] = stat, pval
-                    statData.iat[(ind, 4)], statData.iat[(ind, 6)] = stat2, pval2
+                    with warnings.catch_warnings():
+                        warnings.simplefilter('ignore', category=RuntimeWarning)
+                        stat, pval = ss.mannwhitneyu(row, row2, 
+                                                     alternative='greater')
+                        stat2, pval2 = ss.mannwhitneyu(row, row2, 
+                                                       alternative='less')
+                    statData.iat[ind, 0], statData.iat[ind, 2] = stat, pval
+                    statData.iat[ind, 4], statData.iat[ind, 6] = stat2, pval2
                 else:
-                    statData.iat[(ind, 0)], statData.iat[(ind, 2)] = (0, 0)
-                    statData.iat[(ind, 4)], statData.iat[(ind, 6)] = (0, 0)
-
+                    statData.iat[ind, 0], statData.iat[ind, 2] = 0, 0
+                    statData.iat[ind, 4], statData.iat[ind, 6] = 0, 0
+        # ??? Setting for multiple test correction or not?
         GrP = statData.iloc[:, 2].values
         LsP = statData.iloc[:, 6].values
-        RejectGr, CorrPGr, _, _ = multi.multipletests(GrP, method='fdr_bh', alpha=(settings.alpha))
-        RejectLs, CorrPLs, _, _ = multi.multipletests(LsP, method='fdr_bh', alpha=(settings.alpha))
+        with warnings.catch_warnings():
+            warnings.simplefilter('ignore', category=RuntimeWarning)
+            RejectGr, CorrPGr, _, _ = multi.multipletests(GrP, method='fdr_bh', 
+                                                      alpha=settings.alpha)
+            RejectLs, CorrPLs, _, _ = multi.multipletests(LsP, method='fdr_bh', 
+                                                      alpha=settings.alpha)
         statData.iloc[:, 3], statData.iloc[:, 1] = RejectGr, CorrPGr
         statData.iloc[:, 7], statData.iloc[:, 5] = RejectLs, CorrPLs
-        filename = 'Stats_{}_{}.csv'.format(channel, self.title)
+        filename = 'Stats_{} = {}.csv'.format(self.title, self.channel)
         system.saveToFile(statData, self.statsDir, filename, append=False)
+        self.statData, self.cntrlData, self.tstData = statData, cntrlData, tstData
+        return self
+    
+    def Create_Plots(self, stats, unit="Count", palette = None):
+        if settings.Drop_Outliers:
+            cntrlData = DropOutlier(self.cntrlData)
+            tstData = DropOutlier(self.tstData)
+        else:
+            cntrlData = self.cntrlData
+            tstData = self.tstData
+        cntrlData.loc['Sample Group', :] = self.cntrlGroup
+        tstData.loc['Sample Group', :] =  self.tstGroup
+        plotData = pd.concat([cntrlData.T, tstData.T], ignore_index=True)
+        plot_maker = plotter(plotData, savepath=self.plotDir, 
+                     title=self.plottitle, palette=palette, center=self.center)
+        kws = {'id_str':'Sample Group', 'hue':'Sample Group', 'height':5, 
+               'aspect':4, 'var_str':'Longitudinal Position', 'value_str':unit, 
+               'centerline':plot_maker.MPbin, 'xlen':self.length,
+               'title':plot_maker.title, 'Stats': stats, 
+               'fliersize': {'fliersize':'4'}}
+        plot_maker.plot_Data(plotter.catPlot, plot_maker.savepath, **kws)
+        
+def DropOutlier(Data):
+    with warnings.catch_warnings(): # Ignore warnings regarding empty bins
+        warnings.simplefilter('ignore', category=RuntimeWarning)
+        Mean = np.nanmean(Data.values)
+        std = np.nanstd(Data.values)
+        Data = Data.applymap(lambda x: x if np.abs(x - Mean) <= \
+                             (settings.dropSTD * std) else np.nan)
+    return Data
+        
+        

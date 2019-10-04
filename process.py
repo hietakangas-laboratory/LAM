@@ -11,10 +11,11 @@ import re
 
 def Create_Samples(PATHS):
     # Loop Through samples and collect relevant data
+    print("---Processing samples---")
     for path in [p for p in settings.workdir.iterdir() if p.is_dir() and p.stem 
                  != 'Analysis Data']:
         sample = get_sample(path, PATHS.samplesdir, process=True)
-        print("Processing {}  ...".format(sample.name))
+        print("{}  ...".format(sample.name))
         sample.vectData = sample.get_vectData(settings.vectChannel)
         # Creation of vector for projection
         sample.vector = sample.create_vector(settings.medianBins, PATHS.datadir, 
@@ -58,7 +59,7 @@ def Gather_Samples(PATHS):
 def Get_Counts(PATHS):
     MPs = system.read_data((next(PATHS.datadir.glob('MPS.csv'))), header=0, test=False)
     # Find the smallest and largest bin-number of the dataset
-    MPmax, MPmin = MPs.max(axis=1).item(), MPs.min(axis=1).item()
+    MPmax, MPmin = MPs.max(axis=1).values[0], MPs.min(axis=1).values[0]
     store.center = MPmax
     # Find the size of needed dataframe, i.e. so that all anchored samples fit
     MPdiff = MPmax - MPmin
@@ -67,7 +68,7 @@ def Get_Counts(PATHS):
     store.centerpoint = MPmax
     if settings.process_counts == False and settings.process_samples == False:
         return
-    print('\nCounting and normalizing sample data ...')
+    print('\n---Counting and normalizing sample data---')
     countpaths = PATHS.datadir.glob('All_*')
     for path in countpaths:
         name = str(path.stem).split('_')[1]
@@ -118,9 +119,12 @@ class get_sample:
                 pass
 
         except FileNotFoundError:
-            print('MPs.csv NOT found for sample {}!'.format(self.name))
+            if not settings.process_samples:
+                print('MPs.csv NOT found for sample {}!'.format(self.name))
         except KeyError:
-            print('Measurement point for sample {} NOT found in MPs.csv!'.format(self.name))
+            if not settings.process_samples:
+                string='Measurement point for sample {} NOT found in MPs.csv!'
+                print(string.format(self.name))
 
     def get_vectData(self, channel):
         try:
@@ -381,7 +385,7 @@ class get_channel:
                             temp = settings.channelID.get(IDstring)
                             IDstring = temp
                         except: pass
-                    rename = str(key + '_' + IDstring)
+                    rename = str(key + '-' + IDstring)
                     addData.rename(columns={key: rename}, inplace=True)
                 newData = pd.merge(newData, addData, on='ID')
         return newData
@@ -432,14 +436,14 @@ class normalize:
                     strt = int(self.starts.at[sample])
                     end = int(strt + len(settings.projBins))
                     avgS[strt:end] = insert
-                    filename = str('Avg_{}.csv'.format(col))
+                    filename = str('Avg_{}_{}.csv'.format(self.channel, col))
                     system.saveToFile(avgS, PATHS.datadir, filename)
 #            except TypeError:
 #                print("{}: {} not found on {}".format(self.channel, dataType, sample))
 #            except StopIteration:
 #                pass
 
-def relate_data(data, MP=0, center=50, TotalLength=100, start=False):
+def relate_data(data, MP=0, center=50, TotalLength=100):
     """Sets the passed data into the context of all samples, ie. places the
     data into an empty array with the exact length required to fit all 
     samples"""
@@ -451,5 +455,6 @@ def relate_data(data, MP=0, center=50, TotalLength=100, start=False):
     insx = int(center - MP)
     end = int(insx + length)
     insert = np.full(TotalLength, np.nan)
+    data = np.where(data==np.nan, 0, data)
     insert[insx:end] = data
     return (insert, insx)

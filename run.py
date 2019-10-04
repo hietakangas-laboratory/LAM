@@ -20,7 +20,7 @@ directory should also be created for the normalization of samples. This director
 should contain position csv for one coordinate, typically in the middle of R3-region
 so that the samples have a point to anchor for group-wise analysis.
 
-Dependencies: Anaconda-included packages (Python 3.7), Shapely
+Dependencies: Anaconda-included packages (Python 3.7), Shapely, pycg3d
 
 @author: Arto Viitanen
 """
@@ -43,19 +43,16 @@ def main():
     # Storing of descriptive data of analysis, i.e. channels/samples/groups
     PATHS.save_AnalysisInfo(store.samples, store.samplegroups, store.channels)
     
-    # After samples have been counted and normalized, 
-    ### TODO add plotting and group-wise operations
+    # After samples have been counted and normalized
     SampleGroups = analysis.Samplegroups(store.samplegroups, store.channels,
-                                         store.totalLength, store.center,PATHS)
+                                        store.totalLength, store.center, PATHS)
     if settings.Find_Distances:
         SampleGroups.Get_DistanceMean()
+        
+    if settings.statistics:
+        SampleGroups.Get_Statistics()
     if settings.Create_Plots:
         SampleGroups.create_plots()
-    
-#    Group = analysis.Group("Holidic")
-#    print(Grp.groups)
-#    print(Grp.name)
-#    print(Grp2.addData)
     print('\nANALYSIS COMPLETED')
 
 
