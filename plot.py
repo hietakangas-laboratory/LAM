@@ -29,7 +29,7 @@ class plotter:
             self.MPbin = 0
 
     def vector(self, samplename, vectordata, X, Y, binaryArray=None, skeleton=None):
-        if skeleton is not None:
+        if skeleton is not None and settings.SkeletonVector:
             fig, axes = plt.subplots(nrows=1, ncols=2, figsize=(12, 6), sharex=True,
               sharey=True)
             ax = axes.ravel()
@@ -44,9 +44,9 @@ class plotter:
             fig.savefig(str(self.savepath.joinpath(name)), format=self.format)
         fig, ax = plt.subplots(figsize=(12, 6))
         ax = sns.scatterplot(x=X, y=Y, color='brown')
-        ax = (plt.plot)(*vectordata.xy)
+        ax = plt.plot(*vectordata.xy)
         name = str('Vector_' + samplename + self.ext)
-        fig.savefig(str(self.savepath.joinpath(name)), format=self.format)
+        fig.savefig(str(self.savepath.parent.joinpath(name)), format=self.format)
         plt.close('all')
 
     def plot_Data(self, plotfunc, savepath, palette=None, **kws):

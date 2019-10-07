@@ -10,16 +10,16 @@ import math
 import matplotlib.pyplot as plt
 import os
 
-path = pl.Path(r"P:\h919\hietakangas\Arto\Statistics_DANA\Posterior")
-savepath = pl.Path(r"P:\h919\hietakangas\Arto\Statistics_DANA\rotated")
 
-degDict = { "CtrlYS_S1A": 90, "CtrlYS_S1B": 90, "CtrlYS_S2A": 270, "CtrlYS_S2B": 270,
-           "CtrlY_S1A": 90, "CtrlY_S2A": 90, "CtrlY_S3A": 90, "CtrlY_S4A": 90,
-           "CtrlY_S5A": 90, "CtrlY_S6A": 270, "CtrlY_S8A": 90, "CtrlY_S9A": 90,
-           "CtrlY_S9B": 90, "CtrlY_S7A": 270 }
+path = pl.Path(r"P:\h919\hietakangas\Arto\Statistics_DANA\Temp\Posterior")
+fsavepath = pl.Path(r"P:\h919\hietakangas\Arto\Statistics_DANA\New folder")
 
-MAKEPLOTS = False
-CHANGETYPE = False
+degDict = { "CtrlYS_S1A": 45, "CtrlYS_S4A": -45, 
+           "CtrlYS_S3B": -100, "CtrlYS_S4B": -45, 
+           "CtrlYS_S3A": -100, "CtrlYS_S1B": 45}
+
+MAKEPLOTS = True
+CHANGETYPE = True
 
 def rotate_around_point_highperf(x, y, radians, origin=(0, 0)):
     """Rotate a point around a given point."""
@@ -47,16 +47,17 @@ def make_plots(data1, data2, samplename, channel, savepath):
     ax[1].scatter(x = data2.loc[:, "Position X"], y = data2.loc[:, "Position Y"])
     fig.suptitle("{}\n{}".format(samplename, channel))    
     fig.savefig(savepath.joinpath("{}_{}.png".format(samplename,channel)), format="png")
+    plt.close()
 
 for samplepath in path.iterdir():
-    samplename = str(samplepath.stem).split('-')[0]    
+    samplename = str(samplepath.stem).split('-')[0]
     for channel in ["DAPI", "PROS"]:
         path = pl.Path(next(samplepath.glob('*{}*'.format(channel))))
         if CHANGETYPE:
             change_to_csv(path)
         if samplename in degDict.keys():
+            print(samplename, channel)
             samplepos = path.joinpath("Position.csv")
-            print(samplepos)
             try:
                 data = pd.read_table(samplepos, index_col = False, header=2, 
                                      sep=',')
@@ -76,7 +77,7 @@ for samplepath in path.iterdir():
             xmed = (xmax-xmin)/2
             ymed = (ymax-ymin)/2
             point = (xmed, ymed)
-            orgData = data
+            orgData = data.copy()
             for i, row in data.iterrows():
                 x = row.at["Position X"]
                 y = row.at["Position Y"]
@@ -84,8 +85,16 @@ for samplepath in path.iterdir():
                 data.at[i, "Position X"] = x
                 data.at[i, "Position Y"] = y
             if MAKEPLOTS:
-                make_plots(orgData, data, samplename, channel, savepath)
+                make_plots(orgData, data, samplename, channel, fsavepath)
             strparts = str(samplepos).split("\\")
-            newpath = savepath.joinpath(strparts[-4], strparts[-3], 
+            newpath = fsavepath.joinpath(strparts[-4], strparts[-3], 
                                         strparts[-2], "Position.csv")
-            data.to_csv(str(newpath), index = False)
+            newpath.parent.mkdir(parents=True, exist_ok=True)
+            try:
+                newpath.unlink()
+            except: pass
+            with open(newpath, 'a') as f:
+                f.write('\n')
+                f.write('Position\n')
+                f.write('='*data.shape[1]+'\n')
+                data.to_csv(f, index=False, line_terminator=',\n')

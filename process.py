@@ -37,10 +37,22 @@ def Gather_Samples(PATHS):
 # When samples are not to be processed, the data is gathered from 
     # "./Analysis Data/Samples".
     print("\nGathering sample data  ...")
+    if not settings.process_samples:
+        try:
+            pd.read_csv(PATHS.datadir.joinpath("MPs.csv"))
+        except FileNotFoundError:
+            samples = [p.stem for p in PATHS.samplesdir.iterdir() if p.is_dir()]
+            MPs = pd.DataFrame(np.zeros((1, len(samples))), columns=samples)
+            system.saveToFile(MPs, PATHS.datadir, 'MPs.csv', append=False) 
     # For each sample, the data is collected, and cell numbers are quantified
     # for each channel.
     for path in [p for p in PATHS.samplesdir.iterdir() if p.is_dir()]:
-        sample = get_sample(path, PATHS.samplesdir, process=False)
+        sample = get_sample(path, PATHS, process=False)
+        chanDir = settings.workdir.joinpath(sample.name)
+        if not settings.process_samples and settings.process_counts:
+            for chanPath in [p for p in chanDir.iterdir()]:
+                channel = get_channel(chanPath, sample, settings.AddData)
+                sample.data = sample.project_channel(channel, PATHS.datadir)
         # Looping through every channel found in the sample's directory
         for channelPath in sample.channelpaths:
             channelName = str(channelPath.stem)
@@ -49,21 +61,19 @@ def Gather_Samples(PATHS):
                 sample.find_counts(channelName, PATHS.datadir)
             else: # Collecting measurement point data for anchoring of samples
                 if hasattr(sample, "MP"):
-                    system.saveToFile(sample.MP.rename(sample.name), 
-                                      PATHS.datadir, "MPs.csv")
+                    system.saveToFile(sample.MP, PATHS.datadir, "MPs.csv")
                 if hasattr(sample, "secMP"):
-                    system.saveToFile(sample.secMP.rename(sample.name), 
-                                      PATHS.datadir, "secMPs.csv")
+                    system.saveToFile(sample.secMP, PATHS.datadir, "secMPs.csv")
 
 
 def Get_Counts(PATHS):
-    MPs = system.read_data((next(PATHS.datadir.glob('MPS.csv'))), header=0, test=False)
+    MPs = system.read_data(next(PATHS.datadir.glob('MPS.csv')), header=0, test=False)
     # Find the smallest and largest bin-number of the dataset
     MPmax, MPmin = MPs.max(axis=1).values[0], MPs.min(axis=1).values[0]
     store.center = MPmax
     # Find the size of needed dataframe, i.e. so that all anchored samples fit
     MPdiff = MPmax - MPmin
-    store.totalLength = len(settings.projBins) + MPdiff
+    store.totalLength = int(len(settings.projBins) + MPdiff)
      # Store the bin number of the row onto which samples are anchored to
     store.centerpoint = MPmax
     if settings.process_counts == False and settings.process_samples == False:
@@ -82,10 +92,10 @@ def Get_Counts(PATHS):
 
 
 class get_sample:
-
-    def __init__(self, path, samplesdir, process=True):
+    def __init__(self, path, PATHS, process=True):
         self.name = str(path.stem)
-        self.sampledir = samplesdir.joinpath(self.name)
+        print(self.name)
+        self.sampledir = PATHS.samplesdir.joinpath(self.name)
         self.group = self.name.split('_')[0]
         if self.name not in store.samples:
             store.samples.append(self.name)
@@ -98,20 +108,21 @@ class get_sample:
             self.channels = [str(p).split('_')[(-2)] for p in self.channelpaths]
         else: # If the samples are not to be processed, the data is only gathered
               # from the csv-files in the sample's directory ("./Analysis Data/Samples/")
-            self.channelpaths = list([p for p in path.iterdir() if '.csv' in p.name \
-                                      and 'Vector.csv' not in p.name])
+            self.channelpaths = list([p for p in path.iterdir() if '.csv' in 
+                                      p.name and 'Vector.csv' not in p.name])
             self.channels = [p.stem for p in self.channelpaths]
             for channel in self.channels:
                 if channel.lower() not in [c.lower() for c in store.channels]:
                     store.channels.append(channel)
-
             tempVect = pd.read_csv(self.sampledir.joinpath('Vector.csv'))
             Vect = list(zip(tempVect.loc[:, 'X'], tempVect.loc[:, 'Y']))
             self.vector = gm.LineString(Vect)
+            self.vectorLength = self.vector.length
+            lenS = pd.Series(self.vectorLength, name=self.name)
+            system.saveToFile(lenS, PATHS.datadir, 'Length.csv')            
         try:
             MPs = pd.read_csv(self.sampledir.joinpath('MPs.csv'))
-            if settings.useMP:
-                self.MP = MPs.loc[:, 'MP']
+            self.MP = MPs.loc[:, self.name]
             try:
                 if settings.useSecMP:
                     self.secMP = MPs.loc[:, 'secMP']
@@ -119,19 +130,26 @@ class get_sample:
                 pass
 
         except FileNotFoundError:
-            if not settings.process_samples:
+            if not settings.process_samples and settings.useMP:
                 print('MPs.csv NOT found for sample {}!'.format(self.name))
+            else: 
+                self.MP = pd.Series(0, name=self.name)
         except KeyError:
             if not settings.process_samples:
                 string='Measurement point for sample {} NOT found in MPs.csv!'
                 print(string.format(self.name))
+        finally:
+            try:
+                MPS = pd.Series(self.MP, name=self.name)
+                system.saveToFile(MPS, self.datadir, 'MPs.csv')
+            except: pass
 
     def get_vectData(self, channel):
         try:
-            namer = str('_' + channel + '_')
+            namer = str("_{}_".format(channel))
             namerreg = re.compile(namer, re.I)
             dirPath = [self.channelpaths[i] for i, s in enumerate(self.channelpaths) if namerreg.search(str(s))][0]
-            vectPath = next(dirPath.glob('*_Position.csv'))
+            vectPath = next(dirPath.glob('*Position.csv'))
             vectData = system.read_data(vectPath)
         except:
             print('Sample {} has no valid file for vector creation'.format(self.name))
@@ -144,25 +162,26 @@ class get_sample:
         positions = self.vectData
         X, Y = positions.loc[:, 'Position X'], positions.loc[:, 'Position Y']
         if Skeletonize:
-            vector, binaryArray, skeleton, lineDF = self.SkeletonVector(X, Y, resize, BDiter, SigmaGauss)
+            vector, binaryArray, skeleton, lineDF = self.SkeletonVector(X, Y, 
+                                                    resize, BDiter, SigmaGauss)
         else:
             vector, lineDF = self.MedianVector(X, Y, creationBins)
             binaryArray, skeleton = (None, None)
-        length = pd.Series((vector.length), name=(self.name))
+        vector = vector.simplify(settings.simplifyTol)
+        length = pd.Series(vector.length, name=self.name)
         system.saveToFile(length, datadir, 'Length.csv')
-        system.saveToFile(lineDF, (self.sampledir), 'Vector.csv', append=False)
+        system.saveToFile(lineDF, self.sampledir, 'Vector.csv', append=False)
         create_plot = plotter(self, self.sampledir)
         create_plot.vector(self.name, vector, X, Y, binaryArray, skeleton)
         return vector
 
     def SkeletonVector(self, X, Y, resize, BDiter, SigmaGauss):
-
         def resize_minmax(minv, maxv, axis, resize):
             rminv = math.floor(minv * resize / 10) * 10
             rmaxv = math.ceil(maxv * resize / 10) * 10
             return rminv, rmaxv
 
-        buffer = 100 * resize
+        buffer = 200 * resize
         coords = list(zip(X, Y))
         miny, maxy = Y.min(), Y.max()
         minx, maxx = X.min(), X.max()
@@ -171,7 +190,7 @@ class get_sample:
         ylabels = np.arange(int(rminy) - buffer, int(rmaxy + (buffer + 1)), 10)
         xlabels = np.arange(int(rminx) - buffer, int(rmaxx + (buffer + 1)), 10)
         ylen, xlen = len(ylabels), len(xlabels)
-        BA = pd.DataFrame((np.zeros((ylen, xlen))), index=(np.flip(ylabels, 0)), columns=xlabels)
+        BA = pd.DataFrame(np.zeros((ylen, xlen)), index=np.flip(ylabels, 0), columns=xlabels)
         BAind, BAcol = BA.index, BA.columns
         for coord in coords:
             y = round(coord[1] * resize / 10) * 10
@@ -180,7 +199,10 @@ class get_sample:
 
         if BDiter > 0:
             struct1 = mp.generate_binary_structure(2, 2)
-            BA = mp.binary_dilation(BA, structure=struct1, iterations=BDiter)
+            try:
+                BA = mp.binary_dilation(BA, structure=struct1, iterations=BDiter)
+            except TypeError:
+                print("TypeError: BDiter in settings has to be integer.")
         if SigmaGauss > 0:
             BA = gaussian(BA, sigma=SigmaGauss)
             BA[BA > 0] = True
@@ -188,39 +210,44 @@ class get_sample:
         skeleton = skeletonize(BA)
         skelDF = pd.DataFrame(skeleton, index=BAind, columns=BAcol)
         skelValues = [(skelDF.index[y], skelDF.columns[x]) for y, x in zip(*np.where(skelDF.values == True))]
-        coordDF = pd.DataFrame((np.zeros((len(skelValues), 2))), columns=['X', 'Y'])
+        coordDF = pd.DataFrame(np.zeros((len(skelValues), 2)), columns=['X', 'Y'])
         for i, coord in enumerate(skelValues):
-            coordDF.loc[(i, ['X', 'Y'])] = [
-             coord[1], coord[0]]
-
+            coordDF.loc[i, ['X', 'Y']] = [coord[1], coord[0]]
+        finder = settings.find_dist
         line = []
         start = coordDF.loc[:, 'X'].idxmin()
-        sx, sy = coordDF.loc[(start, 'X')], coordDF.loc[(start, 'Y')]
+        sx, sy = coordDF.loc[start, 'X'], coordDF.loc[start, 'Y']
+        nearStart = coordDF[(abs(coordDF.loc[:, 'X'] - sx) <= finder/2) & 
+                            (abs(coordDF.loc[:, 'Y'] - sy) <= finder/1)].index
+        sx, sy = coordDF.loc[nearStart, 'X'].mean(), coordDF.loc[nearStart, 'Y'].mean()
         line.append((sx / resize, sy / resize))
-        coordDF.drop(start, inplace=True)
+        coordDF.drop(nearStart, inplace=True)
         flag = False
-        finder = 200 * resize
         while not flag:
+            # TODO try creating median estimation?
             point = gm.Point(sx, sy)
-            nearpixels = coordDF[((abs(coordDF.loc[:, 'X'] - sx) <= finder) & (abs(coordDF.loc[:, 'Y'] - sy) <= finder))]
-            points = pd.Series((np.zeros(nearpixels.shape[0])), index=(nearpixels.index))
-            for i, row in nearpixels.iterrows():
-                coord = row.loc['X':'Y'].tolist()
-                point2 = gm.Point(coord[0], coord[1])
-                dist = point.distance(point2)
-                points.at[i] = dist
-            minv = points.min()
-            nearest = points.where(points <= 1.5 * minv).dropna().index
-            if nearest.size == 1:
-                x2, y2 = coordDF.loc[(nearest, 'X')].item(), coordDF.loc[(nearest, 'Y')].item()
-                line.append((x2 / resize, y2 / resize))
-                coordDF.drop(nearest, inplace=True)
-            elif nearest.size > 1:
+            with warnings.catch_warnings():
+                warnings.simplefilter('ignore', category=UserWarning)
+                nearest = coordDF[(abs(coordDF.loc[:, 'X'] - sx) <= finder) & 
+                                 (abs(coordDF.loc[:, 'Y'] - sy) <= finder)].index
+#            points = pd.Series(np.zeros(nearpixels.size), index=nearpixels)
+#            for i, row in coordDF.loc[nearpixels, :].iterrows():
+#                coord = row.loc['X':'Y'].tolist()
+#                point2 = gm.Point(coord[0], coord[1])
+#                dist = point.distance(point2)
+#                points.at[i] = dist
+#            minv = points.min()
+#            nearest = points.where(points <= 2 * minv).dropna().index
+#            if nearest.size == 1:
+#                x2, y2 = coordDF.loc[nearest, 'X'], coordDF.loc[nearest, 'Y']
+#                line.append((x2 / resize, y2 / resize))
+#                sx, sy = x2, y2
+#                coordDF.drop(nearest, inplace=True)
+            if nearest.size > 0:
                 try:
-                    point1, point2 = line[(-3)], line[(-1)]
+                    point1, point2 = line[-3], line[-1]
                 except:
-                    point1, point2 = (
-                     sx, sy), (sx + resize * 100, sy)
+                    point1, point2 = (sx, sy), (sx + (50 / resize), sy)
 
                 x1, y1 = point1[0], point1[1]
                 x2, y2 = point2[0], point2[1]
@@ -228,21 +255,36 @@ class get_sample:
                 shifty = y2 - y1
                 x3, y3 = x2 + 2 * shiftx, y2 + 2 * shifty
                 testpoint = gm.Point(x3, y3)
-                distances = pd.DataFrame((np.zeros((nearest.size, 3))), index=nearest, columns=['dist', 'X', 'Y'])
+                distances = pd.DataFrame(np.zeros((nearest.size, 5)), index=nearest, 
+                                         columns=['dist', 'distOG', 'score', 'X', 'Y'])
                 for index, row in coordDF.loc[nearest, :].iterrows():
-                    x4, y4 = coordDF.loc[(index, 'X')].item(), coordDF.loc[(index, 'Y')].item()
+                    x4, y4 = coordDF.loc[index, 'X'], coordDF.loc[index, 'Y']
                     point3 = gm.Point(x4, y4)
                     dist = testpoint.distance(point3)
-                    distances.at[index, :] = [dist, x4, y4]
-
-                nearest = distances.dist.idxmin()
-                x2, y2 = coordDF.loc[(nearest, 'X')].item(), coordDF.loc[(nearest, 'Y')].item()
-                forfeit = distances.where(distances.X < x2).dropna().index
+                    distOg = point.distance(point3)
+                    score = (0.75 * distOg) + dist
+                    distances.at[index, :] = [dist, distOg, score, x4, y4]
+                nearest = distances.score.idxmin()
+                x2, y2 = coordDF.loc[nearest, 'X'], coordDF.loc[nearest, 'Y']
                 line.append((x2 / resize, y2 / resize))
+                dropdist = distances.loc[nearest, 'distOG']
+                dropdist2 = distances.loc[nearest, 'dist']
+                # TODO alter dropping. Nearby, but only with smaller x than point?
+#                huh = distances.at[nearest, "dist"]
+#                print(distances)
+#                print(huh, drop_dist * huh)
+                forfeit = distances[(distances.dist >= dropdist) & 
+                                  (distances.distOG <= dropdist2)].dropna().index
+#                print(type(nearest))
+                forfeit.union([nearest])
                 coordDF.drop(forfeit, inplace=True)
+                sx, sy = x2, y2
+#                print(coordDF)
             else:
                 flag = True
-            sx, sy = x2, y2
+            
+#            print(sx, sy)
+#            print(type(sy))
 
         vector = gm.LineString(line)
         vector = vector.simplify(settings.simplifyTol)
@@ -258,11 +300,11 @@ class get_sample:
             startval = np.nanmean(Y[(idx == 1)])
         Ymedian[0] = startval
         for b in range(1, creationBins):
-            cells = Y[(idx == b)]
+            cells = Y[idx == b]
             if cells.size == 0:
-                Ymedian[b] = Ymedian[(b - 1)]
+                Ymedian[b] = Ymedian[b - 1]
             else:
-                Ymedian[b] = Y[(idx == b)].min() + (Y[(idx == b)].max() - Y[(idx == b)].min()) / 2
+                Ymedian[b] = Y[idx == b].min() + (Y[idx == b].max() - Y[idx == b].min()) / 2
 
         XYmedian = [p for p in tuple(np.stack((bins, Ymedian), axis=1)) if ~np.isnan(p).any()]
         vector = gm.LineString(XYmedian)
@@ -309,7 +351,9 @@ class get_sample:
                     secMP = pd.Series(secMPbin, name = "secMP")
                     MPs = pd.concat([MPs, secMP], axis=1)
                 MPs.to_csv(self.sampledir.joinpath("MPs.csv"), index=False)
-        else: MPbin = 0        
+        else:
+            MPbin = pd.Series(0, name = self.name)
+            system.saveToFile(MPbin, datadir, "MPs.csv")
         return MPbin, secMPbin
 
     def project_MPs(self, Positions, vector, datadir, filename="some.csv"):
@@ -344,8 +388,8 @@ class get_sample:
         return Positions
 
     def find_counts(self, channelName, datadir):
-        counts = np.bincount((self.data['DistBin']), minlength=(len(settings.projBins)))
-        counts = pd.Series((np.nan_to_num(counts)), name=(self.name))
+        counts = np.bincount(self.data['DistBin'], minlength=len(settings.projBins))
+        counts = pd.Series(np.nan_to_num(counts), name=self.name)
         ChString = str('All_{}.csv'.format(channelName))
         system.saveToFile(counts, datadir, ChString)
 
@@ -355,8 +399,8 @@ class get_channel:
     def __init__(self, path, sample, dataKeys):
         self.name = str(path.stem).split('_')[(-2)]
         self.path = path
-        namer = str('*{}_Position*'.format(self.name))
-        pospath = next(self.path.glob(namer))
+#        namer = str('*{}_Position*'.format(self.name))
+        pospath = next(self.path.glob("*Position.csv"))
         self.data = self.read_channel(pospath)
         self.data = self.read_additional(dataKeys)
 
@@ -401,17 +445,17 @@ class normalize:
     def normalize_samples(self, MPs, arrayLength):
         """ For inserting sample data into larger matrix, centered with MP."""
         cols = self.counts.columns
-        data = pd.DataFrame((np.zeros((arrayLength, len(cols)))), columns=cols)
-        SampleStart = pd.Series((np.full(len(cols), np.nan)), index=cols)
+        data = pd.DataFrame(np.zeros((arrayLength, len(cols))), columns=cols)
+        SampleStart = pd.Series(np.full(len(cols), np.nan), index=cols)
         for col in self.counts.columns:
             handle = self.counts.loc[:, col].values
-            mp = MPs.loc[(0, col)]
+            mp = MPs.loc[0, col]
             insert, insx = relate_data(handle, mp, store.centerpoint, arrayLength)
             data[col] = insert
             SampleStart.at[col] = insx
         filename = str('Norm_{}.csv'.format(self.channel))
         data = data.sort_index(axis=1)
-        system.saveToFile(data, (self.path.parent), filename, append=False)
+        system.saveToFile(data, self.path.parent, filename, append=False)
         return SampleStart
 
     def Avg_AddData(self, PATHS, dataNames, TotalLen):
@@ -422,7 +466,7 @@ class normalize:
             sampleDir = PATHS.samplesdir.joinpath(sample)
             dataFile = sampleDir.glob(str(self.channel + '.csv'))
 #            try:
-            data = system.read_data((next(dataFile)), header=0)
+            data = system.read_data(next(dataFile), header=0)
             for dataType in dataNames.keys():
                 sampleData = data.loc[:, data.columns.str.contains(str(dataType))]
                 binnedData = data.loc[:, 'DistBin']
@@ -431,7 +475,7 @@ class normalize:
                     avgS = pd.Series(np.full(TotalLen, np.nan), name=sample)
                     with warnings.catch_warnings():
                         warnings.simplefilter('ignore', category=RuntimeWarning)
-                        insert = [np.nanmean(sampleData.loc[(binnedData == i, col)]) for i in bins]
+                        insert = [np.nanmean(sampleData.loc[binnedData == i, col]) for i in bins]
                         insert = [0 if np.isnan(v) else v for v in insert]
                     strt = int(self.starts.at[sample])
                     end = int(strt + len(settings.projBins))

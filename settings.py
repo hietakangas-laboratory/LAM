@@ -5,40 +5,42 @@ class settings:
     ######################## PRIMARY SETTINGS ########################
     # DEFINE PATH TO ANALYSIS FOLDER:
     # (Use input r'PATH' where PATH is your path)
-    workdir = pl.Path(r'\\ad.helsinki.fi\home\a\artoviit\Desktop\test')
+    workdir = pl.Path(r'P:\h919\hietakangas\Arto\Statistics_DANA\Final\Middle')
     # Whether to gather raw data and create vectors. If False, expects to find 
     # pre-created datafiles in the Analysis Data directory, i.e. a previous 
     # full run has been made, and there has been no edits to the data files.
     process_samples = False
     # Whether to count and normalize data. If set to False, expect all data to
     # be in place. Can be used to e.g. create additional plots faster.
-    process_counts = False
+    process_counts = True
     # Set True/False to set all plotting functionalities ON/OFF
-    Create_Plots = True     # ON / OFF switch for plots
+    Create_Plots = False     # ON / OFF switch for plots
     
     
     ### VECTOR CREATION & PROJECTION ###
     # The channel based on which the vector is created
     vectChannel = "DAPI"
+    header_row = 2      # On which row does the data have its header (starts from 0)
     # Number of bins used for projection unto vector (the third value).
-    projBins = np.linspace(0, 1, 100)
+    projBins = np.linspace(0, 1, 25)
     
     # Make vector by creating binary image and then skeletonizing. If False, vector 
     # is created by finding middle point between smallest and largest Y-axis position in bin.
-    SkeletonVector = False
-    SkeletonResize = 0.5    # Binary image resize for reprocessing, e.g. smoothing. Keep at steps of ten.
-    BDiter = 0             # Number of iterations for binary dilation (set to 0 if not needed)
-    SigmaGauss = 0.5       # Sigma for gaussian smoothing (set to 0 if not needed)
-    simplifyTol = 20        # Tolerance for vector simplification
+    SkeletonVector = True
+    SkeletonResize = 0.2    # Binary image resize for reprocessing, e.g. smoothing. Keep at steps of ten.
+    find_dist = 125
+    BDiter = 0           # Number of iterations for binary dilation (set to 0 if not needed)
+    SigmaGauss = 1        # Sigma for gaussian smoothing (set to 0 if not needed)
+    simplifyTol = 50        # Tolerance for vector simplification. Dependent on image size.
     # Number of bins used for vector creation when using the median vector creation. You should probably keep this 
     # smaller than the projBins, depending on cell density (<50%).
-    medianBins = 35
+    medianBins = 15
 
 
     ## MEASUREMENT POINTS ##
     # Whether to use measurement point coordinates for normalization. If False,
     # the samples will be handled as perfectly aligned from beginning to end.
-    useMP = True
+    useMP = False
     # The name of the file used for normalizing between samples, i.e. R3 measurement point
     MPname = "MP"
     # Include secondary measurement point. Used to see e.g. proportional change.

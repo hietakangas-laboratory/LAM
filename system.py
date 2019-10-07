@@ -17,23 +17,23 @@ class paths:
         if settings.process_samples == True and self.datadir.exists() == True:
             shutil.rmtree(self.datadir)
         # Create output directories
-        pl.Path.mkdir((self.outputdir), exist_ok=True)
-        pl.Path.mkdir((self.plotdir), exist_ok=True)
-        pl.Path.mkdir((self.samplesdir), exist_ok=True)
-        pl.Path.mkdir((self.datadir), exist_ok=True)
-        pl.Path.mkdir((self.statsdir), exist_ok=True)
+        pl.Path.mkdir(self.outputdir, exist_ok=True)
+        pl.Path.mkdir(self.plotdir, exist_ok=True)
+        pl.Path.mkdir(self.samplesdir, exist_ok=True)
+        pl.Path.mkdir(self.datadir, exist_ok=True)
+        pl.Path.mkdir(self.statsdir, exist_ok=True)
 
     def save_AnalysisInfo(self, sample, group, channels):
         """For saving information of all analyzed samples."""
-        pd.DataFrame(sample).to_csv((self.outputdir.joinpath('SampleList.csv')), 
+        pd.DataFrame(sample).to_csv(self.outputdir.joinpath('SampleList.csv'), 
                      index=False, header=False)
-        pd.DataFrame(group).to_csv((self.outputdir.joinpath('SampleGroups.csv')), 
+        pd.DataFrame(group).to_csv(self.outputdir.joinpath('SampleGroups.csv'), 
                      index=False, header=False)
-        pd.DataFrame(channels).to_csv((self.outputdir.joinpath('Channels.csv')), 
+        pd.DataFrame(channels).to_csv(self.outputdir.joinpath('Channels.csv'), 
                      index=False, header=False)
 
 
-def read_data(filepath, header=2, test=True):
+def read_data(filepath, header=settings.header_row, test=True):
     """For reading csv-data."""
     try:
         data = pd.read_csv(filepath, header=header, index_col=False)
@@ -59,17 +59,17 @@ def saveToFile(data, directory, filename, append=True):
     in the csv"""
     path = directory.joinpath(filename)
     if append == False:
-        data.to_csv((str(path)), index=False)
+        data.to_csv(str(path), index=False)
     elif path.exists():
-        file = pd.read_csv((str(path)), index_col=False)
+        file = pd.read_csv(str(path), index_col=False)
         if data.name not in file.columns:
             file = pd.concat([file, data], axis=1)
         else:
-            file[data.name] = data
+            file.loc[:, data.name] = data
         file = file.sort_index(axis=1)
-        file.to_csv((str(path)), index=False)
+        file.to_csv(str(path), index=False)
     else:
-        data.to_frame().to_csv((str(path)), index=False)
+        data.to_frame().to_csv(str(path), index=False)
 
 
 class store:
