@@ -5,14 +5,14 @@ class settings:
     ######################## PRIMARY SETTINGS ########################
     # DEFINE PATH TO ANALYSIS FOLDER:
     # (Use input r'PATH' where PATH is your path)
-    workdir = pl.Path(r'P:\h919\hietakangas\Arto\Statistics_DANA\Final\Middle')
+    workdir = pl.Path(r'P:\h919\hietakangas\Arto\Statistics_DANA\Final\Posterior')
     # Whether to gather raw data and create vectors. If False, expects to find 
     # pre-created datafiles in the Analysis Data directory, i.e. a previous 
     # full run has been made, and there has been no edits to the data files.
     process_samples = False
     # Whether to count and normalize data. If set to False, expect all data to
     # be in place. Can be used to e.g. create additional plots faster.
-    process_counts = True
+    process_counts = False
     # Set True/False to set all plotting functionalities ON/OFF
     Create_Plots = True     # ON / OFF switch for plots
     
@@ -22,7 +22,7 @@ class settings:
     vectChannel = "DAPI"
     header_row = 2      # On which row does the data have its header (starts from 0)
     # Number of bins used for projection unto vector (the third value).
-    projBins = np.linspace(0, 1, 19)
+    projBins = np.linspace(0, 1, 8)
     
     # Make vector by creating binary image and then skeletonizing. If False, vector 
     # is created by finding middle point between smallest and largest Y-axis position in bin.
@@ -67,8 +67,8 @@ class settings:
     replaceID = True
     channelID = {"Ch=1": "Pros",
                  "Ch=2": "GFP",
-                 "Ch=3": "SuH",
-                 "Ch=4": "DAPI",}
+                 "Ch=3": "DAPI",
+                 "Ch=4": "adfbad",}
     ###################################################################
     
     ### ANALYSIS OPTIONS ###
