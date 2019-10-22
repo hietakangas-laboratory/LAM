@@ -58,7 +58,7 @@ class Samplegroups:
             else: targets = settings.vs_channels
             for trgt in targets:
                 if adds: namer = "^Avg_.*_{}.*".format(trgt)
-                else: namer = "^Norm_{}_.*".format(trgt)
+                else: namer = "^Norm_{}.*".format(trgt)
                 reg = re.compile(namer, re.I)
                 selected = [p for p in paths if reg.search(str(p.stem))]
                 retPaths.extend(selected)

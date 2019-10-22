@@ -95,14 +95,14 @@ class plotter:
             yaxis = [ytop, ytop]
             yheight = ytop*0.8
             for index, row in stats.iterrows():
-                if row[0:1].all() != False and row[2] == True:
+                if row[0:2].any() != False and row[3] == True:
                     xaxis = [index-0.5, index+0.5]
                     pStr, color = __marker(row[2], LScolors)
                     if settings.fill:
                         plt.fill_between(xaxis,yaxis, color=color, alpha=0.2)
                     if settings.stars:
                         plt.text(index, yheight, pStr)
-                if row[4:5].all() != False and row[6] == True:
+                if row[4:6].any() != False and row[7] == True:
                     xaxis = [index-0.5, index+0.5]
                     pStr, color= __marker(row[6], GRcolors)
                     if settings.fill:
@@ -145,7 +145,7 @@ class plotter:
                 g = sns.FacetGrid(plotData, row=kws.get('row'), hue=kws.get('hue'), 
                           sharex=True, sharey=True, gridspec_kws={'hspace': 0.3},
                           height=kws.get('height'),aspect=kws.get('aspect'),
-                          legend_out=True,dropna=False)
+                          legend_out=True, dropna=False)
                 g = g.map_dataframe(plotfunc, self.palette, **kws).add_legend()
                 for ax in g.axes.flat:
                     ax.xaxis.set_tick_params(labelbottom=True)

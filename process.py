@@ -381,7 +381,8 @@ class get_sample:
         Positions["NormDist"] = [self.vector.project(x, normalized=True) for x in # Find normalized distance (0->1)
                  Positions["VectPoint"]]
         # Find the bins that the points fall into
-        Positions["DistBin"]=np.digitize(Positions.loc[:,"NormDist"],settings.projBins, right=True)
+        Positions["DistBin"] = np.digitize(Positions.loc[:,"NormDist"],
+                                 settings.projBins, right=True)
         # Save the obtained data:
         ChString = str('{}.csv'.format(channel.name))
         system.saveToFile(Positions, self.sampledir, ChString, append=False)

@@ -14,7 +14,7 @@ class settings:
     # be in place. Can be used to e.g. create additional plots faster.
     process_counts = True
     # Set True/False to set all plotting functionalities ON/OFF
-    Create_Plots = False     # ON / OFF switch for plots
+    Create_Plots = True     # ON / OFF switch for plots
     
     
     ### VECTOR CREATION & PROJECTION ###
@@ -22,13 +22,13 @@ class settings:
     vectChannel = "DAPI"
     header_row = 2      # On which row does the data have its header (starts from 0)
     # Number of bins used for projection unto vector (the third value).
-    projBins = np.linspace(0, 1, 25)
+    projBins = np.linspace(0, 1, 19)
     
     # Make vector by creating binary image and then skeletonizing. If False, vector 
     # is created by finding middle point between smallest and largest Y-axis position in bin.
     SkeletonVector = True
     SkeletonResize = 0.2    # Binary image resize for reprocessing, e.g. smoothing. Keep at steps of ten.
-    find_dist = 125
+    find_dist = 150
     BDiter = 0           # Number of iterations for binary dilation (set to 0 if not needed)
     SigmaGauss = 1        # Sigma for gaussian smoothing (set to 0 if not needed)
     simplifyTol = 50        # Tolerance for vector simplification. Dependent on image size.
@@ -76,14 +76,14 @@ class settings:
     # channels in Distance_Channels list. If use target is True, the nearest
     # cell is found on the channel defined by target_chan, otherwise they are
     # found within the channel undergoing analysis.
-    Find_Distances = False
-    Distance_Channels = ["GFP"]
+    Find_Distances = True
+    Distance_Channels = ["DAPI"]
     use_target = False
     target_chan = "Pros"
     # The maximum distance the nearest cell will be looked at. Increase is
     # computationally expensive, depending on the size of the dataset and the 
     # density of cells.
-    maxDist = 30    # Radius around the cell
+    maxDist = 100    # Radius around the cell
     # Whether to look only at cells of certain size. Default is to include cells 
     # smaller than Vol_inclusion. If cells of greater volume are wanted, 
     # designate incl_type to be 'greater'. Otherwise, the string can be left empty.
@@ -93,7 +93,7 @@ class settings:
     
     ### STATISTICS OPTIONS ###
     # Whether to perform group-wise stat analysis.
-    statistics = False
+    statistics = True
     windowed = True
     trail = 2
     lead = 2
@@ -103,24 +103,24 @@ class settings:
     stars = True # Make P-value stars to the plot (*:<0.05 **:<0.01 ***:<0.001)
     fill = True
     # The name of the control group that the statistics are run against.
-    cntrlGroup = "starv"
+    cntrlGroup = "CtrlY"
     
     ### PLOTTING OPTIONS ###  
-    Create_Channel_Plots = False
-    Create_AddData_Plots = False
-    Create_Channel_PairPlots = False
+    Create_Channel_Plots = True
+    Create_AddData_Plots = True
+    Create_Channel_PairPlots = True
     Create_NearestDist_Plots = True
     Create_Statistics_Plots = True  # requires statistics to be True
     # TODO change versus-plots to be only done on selected channels/data
     Create_ChanVSAdd_Plots = True
     Create_AddVSAdd_Plots = True
-    vs_channels = ['DAPI', 'GFP']
+    vs_channels = ['DAPI', 'PROS']
     vs_adds = ['Intensity Mean']
     
     # Gives values some coordinate-shift in channel pairplots. Useful in presenting
     # the data, as it is discrete; most of the data would be hidden under others.
     # Doesn't affect the underlying data, or the regression in plots.
-    plot_jitter = False
+    plot_jitter = True
     
     ## Figure save-format ##
     # Supported formats for the plot files: eps, jpeg, jpg, pdf, pgf, png, ps, raw, rgba, svg, svgz, tif, tiff.
