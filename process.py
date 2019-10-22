@@ -14,7 +14,7 @@ def Create_Samples(PATHS):
     print("---Processing samples---")
     for path in [p for p in settings.workdir.iterdir() if p.is_dir() and p.stem 
                  != 'Analysis Data']:
-        sample = get_sample(path, PATHS.samplesdir, process=True)
+        sample = get_sample(path, PATHS, process=True)
         print("{}  ...".format(sample.name))
         sample.vectData = sample.get_vectData(settings.vectChannel)
         # Creation of vector for projection

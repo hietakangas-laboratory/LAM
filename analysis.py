@@ -147,6 +147,7 @@ class Samplegroups:
             print('\nPlotting average distances  ...')
             __nearestDist()
         # TODO add sample group total counts / plots & stats
+        # TODO add heatmaps
 
     def read_channel(self, path, groups, drop=False):
         Data = system.read_data(path, header=0, test=False)

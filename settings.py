@@ -5,14 +5,14 @@ class settings:
     ######################## PRIMARY SETTINGS ########################
     # DEFINE PATH TO ANALYSIS FOLDER:
     # (Use input r'PATH' where PATH is your path)
-    workdir = pl.Path(r'P:\h919\hietakangas\Arto\Statistics_DANA\Final\Posterior')
+    workdir = pl.Path(r'P:\h919\hietakangas\Arto\21.01.2019 Statistics')
     # Whether to gather raw data and create vectors. If False, expects to find 
     # pre-created datafiles in the Analysis Data directory, i.e. a previous 
     # full run has been made, and there has been no edits to the data files.
-    process_samples = False
+    process_samples = True
     # Whether to count and normalize data. If set to False, expect all data to
     # be in place. Can be used to e.g. create additional plots faster.
-    process_counts = False
+    process_counts = True
     # Set True/False to set all plotting functionalities ON/OFF
     Create_Plots = True     # ON / OFF switch for plots
     
@@ -22,25 +22,25 @@ class settings:
     vectChannel = "DAPI"
     header_row = 2      # On which row does the data have its header (starts from 0)
     # Number of bins used for projection unto vector (the third value).
-    projBins = np.linspace(0, 1, 8)
+    projBins = np.linspace(0, 1, 100)
     
     # Make vector by creating binary image and then skeletonizing. If False, vector 
     # is created by finding middle point between smallest and largest Y-axis position in bin.
-    SkeletonVector = True
+    SkeletonVector = False
     SkeletonResize = 0.2    # Binary image resize for reprocessing, e.g. smoothing. Keep at steps of ten.
-    find_dist = 150
+    find_dist = 30
     BDiter = 0           # Number of iterations for binary dilation (set to 0 if not needed)
     SigmaGauss = 1        # Sigma for gaussian smoothing (set to 0 if not needed)
     simplifyTol = 50        # Tolerance for vector simplification. Dependent on image size.
     # Number of bins used for vector creation when using the median vector creation. You should probably keep this 
     # smaller than the projBins, depending on cell density (<50%).
-    medianBins = 15
+    medianBins = 25
 
 
     ## MEASUREMENT POINTS ##
     # Whether to use measurement point coordinates for normalization. If False,
     # the samples will be handled as perfectly aligned from beginning to end.
-    useMP = False
+    useMP = True
     # The name of the file used for normalizing between samples, i.e. R3 measurement point
     MPname = "MP"
     # Include secondary measurement point. Used to see e.g. proportional change.
@@ -67,8 +67,8 @@ class settings:
     replaceID = True
     channelID = {"Ch=1": "Pros",
                  "Ch=2": "GFP",
-                 "Ch=3": "DAPI",
-                 "Ch=4": "adfbad",}
+                 "Ch=3": "SuH",
+                 "Ch=4": "DAPI",}
     ###################################################################
     
     ### ANALYSIS OPTIONS ###
@@ -76,7 +76,7 @@ class settings:
     # channels in Distance_Channels list. If use target is True, the nearest
     # cell is found on the channel defined by target_chan, otherwise they are
     # found within the channel undergoing analysis.
-    Find_Distances = True
+    Find_Distances = False
     Distance_Channels = ["DAPI"]
     use_target = False
     target_chan = "Pros"
@@ -114,7 +114,7 @@ class settings:
     # TODO change versus-plots to be only done on selected channels/data
     Create_ChanVSAdd_Plots = True
     Create_AddVSAdd_Plots = True
-    vs_channels = ['DAPI', 'PROS']
+    vs_channels = ['DAPI', 'Pros', 'SuH', 'GFP']
     vs_adds = ['Intensity Mean']
     
     # Gives values some coordinate-shift in channel pairplots. Useful in presenting
