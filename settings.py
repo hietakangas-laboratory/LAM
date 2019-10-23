@@ -9,10 +9,10 @@ class settings:
     # Whether to gather raw data and create vectors. If False, expects to find 
     # pre-created datafiles in the Analysis Data directory, i.e. a previous 
     # full run has been made, and there has been no edits to the data files.
-    process_samples = True
+    process_samples = False
     # Whether to count and normalize data. If set to False, expect all data to
     # be in place. Can be used to e.g. create additional plots faster.
-    process_counts = True
+    process_counts = False
     # Set True/False to set all plotting functionalities ON/OFF
     Create_Plots = True     # ON / OFF switch for plots
     
@@ -22,7 +22,7 @@ class settings:
     vectChannel = "DAPI"
     header_row = 2      # On which row does the data have its header (starts from 0)
     # Number of bins used for projection unto vector (the third value).
-    projBins = np.linspace(0, 1, 100)
+    projBins = np.linspace(0, 1, 80)
     
     # Make vector by creating binary image and then skeletonizing. If False, vector 
     # is created by finding middle point between smallest and largest Y-axis position in bin.
@@ -103,11 +103,11 @@ class settings:
     stars = True # Make P-value stars to the plot (*:<0.05 **:<0.01 ***:<0.001)
     fill = True
     # The name of the control group that the statistics are run against.
-    cntrlGroup = "CtrlY"
+    cntrlGroup = "starv"
     
     ### PLOTTING OPTIONS ###  
-    Create_Channel_Plots = True
-    Create_AddData_Plots = True
+    Create_Channel_Plots = False
+    Create_AddData_Plots = False
     Create_Channel_PairPlots = True
     Create_NearestDist_Plots = True
     Create_Statistics_Plots = True  # requires statistics to be True

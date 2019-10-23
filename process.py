@@ -50,7 +50,7 @@ def Gather_Samples(PATHS):
         sample = get_sample(path, PATHS, process=False)
         chanDir = settings.workdir.joinpath(sample.name)
         if not settings.process_samples and settings.process_counts:
-            for chanPath in [p for p in chanDir.iterdir()]:
+            for chanPath in [p for p in chanDir.iterdir() if p.is_dir()]:
                 channel = get_channel(chanPath, sample, settings.AddData)
                 sample.data = sample.project_channel(channel, PATHS.datadir)
         # Looping through every channel found in the sample's directory
@@ -109,7 +109,8 @@ class get_sample:
         else: # If the samples are not to be processed, the data is only gathered
               # from the csv-files in the sample's directory ("./Analysis Data/Samples/")
             self.channelpaths = list([p for p in path.iterdir() if '.csv' in 
-                                      p.name and 'Vector.csv' not in p.name])
+                                     p.name and p.stem not in ['Vector', 'MPs',
+                                                               'R45', 'MP']])
             self.channels = [p.stem for p in self.channelpaths]
             for channel in self.channels:
                 if channel.lower() not in [c.lower() for c in store.channels]:
@@ -121,7 +122,7 @@ class get_sample:
             lenS = pd.Series(self.vectorLength, name=self.name)
             system.saveToFile(lenS, PATHS.datadir, 'Length.csv')            
         try:
-            MPs = pd.read_csv(self.sampledir.joinpath('MPs.csv'))
+            MPs = pd.read_csv(PATHS.datadir.joinpath('MPs.csv'))
             self.MP = MPs.loc[:, self.name]
             try:
                 if settings.useSecMP:

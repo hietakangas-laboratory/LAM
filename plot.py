@@ -220,7 +220,6 @@ class plotter:
 #        Sdata = pd.to_numeric(data[col])   
 #        plotdata = plotData.apply(pd.to_numeric, **{'errors':'ignore'})
         flierprops = kws.pop('fliersize')
-#        print(plotData)
         g = sns.catplot(data=plotData, x=kws.get('xlabel'), y=kws.get('ylabel'), 
                     hue="Sample Group", kind="box", palette=palette, 
                     linewidth=0.15, height=kws.get('height'),
