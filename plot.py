@@ -136,6 +136,7 @@ class plotter:
                           y=plotData.loc[:, kws.get('y')], kind='kde',
                           color=palette.get(key), joint_kws={'shade_lowest': False})
             elif plotfunc.__name__ == 'catPlot':
+                # TODO add buffer to sign. stars and plot
                 g = self.catPlot(self.palette, **kws)
                 __stats()
                 __add()

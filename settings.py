@@ -106,7 +106,7 @@ class settings:
     cntrlGroup = "starv"
     
     ### PLOTTING OPTIONS ###  
-    Create_Channel_Plots = False
+    Create_Channel_Plots = True
     Create_AddData_Plots = False
     Create_Channel_PairPlots = True
     Create_NearestDist_Plots = True

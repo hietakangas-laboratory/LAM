@@ -94,7 +94,6 @@ def Get_Counts(PATHS):
 class get_sample:
     def __init__(self, path, PATHS, process=True):
         self.name = str(path.stem)
-        print(self.name)
         self.sampledir = PATHS.samplesdir.joinpath(self.name)
         self.group = self.name.split('_')[0]
         if self.name not in store.samples:
@@ -109,8 +108,7 @@ class get_sample:
         else: # If the samples are not to be processed, the data is only gathered
               # from the csv-files in the sample's directory ("./Analysis Data/Samples/")
             self.channelpaths = list([p for p in path.iterdir() if '.csv' in 
-                                     p.name and p.stem not in ['Vector', 'MPs',
-                                                               'R45', 'MP']])
+                                     p.name and p.stem not in ['Vector', 'MPs']])
             self.channels = [p.stem for p in self.channelpaths]
             for channel in self.channels:
                 if channel.lower() not in [c.lower() for c in store.channels]:
@@ -167,7 +165,7 @@ class get_sample:
                                                     resize, BDiter, SigmaGauss)
         else:
             vector, lineDF = self.MedianVector(X, Y, creationBins)
-            binaryArray, skeleton = (None, None)
+            binaryArray, skeleton = None, None
         vector = vector.simplify(settings.simplifyTol)
         length = pd.Series(vector.length, name=self.name)
         system.saveToFile(length, datadir, 'Length.csv')
@@ -203,7 +201,7 @@ class get_sample:
             try:
                 BA = mp.binary_dilation(BA, structure=struct1, iterations=BDiter)
             except TypeError:
-                print("TypeError: BDiter in settings has to be integer.")
+                print("TypeError: BDiter in settings has to be an integer.")
         if SigmaGauss > 0:
             BA = gaussian(BA, sigma=SigmaGauss)
             BA[BA > 0] = True
