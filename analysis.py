@@ -462,51 +462,61 @@ class statistics:
         self.tstData = None
 
     def MWW_test(self, Path):
-#        def __get_stats():
-                  
-        self.channel = ' '.join(str(Path.stem).split('_')[1:])
-        Data = system.read_data(Path, header=0, test=False)
-        cntrlData = Data.loc[:, Data.columns.str.contains(self.cntrlNamer, regex=True)]
-        tstData = Data.loc[:, Data.columns.str.contains(self.tstNamer)]
-        statData = pd.DataFrame(index=Data.index, columns=['Score Greater',
-         'Corrected Greater', 'P Greater', 'Reject Greater',
-         'Score Lesser', 'Corrected Lesser', 'P Lesser',
-         'Reject Lesser'])
-        # TODO try implementing rollin window
-#        if settings.windowed:
-#            for i, __ in cntrlData.loc[settings.trail-1:-(settings.lead+1), 
-#                                       :].iterrows():
-#                sInd = i - settings.trail
-#                eInd = i + settings.lead
-#                cntrlVals = cntrlData.loc[sInd:eInd, :].values().flatten()
-#                tstVals = tstData.loc[sInd:eInd, :].values().flatten()
-                
-        for ind, row in cntrlData.iterrows():
-            row2 = tstData.loc[ind, :]
-            if row.any() == True or row2.any() == True:
-                if np.array_equal(row.values, row2.values) == False:
+        def __get_stats(row, row2, ind, statData):
+            if row.any() != False or row2.any() != False:
+                if np.array_equal(row, row2) == False:
                     with warnings.catch_warnings():
                         warnings.simplefilter('ignore', category=RuntimeWarning)
                         stat, pval = ss.mannwhitneyu(row, row2, 
                                                      alternative='greater')
                         stat2, pval2 = ss.mannwhitneyu(row, row2, 
                                                        alternative='less')
+                        stat3, pval3 = ss.mannwhitneyu(row, row2, 
+                                                       alternative='two-sided')
                     statData.iat[ind, 0], statData.iat[ind, 2] = stat, pval
-                    statData.iat[ind, 4], statData.iat[ind, 6] = stat2, pval2
+                    statData.iat[ind, 5] = pval2
+                    statData.iat[ind, 8] = pval3
                 else:
                     statData.iat[ind, 0], statData.iat[ind, 2] = 0, 0
-                    statData.iat[ind, 4], statData.iat[ind, 6] = 0, 0
-        # ??? Setting for multiple test correction or not?
-        GrP = statData.iloc[:, 2].values
-        LsP = statData.iloc[:, 6].values
-        with warnings.catch_warnings():
-            warnings.simplefilter('ignore', category=RuntimeWarning)
-            RejectGr, CorrPGr, _, _ = multi.multipletests(GrP, method='fdr_bh', 
+                    statData.iat[ind, 5] = 0
+                    statData.iat[ind, 8] = 0
+            return statData
+        
+        def __correct(Pvals, corrInd, rejInd):
+            vals = Pvals.values
+            with warnings.catch_warnings():
+                warnings.simplefilter('ignore', category=RuntimeWarning)
+                Reject, CorrP, _, _ = multi.multipletests(vals, method='fdr_bh', 
                                                       alpha=settings.alpha)
-            RejectLs, CorrPLs, _, _ = multi.multipletests(LsP, method='fdr_bh', 
-                                                      alpha=settings.alpha)
-        statData.iloc[:, 3], statData.iloc[:, 1] = RejectGr, CorrPGr
-        statData.iloc[:, 7], statData.iloc[:, 5] = RejectLs, CorrPLs
+            statData.iloc[:,corrInd], statData.iloc[:, rejInd] = CorrP, Reject
+            return statData
+                  
+        self.channel = ' '.join(str(Path.stem).split('_')[1:])
+        Data = system.read_data(Path, header=0, test=False)
+        cntrlData = Data.loc[:, Data.columns.str.contains(self.cntrlNamer, regex=True)]
+        tstData = Data.loc[:, Data.columns.str.contains(self.tstNamer, regex=True)]
+        indx = cntrlData.index.union(tstData.index)
+        statData = pd.DataFrame(index=indx, columns=['U Score',
+         'Corrected Greater', 'P Greater', 'Reject Greater', 'Corrected Lesser', 
+         'P Lesser', 'Reject Lesser', 'Corrected two-sided', 'P two-sided', 
+         'Reject two-sided'])
+#         TODO try implementing rollin window
+        if settings.windowed:
+            for ind, __ in cntrlData.iloc[settings.trail-1:-(settings.lead+1), 
+                                       :].iterrows():
+                sInd = ind - settings.trail
+                eInd = ind + settings.lead
+                cntrlVals = cntrlData.iloc[sInd:eInd, :].values.flatten()
+                tstVals = tstData.iloc[sInd:eInd, :].values.flatten()
+                statData = __get_stats(cntrlVals, tstVals, ind, statData)
+        else:        
+            for ind, row in cntrlData.iterrows():
+                cntrlVals = row.values
+                tstVals = tstData.loc[ind, :].values
+                statData = __get_stats(cntrlVals, tstVals, ind, statData)
+        statData = __correct(statData.iloc[:, 2], 1, 3)
+        statData = __correct(statData.iloc[:, 5], 4, 6)
+        statData = __correct(statData.iloc[:, 8], 7, 9)
         filename = 'Stats_{} = {}.csv'.format(self.title, self.channel)
         system.saveToFile(statData, self.statsDir, filename, append=False)
         self.statData, self.cntrlData, self.tstData = statData, cntrlData, tstData
@@ -529,6 +539,7 @@ class statistics:
                'centerline':plot_maker.MPbin, 'xlen':self.length,
                'title':plot_maker.title, 'Stats': stats, 
                'fliersize': {'fliersize':'4'}}
+        if settings.windowed: kws.update({'windowed': True})
         plot_maker.plot_Data(plotter.catPlot, plot_maker.savepath, **kws)
         
 def DropOutlier(Data):

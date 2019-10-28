@@ -71,45 +71,65 @@ class plotter:
                 ycoords = (0, ytop)
                 xcoords = (MPbin, MPbin)
                 ax.plot(xcoords, ycoords, 'r--')
-                
-        def __marker(value, colors):
-            if value <= 0.001:
-                pStr = "*\n*\n*"
-                color = colors[3]
-            elif value <= 0.01:
-                pStr = "*\n*"
-                color = colors[2]
-            elif value <= 0.05:
-                pStr = "*"
-                color = colors[1]
-            else:
-                pStr = " "
-                color = colors[0]
-            return pStr, color
         
         def __stats():
+            def __marker(value, colors):
+                if value <= 0.001:
+                    pStr = "*\n*\n*"
+                    color = colors[3]
+                elif value <= 0.01:
+                    pStr = "*\n*"
+                    color = colors[2]
+                elif value <= 0.05:
+                    pStr = "*"
+                    color = colors[1]
+                else:
+                    pStr = " "
+                    color = colors[0]
+                return pStr, color
+        
             stats = kws.pop('Stats')
             __, ytop = plt.ylim()
             LScolors = sns.color_palette('Reds',n_colors=4)
             GRcolors = sns.color_palette('Blues',n_colors=4)
             yaxis = [ytop, ytop]
-            yheight = ytop*0.8
+            yheight = ytop*0.9
+            if 'windowed' in kws: stars = False
+            elif settings.stars: stars = True
+            else: stars = False
+            # TODO handle color filling of plot ends
             for index, row in stats.iterrows():
-                if row[0:2].any() != False and row[3] == True:
+                # row[1] == row[1] checks that given value is not NaN
+                if row[1] == row[1] and row[3] == True:# cntrl is greater
                     xaxis = [index-0.5, index+0.5]
-                    pStr, color = __marker(row[2], LScolors)
+                    pStr, color = __marker(row[1], LScolors)
                     if settings.fill:
                         plt.fill_between(xaxis,yaxis, color=color, alpha=0.2)
-                    if settings.stars:
+                    if stars:
                         plt.text(index, yheight, pStr)
-                if row[4:6].any() != False and row[7] == True:
+                if row[4] == row[4] and row[6] == True:# cntrl is lesser
                     xaxis = [index-0.5, index+0.5]
-                    pStr, color= __marker(row[6], GRcolors)
+                    pStr, color = __marker(row[4], GRcolors)
                     if settings.fill:
                         plt.fill_between(xaxis,yaxis, color=color, alpha=0.2)
-                    if settings.stars:
+                    if stars:
                         plt.text(index, yheight, pStr)
-            return g
+            Y = stats.iloc[:, 7]
+            X = Y.index.tolist()
+            logvals = np.log2(Y.astype(np.float64))
+            xmin, xtop = stats.index.min(), stats.index.max()
+            ax2 = plt.twinx()
+            lkws = {'alpha': 0.85}
+            ax2.plot(X, np.negative(logvals), color='dimgrey', linewidth=1,
+                     **lkws)
+            ax2.plot((xmin,xtop), (0,0), linestyle='dashed', color='grey', 
+                     linewidth=0.85, **lkws)
+            ax2.set_ylabel('P value\n(-log2)')
+            ax2.set_ylim(bottom= 2.5*-settings.ylim, top=settings.ylim)
+            ytick = np.arange(0, settings.ylim, 5)
+            ax2.set_yticks(ytick)
+            ax2.set_yticklabels(ytick)
+            ax2.yaxis.set_label_coords(1.04, 0.85)
         
         def __add():
             if 'centerline' in kws.keys(): __centerline()
@@ -119,6 +139,7 @@ class plotter:
             if 'xlabel' in kws.keys():
                 plt.xlabel(kws.get('xlabel'), labelpad=20)
             return g
+        
         #---------#
         if 'id_str' in kws:
             plotData, varname, valname = __melt_data(self.data, **kws)
@@ -140,6 +161,7 @@ class plotter:
                 g = self.catPlot(self.palette, **kws)
                 __stats()
                 __add()
+                g.fig.subplots_adjust(right=0.85)
             elif plotfunc.__name__ == 'pairPlot':
                 g = self.pairPlot(**kws)
             else:
@@ -221,8 +243,9 @@ class plotter:
 #        Sdata = pd.to_numeric(data[col])   
 #        plotdata = plotData.apply(pd.to_numeric, **{'errors':'ignore'})
         flierprops = kws.pop('fliersize')
+        fkws = {'dropna': False}
         g = sns.catplot(data=plotData, x=kws.get('xlabel'), y=kws.get('ylabel'), 
                     hue="Sample Group", kind="box", palette=palette, 
                     linewidth=0.15, height=kws.get('height'),
-                    aspect=kws.get('aspect'), **flierprops)
+                    aspect=kws.get('aspect'), facet_kws = fkws, **flierprops)
         return g

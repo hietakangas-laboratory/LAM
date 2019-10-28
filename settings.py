@@ -95,8 +95,9 @@ class settings:
     # Whether to perform group-wise stat analysis.
     statistics = True
     windowed = True
-    trail = 2
-    lead = 2
+    trail = 1
+    lead = 1
+    ylim = 30   # negative log2 y-limit
     
     alpha = 0.05 # for rejection of H_0
     # plots
@@ -108,12 +109,12 @@ class settings:
     ### PLOTTING OPTIONS ###  
     Create_Channel_Plots = True
     Create_AddData_Plots = False
-    Create_Channel_PairPlots = True
-    Create_NearestDist_Plots = True
+    Create_Channel_PairPlots = False
+    Create_NearestDist_Plots = False
     Create_Statistics_Plots = True  # requires statistics to be True
     # TODO change versus-plots to be only done on selected channels/data
-    Create_ChanVSAdd_Plots = True
-    Create_AddVSAdd_Plots = True
+    Create_ChanVSAdd_Plots = False
+    Create_AddVSAdd_Plots = False
     vs_channels = ['DAPI', 'Pros', 'SuH', 'GFP']
     vs_adds = ['Intensity Mean']
     
