@@ -68,9 +68,7 @@ class plotter:
             MPbin = kws.get('centerline')
             __, ytop = plt.ylim()
             for ax in g.axes.flat:
-                ycoords = (0, ytop)
-                xcoords = (MPbin, MPbin)
-                ax.plot(xcoords, ycoords, 'r--')
+                ax.plot((MPbin, MPbin), (0, ytop), 'r--')
         
         def __stats():
             def __marker(value, colors):
@@ -90,34 +88,15 @@ class plotter:
         
             stats = kws.pop('Stats')
             __, ytop = plt.ylim()
-            LScolors = sns.color_palette('Reds',n_colors=4)
-            GRcolors = sns.color_palette('Blues',n_colors=4)
-            yaxis = [ytop, ytop]
-            yheight = ytop*0.9
-            if 'windowed' in kws: stars = False
-            elif settings.stars: stars = True
-            else: stars = False
-            # TODO handle color filling of plot ends
-            for index, row in stats.iterrows():
-                # row[1] == row[1] checks that given value is not NaN
-                if row[1] == row[1] and row[3] == True:# cntrl is greater
-                    xaxis = [index-0.5, index+0.5]
-                    pStr, color = __marker(row[1], LScolors)
-                    if settings.fill:
-                        plt.fill_between(xaxis,yaxis, color=color, alpha=0.2)
-                    if stars:
-                        plt.text(index, yheight, pStr)
-                if row[4] == row[4] and row[6] == True:# cntrl is lesser
-                    xaxis = [index-0.5, index+0.5]
-                    pStr, color = __marker(row[4], GRcolors)
-                    if settings.fill:
-                        plt.fill_between(xaxis,yaxis, color=color, alpha=0.2)
-                    if stars:
-                        plt.text(index, yheight, pStr)
+            tytop = ytop*1.35
+            ax = plt.gca()
+            # TODO change -log2 to be optional.
+            ax.set_ylim(top=tytop)
             Y = stats.iloc[:, 7]
             X = Y.index.tolist()
             logvals = np.log2(Y.astype(np.float64))
             xmin, xtop = stats.index.min(), stats.index.max()
+            # Create twin axis with -log2 P-values
             ax2 = plt.twinx()
             lkws = {'alpha': 0.85}
             ax2.plot(X, np.negative(logvals), color='dimgrey', linewidth=1,
@@ -125,14 +104,50 @@ class plotter:
             ax2.plot((xmin,xtop), (0,0), linestyle='dashed', color='grey', 
                      linewidth=0.85, **lkws)
             ax2.set_ylabel('P value\n(-log2)')
-            ax2.set_ylim(bottom= 2.5*-settings.ylim, top=settings.ylim)
+            # Find top of original y-axis and create a buffer for twin to create
+            # prettier plot
+#            __, ytop = ax.get_ylim()
+            botAdd = 2.75*-settings.ylim
+            ax2.set_ylim(bottom=botAdd, top=settings.ylim)
             ytick = np.arange(0, settings.ylim, 5)
             ax2.set_yticks(ytick)
-            ax2.set_yticklabels(ytick)
+            ax2.set_yticklabels(ytick, fontdict={'fontsize': 14})
             ax2.yaxis.set_label_coords(1.04, 0.85)
+            ybot2, ytop2 = ax2.get_ylim()
+            yaxis = [ybot2, ybot2]
+            yheight = ytop2*0.9
+            # Create significance stars and color fills
+            if 'windowed' in kws: 
+                stars = False
+                comment = "Window: lead {}, trail {}".format(settings.lead, 
+                                        settings.trail)
+                ax.text(0, tytop*1.02, comment)
+            elif settings.stars: stars = True
+            else: stars = False
+            LScolors = sns.color_palette('Reds',n_colors=4)
+            GRcolors = sns.color_palette('Blues',n_colors=4)
+            for index, row in stats.iterrows():
+                xaxis = [index-0.5, index+0.5]
+                # row[1] == row[1] checks that given value is not NaN
+                if row[1] == row[1] and row[3] == True:# cntrl is greater
+                    pStr, color = __marker(row[1], LScolors)
+                    if settings.fill:
+                        plt.fill_between(xaxis,yaxis, color=color, alpha=0.2)
+                    if stars:
+                        plt.text(index, yheight, pStr)
+                if row[4] == row[4] and row[6] == True:# cntrl is lesser
+                    pStr, color = __marker(row[4], GRcolors)
+                    if settings.fill:
+                        plt.fill_between(xaxis,yaxis, color=color, alpha=0.2)
+                    if stars:
+                        plt.text(index, yheight, pStr)
+            # Create centerline
+            MPbin = kws.get('centerline')
+            ax2.plot((MPbin, MPbin), (ybot2, ytop2), 'r--')
         
-        def __add():
-            if 'centerline' in kws.keys(): __centerline()
+        def __add(centerline=True):
+            if 'centerline' in kws.keys() and centerline: 
+                __centerline()
             if 'xlen' in kws.keys(): __set_xtick()
             if 'ylabel' in kws.keys():
                 g.set(ylabel=kws.get('ylabel'))
@@ -157,11 +172,10 @@ class plotter:
                           y=plotData.loc[:, kws.get('y')], kind='kde',
                           color=palette.get(key), joint_kws={'shade_lowest': False})
             elif plotfunc.__name__ == 'catPlot':
-                # TODO add buffer to sign. stars and plot
+                # TODO add buffer to sign. stars and plot ???
                 g = self.catPlot(self.palette, **kws)
                 __stats()
-                __add()
-                g.fig.subplots_adjust(right=0.85)
+                __add(centerline=False)
             elif plotfunc.__name__ == 'pairPlot':
                 g = self.pairPlot(**kws)
             else:
@@ -240,8 +254,6 @@ class plotter:
         data = kws.pop('data')
         col = kws.get('ylabel')
         plotData = data.dropna(subset=[col])
-#        Sdata = pd.to_numeric(data[col])   
-#        plotdata = plotData.apply(pd.to_numeric, **{'errors':'ignore'})
         flierprops = kws.pop('fliersize')
         fkws = {'dropna': False}
         g = sns.catplot(data=plotData, x=kws.get('xlabel'), y=kws.get('ylabel'), 

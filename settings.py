@@ -97,7 +97,7 @@ class settings:
     windowed = True
     trail = 1
     lead = 1
-    ylim = 30   # negative log2 y-limit
+    ylim = 25   # negative log2 y-limit
     
     alpha = 0.05 # for rejection of H_0
     # plots

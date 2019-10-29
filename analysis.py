@@ -493,14 +493,13 @@ class statistics:
                   
         self.channel = ' '.join(str(Path.stem).split('_')[1:])
         Data = system.read_data(Path, header=0, test=False)
+        Data = Data.replace(np.nan, 0)
         cntrlData = Data.loc[:, Data.columns.str.contains(self.cntrlNamer, regex=True)]
         tstData = Data.loc[:, Data.columns.str.contains(self.tstNamer, regex=True)]
-        indx = cntrlData.index.union(tstData.index)
-        statData = pd.DataFrame(index=indx, columns=['U Score',
-         'Corrected Greater', 'P Greater', 'Reject Greater', 'Corrected Lesser', 
-         'P Lesser', 'Reject Lesser', 'Corrected two-sided', 'P two-sided', 
-         'Reject two-sided'])
-#         TODO try implementing rollin window
+        statData = pd.DataFrame(index=Data.index, columns=['U Score',
+         'Corr. Greater', 'P Greater', 'Reject Greater', 'Corr. Lesser', 
+         'P Lesser', 'Reject Lesser', 'Corr. Two-sided', 'P Two-sided', 
+         'Reject Two-sided'])
         if settings.windowed:
             for ind, __ in cntrlData.iloc[settings.trail-1:-(settings.lead+1), 
                                        :].iterrows():
