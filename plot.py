@@ -90,60 +90,62 @@ class plotter:
             __, ytop = plt.ylim()
             tytop = ytop*1.35
             ax = plt.gca()
-            # TODO change -log2 to be optional.
             ax.set_ylim(top=tytop)
-            Y = stats.iloc[:, 7]
-            X = Y.index.tolist()
-            logvals = np.log2(Y.astype(np.float64))
-            xmin, xtop = stats.index.min(), stats.index.max()
-            # Create twin axis with -log2 P-values
-            ax2 = plt.twinx()
-            lkws = {'alpha': 0.85}
-            ax2.plot(X, np.negative(logvals), color='dimgrey', linewidth=1,
-                     **lkws)
-            ax2.plot((xmin,xtop), (0,0), linestyle='dashed', color='grey', 
-                     linewidth=0.85, **lkws)
-            ax2.set_ylabel('P value\n(-log2)')
-            # Find top of original y-axis and create a buffer for twin to create
-            # prettier plot
-#            __, ytop = ax.get_ylim()
-            botAdd = 2.75*-settings.ylim
-            ax2.set_ylim(bottom=botAdd, top=settings.ylim)
-            ytick = np.arange(0, settings.ylim, 5)
-            ax2.set_yticks(ytick)
-            ax2.set_yticklabels(ytick, fontdict={'fontsize': 14})
-            ax2.yaxis.set_label_coords(1.04, 0.85)
-            ybot2, ytop2 = ax2.get_ylim()
-            yaxis = [ybot2, ybot2]
-            yheight = ytop2*0.9
+            MPbin = kws.get('centerline')
+            if settings.negLog2: # Creation of -log2 P-valueaxis and line plot
+                settings.stars = False
+                Y = stats.iloc[:, 7]
+                X = Y.index.tolist()
+                logvals = np.log2(Y.astype(np.float64))
+                xmin, xtop = stats.index.min(), stats.index.max()
+                # Create twin axis with -log2 P-values
+                ax2 = plt.twinx()
+                lkws = {'alpha': 0.85}
+                ax2.plot(X, np.negative(logvals), color='dimgrey', linewidth=1,
+                         **lkws)
+                ax2.plot((xmin,xtop), (0,0), linestyle='dashed', color='grey', 
+                         linewidth=0.85, **lkws)
+                ax2.set_ylabel('P value\n(-log2)')
+                # Find top of original y-axis and create a buffer for twin to create
+                # prettier plot
+                botAdd = 2.75*-settings.ylim
+                ax2.set_ylim(bottom=botAdd, top=settings.ylim)
+                ytick = np.arange(0, settings.ylim, 5)
+                ax2.set_yticks(ytick)
+                ax2.set_yticklabels(ytick, fontdict={'fontsize': 14})
+                ax2.yaxis.set_label_coords(1.04, 0.85)
+                ybot2, ytop2 = ax2.get_ylim()
+                yaxis = [ybot2, ybot2]
+                # Create centerline
+                ax2.plot((MPbin, MPbin), (ybot2, ytop2), 'r--')
+            else: # Initiation of variables when not using -log2 & make centerline
+                yaxis = [tytop, tytop]
+                yheight = ytop*1.1
+                ax.plot((MPbin, MPbin), (0, tytop), 'r--')
             # Create significance stars and color fills
-            if 'windowed' in kws: 
-                stars = False
+            if 'windowed' in kws:
                 comment = "Window: lead {}, trail {}".format(settings.lead, 
                                         settings.trail)
                 ax.text(0, tytop*1.02, comment)
-            elif settings.stars: stars = True
-            else: stars = False
             LScolors = sns.color_palette('Reds',n_colors=4)
             GRcolors = sns.color_palette('Blues',n_colors=4)
             for index, row in stats.iterrows():
+                # If both null rejections have same value, continue to next bin
+                if row[3] == row[6]:
+                    continue
                 xaxis = [index-0.5, index+0.5]
-                # row[1] == row[1] checks that given value is not NaN
-                if row[1] == row[1] and row[3] == True:# cntrl is greater
+                if row[3] == True:# cntrl is greater
                     pStr, color = __marker(row[1], LScolors)
                     if settings.fill:
                         plt.fill_between(xaxis,yaxis, color=color, alpha=0.2)
-                    if stars:
-                        plt.text(index, yheight, pStr)
-                if row[4] == row[4] and row[6] == True:# cntrl is lesser
+                    if settings.stars:
+                        plt.text(index, yheight, pStr, fontdict={'fontsize': 14})
+                if row[6] == True:# cntrl is lesser
                     pStr, color = __marker(row[4], GRcolors)
                     if settings.fill:
                         plt.fill_between(xaxis,yaxis, color=color, alpha=0.2)
-                    if stars:
-                        plt.text(index, yheight, pStr)
-            # Create centerline
-            MPbin = kws.get('centerline')
-            ax2.plot((MPbin, MPbin), (ybot2, ytop2), 'r--')
+                    if settings.stars:
+                        plt.text(index, yheight, pStr, fontdict={'fontsize': 14})
         
         def __add(centerline=True):
             if 'centerline' in kws.keys() and centerline: 
@@ -230,6 +232,7 @@ class plotter:
         return g
 
     def distPlot(palette, **kws):
+        # ??? Needed?
         axes = plt.gca()
         return axes
 

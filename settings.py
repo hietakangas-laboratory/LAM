@@ -100,9 +100,10 @@ class settings:
     ylim = 25   # negative log2 y-limit
     
     alpha = 0.05 # for rejection of H_0
-    # plots
+    # Plots
     stars = True # Make P-value stars to the plot (*:<0.05 **:<0.01 ***:<0.001)
     fill = True
+    negLog2 = True # Makes stars to be False
     # The name of the control group that the statistics are run against.
     cntrlGroup = "starv"
     

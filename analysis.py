@@ -432,7 +432,6 @@ class Sample(Group):
             # Overwrite the original data with the data containing new columns.
         system.saveToFile(NewData, (self.path), OW_name, append=False)
 
-
 class statistics:
     def __init__(self, control, group2):
         """Takes two Group-objects and creates statistics based on their 
@@ -501,7 +500,7 @@ class statistics:
          'P Lesser', 'Reject Lesser', 'Corr. Two-sided', 'P Two-sided', 
          'Reject Two-sided'])
         if settings.windowed:
-            for ind, __ in cntrlData.iloc[settings.trail-1:-(settings.lead+1), 
+            for ind, __ in cntrlData.iloc[settings.trail:-(settings.lead+1), 
                                        :].iterrows():
                 sInd = ind - settings.trail
                 eInd = ind + settings.lead
@@ -549,5 +548,3 @@ def DropOutlier(Data):
         Data = Data.applymap(lambda x: x if np.abs(x - Mean) <= \
                              (settings.dropSTD * std) else np.nan)
     return Data
-        
-        
