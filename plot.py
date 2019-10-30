@@ -117,11 +117,11 @@ class plotter:
                 ybot2, ytop2 = ax2.get_ylim()
                 yaxis = [ybot2, ybot2]
                 # Create centerline
-                ax2.plot((MPbin, MPbin), (ybot2, ytop2), 'r--')
+                ax2.plot((MPbin, MPbin), (ybot2, ytop2), 'r-')
             else: # Initiation of variables when not using -log2 & make centerline
                 yaxis = [tytop, tytop]
                 yheight = ytop*1.1
-                ax.plot((MPbin, MPbin), (0, tytop), 'r--')
+                ax.plot((MPbin, MPbin), (0, tytop), 'r-')
             # Create significance stars and color fills
             if 'windowed' in kws:
                 comment = "Window: lead {}, trail {}".format(settings.lead, 

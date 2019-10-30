@@ -50,7 +50,7 @@ class Samplegroups:
     def create_plots(self):
         basekws = {'id_str':'Sample Group',  'hue':'Sample Group',  
                    'row':'Sample Group', 'height':5, 'aspect':3,  
-                   'var_str':'Longitudinal Position', 'flierS': 3}
+                   'var_str':'Longitudinal Position', 'flierS': 2}
         
         def _select(paths, adds=True):
             retPaths = []
@@ -123,6 +123,7 @@ class Samplegroups:
                        'title':plot_maker.title, 'xlen':self._length}
                 kws.update(basekws)
                 (plot_maker.plot_Data)((plotter.linePlot), savepath, **kws)
+        
         #-------#
         print("\n---Creating plots---")
         if settings.Create_Channel_Plots:
@@ -536,7 +537,7 @@ class statistics:
                'aspect':4, 'var_str':'Longitudinal Position', 'value_str':unit, 
                'centerline':plot_maker.MPbin, 'xlen':self.length,
                'title':plot_maker.title, 'Stats': stats, 
-               'fliersize': {'fliersize':'4'}}
+               'fliersize': {'fliersize':'2'}}
         if settings.windowed: kws.update({'windowed': True})
         plot_maker.plot_Data(plotter.catPlot, plot_maker.savepath, **kws)
         
