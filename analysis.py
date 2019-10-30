@@ -19,11 +19,6 @@ class Samplegroups:
     _AllStarts = None
     _length = 0
     _center = int(len(settings.projBins / 2))
-    
-#    def __new__(cls, groups = None, channels = None, PATHS = None, child = True):
-#        if not cls._instance:
-#            cls._instance = super().__new__(cls)
-#        return cls._instance
 
     def __init__(self, groups=None, channels=None, length=0, center=None, 
                  PATHS=None, child=False):
@@ -149,6 +144,7 @@ class Samplegroups:
             __nearestDist()
         # TODO add sample group total counts / plots & stats
         # TODO add heatmaps
+        # TODO add cluster plots
 
     def read_channel(self, path, groups, drop=False):
         Data = system.read_data(path, header=0, test=False)
@@ -234,6 +230,15 @@ class Samplegroups:
                 Smpl = Sample(path, SampleGroup.group)
                 print('\n{}  ...'.format(Smpl.name))
                 Smpl.DistanceMean(settings.maxDist)
+    
+    def Get_Clusters(self):
+        for grp in self._groups:
+            print('\n---Finding clusters for group {}---'.format(grp))
+            SampleGroup = Group(grp)
+            for path in SampleGroup._groupPaths:
+                Smpl = Sample(path, SampleGroup.group)
+                print('{}  ...'.format(Smpl.name))
+                Smpl.Clusters(settings.Cl_maxDist)
 
     def Get_Statistics(self):
         if settings.Create_Plots:
@@ -299,10 +304,10 @@ class Sample(Group):
         self.color = Group._color
         self.MP = self._MPs.loc[(0, self.name)]
 
-    def DistanceMean(self, dist=10):
+    def DistanceMean(self, dist=25):
         kws = {'Dist': dist}
         distChans = [p for p in self.channelPaths for t in 
-                     settings.Distance_Channels if t == p.stem]
+                     settings.Distance_Channels if t.lower() == p.stem.lower()]
         if settings.use_target:
             target = settings.target_chan
             try:
@@ -323,11 +328,23 @@ class Sample(Group):
                 return
             Data = Data.loc[:, ~Data.columns.str.contains('Nearest_')]
             Data.name = path.stem
-            Data = (self.find_distances)(Data, volIncl=settings.Vol_inclusion, 
+            self.find_distances(Data, volIncl=settings.Vol_inclusion, 
                    compare=settings.incl_type, **kws)
 
-    def Clusters(self):
-        pass
+    def Clusters(self, dist=10):
+        kws = {'Dist': dist}
+        clustChans = [p for p in self.channelPaths for t in 
+                     settings.Cluster_Channels if t.lower() == p.stem.lower()]
+        for path in clustChans:
+            try:
+                Data = system.read_data(path, header=0)
+            except:
+                print("Sample doesn't have file for channel {}".format(path.stem))
+                return
+            Data = Data.loc[:, ~Data.columns.str.contains('ClusterID_')]
+            Data.name = path.stem
+            self.find_distances(Data, volIncl=settings.Cl_Vol_inclusion, 
+                   compare=settings.Cl_incl_type, clusters=True, **kws)
 
     def find_distances(self, Data, volIncl=200, compare='smaller', clusters=False, 
                        **kws):
@@ -335,9 +352,8 @@ class Sample(Group):
         and distance means per bin, or to find cell clusters. Argument "Data" 
         is channel data from a sample."""
 
-        def __get_nearby(ind, row, target, rmv_self=False, **kws):
+        def __get_nearby(ind, row, target, maxDist, rmv_self=False, **kws):
             """Within an iterator, find all cells near the current cell."""
-            maxDist = kws.get('Dist') # the distance used for subsetting target
             point = CG3dPoint(row.x, row.y, row.z)
             # When finding nearest in the same channel, remove the current
             # cell from the frame, otherwise nearest cell would be itself.
@@ -348,8 +364,7 @@ class Sample(Group):
                           (abs(target.y - row.y) <= maxDist) & 
                           (abs(target.z - row.z) <= maxDist))].index
             if not near.empty: # Then get distances to nearby cells:
-                cols = [
-                 'XYZ', 'Dist', 'ID']
+                cols = ['XYZ', 'Dist', 'ID']
                 nearby = pd.DataFrame(columns=cols)
                 for i2, row2 in target.loc[near, :].iterrows():
                     point2 = CG3dPoint(row2.x, row2.y, row2.z)
@@ -362,10 +377,36 @@ class Sample(Group):
             return None
 
         def __find_clusters():
-            pass
+            def __merge(Seeds): 
+                r = sum(Seeds, [])
+                r = map(lambda x: set([x]), set(r))
+                for item in map(set, Seeds):
+                    outside = [x for x in r if not x & item]
+                    inside = [x for x in r if x & item]
+                    inside = set([]).union(*inside)
+                    r = outside + [inside]
+                yield r
+            
+            maxDist = kws.get('Dist') # the distance used for subsetting target
+            clusterSeed = {}
+            target = XYpos
+            for i, row in XYpos.iterrows():
+                nearby = __get_nearby(i, row, target, maxDist, **kws)
+                if nearby is not None:
+                    if nearby.shape[0] > 1:
+                        clusterSeed[i] = nearby.ID.tolist()
+            Cl_lst = [sorted(list(clusterSeed.get(key))) for key in clusterSeed.keys()]
+            Cl_gen = __merge(Cl_lst)
+            # Change the generator into list of lists and drop clusters of size 
+            # under/over limits
+            Clusters = [list(y) for x in Cl_gen for y in x if y and len(y) >= 
+                        settings.Cl_min and len(y) <= settings.Cl_max]
+            return Clusters
+            
 
         def __find_nearest():
             """For iterating the passed data to determine the nearest cells."""
+            maxDist = kws.get('Dist') # the distance used for subsetting target
             if 'targetXY' in locals():
                 target = targetXY
                 comment = settings.target_chan
@@ -382,10 +423,10 @@ class Sample(Group):
             pointData = pd.DataFrame(columns=cols, index=XYpos.index)
             # Iterate over each cell (row) in the data
             for i, row in XYpos.iterrows():
-                nearby = __get_nearby(i, row, target, rmv_self=rmv, **kws)
+                nearby = __get_nearby(i, row, target, maxDist, rmv_self=rmv, **kws)
                 if nearby is not None:
                     nearest = nearby.Dist.idxmin()
-                    pointData.loc[(i, cols)] = nearby.loc[nearest].values
+                    pointData.loc[i, cols] = nearby.loc[nearest].values
             # Concatenate the obtained data with the read data.        
             NewData = pd.concat([Data, pointData], axis=1)
             # Get bin and distance to nearest cell for each cell, then calculate
@@ -402,7 +443,6 @@ class Sample(Group):
             dInd = self.subset_data(Data, compare, volIncl)
             if 'tData' in kws.keys(): # Obtain target channel if used.
                 tData = kws.pop('tData')
-                print(tData)
                 tInd = self.subset_data(tData, compare, volIncl)
         elif 'tData' in kws.keys():
             tData = kws.pop('tData')
@@ -416,9 +456,8 @@ class Sample(Group):
         renames = {'Position X':'x', 'Position Y':'y', 'Position Z':'z'}
         XYpos.rename(columns=renames, inplace=True) # renaming for dot notation
         if 'tInd' in locals():  # Get data from target channel, if used
-            targetXY = tData.loc[(tInd,
-             ['Position X', 'Position Y', 'Position Z',
-              'ID'])]
+            targetXY = tData.loc[tInd,['Position X', 'Position Y', 'Position Z',
+              'ID']]
             targetXY.rename(columns=renames, inplace=True)
         if clusters == False:
             NewData, Means, filename = __find_nearest()
@@ -426,12 +465,18 @@ class Sample(Group):
             insert, _ = process.relate_data(Means, self.MP, self._center, self._length)
             SMeans = pd.Series(data=insert, name=(self.name))
             system.saveToFile(SMeans, self._dataDir, filename)
-            OW_name = '{}.csv'.format(Data.name)
-        else: # TODO add cluster finding
-#               __find_clusters()
-            pass
-            # Overwrite the original data with the data containing new columns.
-        system.saveToFile(NewData, (self.path), OW_name, append=False)
+        else:
+            Clusters = __find_clusters()
+            clustData = pd.DataFrame(index=Data.index, columns=['ID', 'ClusterID'])
+            clustData = clustData.assign(ID = Data.ID)
+            for i, vals in enumerate(Clusters):
+                clustData.loc[clustData.ID.isin([int(v) for v in vals]), 
+                              'ClusterID'] = i
+            NewData = Data.merge(clustData, how='outer', copy=False,
+                                            on=['ID'])
+        # Overwrite the original data with the data containing new columns.
+        OW_name = '{}.csv'.format(Data.name)
+        system.saveToFile(NewData, self.path, OW_name, append=False)
 
 class statistics:
     def __init__(self, control, group2):

@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 from settings import settings
+import sys
 import pathlib as pl, shutil, pandas as pd, inspect
 
 class paths:
-
     def __init__(self, workdir):
         """Creation of output folders."""
         # Create path-variables necessary for the analysis
@@ -71,6 +71,16 @@ def saveToFile(data, directory, filename, append=True):
     else:
         data.to_frame().to_csv(str(path), index=False)
 
+def start():
+    try:
+        if True not in [settings.process_samples, settings.process_counts, 
+                    settings.Create_Plots, settings.process_dists]:
+            sys.exit("\nAll primary settings are set to False. \n\nExiting ...")
+        else:
+            PATHS = paths(settings.workdir)
+            return PATHS
+    except SystemExit:
+        raise
 
 class store:
     samplegroups = []

@@ -10,11 +10,13 @@ class settings:
     # pre-created datafiles in the Analysis Data directory, i.e. a previous 
     # full run has been made, and there has been no edits to the data files.
     process_samples = False
-    # Whether to count and normalize data. If set to False, expect all data to
-    # be in place. Can be used to e.g. create additional plots faster.
-    process_counts = False
+    # Whether to count and normalize data, and to compute average distances and 
+    # clusters. If set to False, expect all data to be in place. Can be used to 
+    # e.g. create additional plots faster.
+    process_counts = True
+    process_dists = True
     # Set True/False to set all plotting functionalities ON/OFF
-    Create_Plots = True     # ON / OFF switch for plots
+    Create_Plots = False     # ON / OFF switch for plots
     
     
     ### VECTOR CREATION & PROJECTION ###
@@ -44,7 +46,7 @@ class settings:
     # The name of the file used for normalizing between samples, i.e. R3 measurement point
     MPname = "MP"
     # Include secondary measurement point. Used to see e.g. proportional change.
-    useSecMP = False
+    useSecMP = False    # SECMP NOT PROPERLY IMPLEMENTED
     # Name of secondary measurement point
     secMP = 'R45'
     
@@ -72,28 +74,38 @@ class settings:
     ###################################################################
     
     ### ANALYSIS OPTIONS ###
+    ## DISTANCE MEANS ##
     # Find nearest cell of each cell. Distance estimation is performed for all 
     # channels in Distance_Channels list. If use target is True, the nearest
     # cell is found on the channel defined by target_chan, otherwise they are
     # found within the channel undergoing analysis.
-    Find_Distances = False
-    Distance_Channels = ["DAPI"]
+    Find_Distances = True
+    Distance_Channels = ["GFP"]
     use_target = False
     target_chan = "Pros"
     # The maximum distance the nearest cell will be looked at. Increase is
     # computationally expensive, depending on the size of the dataset and the 
     # density of cells.
-    maxDist = 100    # Radius around the cell
+    maxDist = 30    # Radius around the cell
     # Whether to look only at cells of certain size. Default is to include cells 
     # smaller than Vol_inclusion. If cells of greater volume are wanted, 
     # designate incl_type to be 'greater'. Otherwise, the string can be left empty.
     Vol_inclusion = 0    # Set to zero if not wanted.
     incl_type = ""
     
+    ## CLUSTERS ##
+    # Whether to compute clusters
+    Find_Clusters = True
+    Cluster_Channels = ["GFP"]
+    Cl_maxDist = 20    # Radius around the cell
+    Cl_Vol_inclusion = 0    # Set to zero if not wanted.
+    Cl_incl_type = ""      # Same as above in Find_Distances
+    Cl_min = 3
+    Cl_max = 50
     
     ### STATISTICS OPTIONS ###
     # Whether to perform group-wise stat analysis.
-    statistics = True
+    statistics = False
     windowed = True
     trail = 1
     lead = 1
@@ -119,9 +131,14 @@ class settings:
     vs_channels = ['DAPI', 'Pros', 'SuH', 'GFP']
     vs_adds = ['Intensity Mean']
     
+      # Whether to drop outliers from plots ONLY, and the standard deviation limit
+    # for considering what is an outlier.
+    Drop_Outliers = True
+    dropSTD = 3
+    
     # Gives values some coordinate-shift in channel pairplots. Useful in presenting
     # the data, as it is discrete; most of the data would be hidden under others.
-    # Doesn't affect the underlying data, or the regression in plots.
+    # Doesn't affect the underlying data.
     plot_jitter = True
     
     ## Figure save-format ##
@@ -139,8 +156,3 @@ class settings:
     
     # Define colors used for sample groups (xkcd colors: 'https://xkcd.com/color/rgb/')
     palette_colors = ['orange yellow', 'aqua marine', 'tomato', 'dark lime', 'tan brown']
-    
-    # Whether to drop outliers from plots ONLY, and the standard deviation limit
-    # for considering what is an outlier.
-    Drop_Outliers = True
-    dropSTD = 3
