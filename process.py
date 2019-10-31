@@ -29,7 +29,9 @@ def Create_Samples(PATHS):
         for path2 in sample.channelpaths:
             channel = get_channel(path2, sample, settings.AddData)
             sample.data = sample.project_channel(channel, PATHS.datadir)
-            sample.find_counts(channel.name, PATHS.datadir)
+            channelName = str(path2.stem)
+            if channelName not in ["MPs", "MP", "R45"]:
+                sample.find_counts(channel.name, PATHS.datadir)
     print("\nAll samples processed")
 
 
@@ -56,7 +58,7 @@ def Gather_Samples(PATHS):
         # Looping through every channel found in the sample's directory
         for channelPath in sample.channelpaths:
             channelName = str(channelPath.stem)
-            if channelName != "MPs": # Collecting microscopy channel relevant data
+            if channelName not in ["MPs", "MP", "R45"]: # Collecting microscopy channel relevant data
                 sample.data = system.read_data(channelPath, header = 0)
                 sample.find_counts(channelName, PATHS.datadir)
             else: # Collecting measurement point data for anchoring of samples
@@ -87,7 +89,9 @@ def Get_Counts(PATHS):
         # MP is anchored to one row, with bin-respective (index) cell counts in 
         # each element of a sample (column) to allow relative comparison.
         ChCounts = normalize(path)
-        ChCounts.starts = ChCounts.normalize_samples(MPs, store.totalLength)
+        ChCounts.starts, NormCounts = ChCounts.normalize_samples(MPs, 
+                                                             store.totalLength)
+        ChCounts.averages(NormCounts)
         ChCounts.Avg_AddData(PATHS, settings.AddData, store.totalLength)
 
 
@@ -456,7 +460,20 @@ class normalize:
         filename = str('Norm_{}.csv'.format(self.channel))
         data = data.sort_index(axis=1)
         system.saveToFile(data, self.path.parent, filename, append=False)
-        return SampleStart
+        return SampleStart, data
+    
+    def averages(self, NormCounts):
+        samples = NormCounts.columns.tolist()
+        Groups = set({s.casefold(): s.split('_')[0] for s in samples}.values())
+        cols = ["{}_All".format(g) for g in Groups]
+        Avgs = pd.DataFrame(index=NormCounts.index, columns=cols)
+        for grp in Groups:
+            namer = "{}_".format(grp)
+            grpData = NormCounts.loc[:,(NormCounts.columns.str.contains(namer))]
+            Avgs.loc[:, "{}_All".format(grp)] = grpData.mean(axis=1)
+        filename = str('ChanAvg_{}.csv'.format(self.channel))
+        system.saveToFile(Avgs, self.path.parent, filename, append=False)
+        
 
     def Avg_AddData(self, PATHS, dataNames, TotalLen):
         # TODO Add try / exceptions

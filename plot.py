@@ -158,7 +158,7 @@ class plotter:
             return g
         
         #---------#
-        if 'id_str' in kws:
+        if 'id_str' in kws and kws.get('id_str') is not None:
             plotData, varname, valname = __melt_data(self.data, **kws)
             kws.update({'xlabel':varname,  'ylabel':valname, 'data':plotData})
         else:
@@ -182,7 +182,7 @@ class plotter:
                 g = self.pairPlot(**kws)
             else:
                 g = sns.FacetGrid(plotData, row=kws.get('row'), hue=kws.get('hue'), 
-                          sharex=True, sharey=True, gridspec_kws={'hspace': 0.3},
+                          sharex=True, sharey=True, gridspec_kws=kws.get('gridspec'),
                           height=kws.get('height'),aspect=kws.get('aspect'),
                           legend_out=True, dropna=False)
                 g = g.map_dataframe(plotfunc, self.palette, **kws).add_legend()
@@ -190,7 +190,7 @@ class plotter:
                     ax.xaxis.set_tick_params(labelbottom=True)
                 __add()
         # Giving a title and then saving the plot
-        plt.suptitle(self.title, weight='bold', y=1)
+        plt.suptitle(self.title, weight='bold', y=kws.get('title_y'))
         filepath = savepath.joinpath(self.title + self.ext)
         g.savefig(str(filepath), format=self.format)
         plt.close('all')
@@ -264,3 +264,9 @@ class plotter:
                     linewidth=0.15, height=kws.get('height'),
                     aspect=kws.get('aspect'), facet_kws = fkws, **flierprops)
         return g
+    
+    def Heatmap(palette, **kws):
+        axes = plt.gca()
+        data = kws.pop('data')
+        sns.heatmap(data=data.iloc[:,:-2], cmap='coolwarm', ax=axes)
+        return axes

@@ -13,10 +13,10 @@ class settings:
     # Whether to count and normalize data, and to compute average distances and 
     # clusters. If set to False, expect all data to be in place. Can be used to 
     # e.g. create additional plots faster.
-    process_counts = True
-    process_dists = True
+    process_counts = False
+    process_dists = False
     # Set True/False to set all plotting functionalities ON/OFF
-    Create_Plots = False     # ON / OFF switch for plots
+    Create_Plots = True     # ON / OFF switch for plots
     
     
     ### VECTOR CREATION & PROJECTION ###
@@ -123,8 +123,9 @@ class settings:
     Create_Channel_Plots = True
     Create_AddData_Plots = False
     Create_Channel_PairPlots = False
+    Create_Heatmaps = True
     Create_NearestDist_Plots = False
-    Create_Statistics_Plots = True  # requires statistics to be True
+    Create_Statistics_Plots = False  # requires statistics to be True
     # TODO change versus-plots to be only done on selected channels/data
     Create_ChanVSAdd_Plots = False
     Create_AddVSAdd_Plots = False

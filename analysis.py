@@ -45,7 +45,8 @@ class Samplegroups:
     def create_plots(self):
         basekws = {'id_str':'Sample Group',  'hue':'Sample Group',  
                    'row':'Sample Group', 'height':5, 'aspect':3,  
-                   'var_str':'Longitudinal Position', 'flierS': 2}
+                   'var_str':'Longitudinal Position', 'flierS': 2,
+                   'title_y':0.95, 'gridspec':{'hspace': 0.3}}
         
         def _select(paths, adds=True):
             retPaths = []
@@ -59,7 +60,7 @@ class Samplegroups:
                 retPaths.extend(selected)
             return retPaths
 
-        def __base(paths, func, ylabel=None, **kws):
+        def __base(paths, func, ylabel='Cell Count', **kws):
             savepath = self._plotDir
             for path in paths:
                 dropB = settings.Drop_Outliers
@@ -67,14 +68,32 @@ class Samplegroups:
                                                            drop=dropB)
                 plot_maker = plotter(plotData, self._plotDir, center=cntr,
                              title=name, palette=self._grpPalette)
-                kws = {'centerline':plot_maker.MPbin, 'title':plot_maker.title,  
+                kws2 = {'centerline':plot_maker.MPbin, 'title':plot_maker.title,  
                        'value_str': 'Cell Count', 'xlen': self._length, 
                        'ylabel':ylabel}
-                kws.update(basekws)
+                kws2.update(basekws)
                 if ylabel is None:
                     ylabel = settings.AddData.get(plot_maker.title)
-                    kws.update({'ylabel': ylabel})
-                plot_maker.plot_Data(func, savepath, **kws)
+                    kws2.update({'ylabel': ylabel})
+                kws2.update(kws)
+                plot_maker.plot_Data(func, savepath, **kws2)
+                
+        def __heat(paths):
+            savepath = self._plotDir
+            fullData = pd.DataFrame()
+            for path in paths:
+                plotData, name, cntr = self.read_channel(path, self._groups)
+                plotData.index = plotData.loc[:,'Sample Group']
+                plotData.drop(labels='Sample Group', axis=1, inplace=True)
+                plotData.loc[:, 'Channel'] = name
+                fullData = pd.concat([fullData, plotData], axis=0, copy=False)
+            fullData = fullData.replace(np.nan, 0)
+            name = "All Channels Heatmaps"
+            plot_maker = plotter(fullData, self._plotDir, center=cntr,
+                         title=name, palette=self._grpPalette)
+            kws = {'height':3, 'aspect':5, 'gridspec':{'hspace': 0.5}, 
+                   'row':'Channel', 'title_y':0.95}
+            plot_maker.plot_Data(plotter.Heatmap, savepath, **kws)
 
         def __versus(paths1, paths2=None, folder=None):
             """Creation of bivariant jointplots."""
@@ -105,7 +124,7 @@ class Samplegroups:
                                  palette=self._grpPalette)
             kws = {'hue':'Sample Group', 'kind': 'reg', 'diag_kind': 'kde',
                    'height':3.5, 'aspect':1}
-            plot_maker.plot_Data(plotter.pairPlot, self._plotDir, **kws)
+            plot_maker.plot_Data(plotter.pairPlot, self._plotDir, **kws)            
 
         def __nearestDist():
             paths = self._dataDir.glob('Avg_DistanceMeans_*')
@@ -123,13 +142,17 @@ class Samplegroups:
         print("\n---Creating plots---")
         if settings.Create_Channel_Plots:
             print('\nPlotting channels  ...')
-            __base(self._chanPaths, plotter.boxPlot, ylabel='Cell Count')
+            __base(self._chanPaths, plotter.boxPlot)
         if settings.Create_AddData_Plots:
             print('\nPlotting additional data  ...')
-            __base(self._addData, plotter.linePlot)
+            __base(self._addData, plotter.linePlot, ylabel=None)
         if settings.Create_Channel_PairPlots:
             print('\nPlotting channel pairs  ...')
             __pair()
+        if settings.Create_Heatmaps:
+            print('\nPlotting heatmaps  ...')
+            HMpaths = self._dataDir.glob("ChanAvg_*")
+            __heat(HMpaths)
         if settings.Create_ChanVSAdd_Plots:
             print('\nPlotting channel VS additional data  ...')
             paths1 = _select(self._chanPaths, adds=False)
@@ -228,7 +251,7 @@ class Samplegroups:
             SampleGroup = Group(grp)
             for path in SampleGroup._groupPaths:
                 Smpl = Sample(path, SampleGroup.group)
-                print('\n{}  ...'.format(Smpl.name))
+                print('{}  ...'.format(Smpl.name))
                 Smpl.DistanceMean(settings.maxDist)
     
     def Get_Clusters(self):
@@ -427,8 +450,9 @@ class Sample(Group):
                 if nearby is not None:
                     nearest = nearby.Dist.idxmin()
                     pointData.loc[i, cols] = nearby.loc[nearest].values
-            # Concatenate the obtained data with the read data.        
-            NewData = pd.concat([Data, pointData], axis=1)
+            # Concatenate the obtained data with the read data.
+            NewData = Data.merge(pointData, how='outer', copy=False,
+                                            on=['ID'])
             # Get bin and distance to nearest cell for each cell, then calculate
             # average distance within each bin.
             binnedData = NewData.loc[:, 'DistBin']
