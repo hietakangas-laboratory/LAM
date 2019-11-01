@@ -14,7 +14,7 @@ class settings:
     # clusters. If set to False, expect all data to be in place. Can be used to 
     # e.g. create additional plots faster.
     process_counts = False
-    process_dists = False
+    process_dists = True
     # Set True/False to set all plotting functionalities ON/OFF
     Create_Plots = True     # ON / OFF switch for plots
     
@@ -79,7 +79,7 @@ class settings:
     # channels in Distance_Channels list. If use target is True, the nearest
     # cell is found on the channel defined by target_chan, otherwise they are
     # found within the channel undergoing analysis.
-    Find_Distances = True
+    Find_Distances = False
     Distance_Channels = ["GFP"]
     use_target = False
     target_chan = "Pros"
@@ -95,7 +95,7 @@ class settings:
     
     ## CLUSTERS ##
     # Whether to compute clusters
-    Find_Clusters = True
+    Find_Clusters = False
     Cluster_Channels = ["GFP"]
     Cl_maxDist = 20    # Radius around the cell
     Cl_Vol_inclusion = 0    # Set to zero if not wanted.
@@ -105,7 +105,7 @@ class settings:
     
     ### STATISTICS OPTIONS ###
     # Whether to perform group-wise stat analysis.
-    statistics = False
+    statistics = True
     windowed = True
     trail = 1
     lead = 1
@@ -120,12 +120,12 @@ class settings:
     cntrlGroup = "starv"
     
     ### PLOTTING OPTIONS ###  
-    Create_Channel_Plots = True
+    Create_Channel_Plots = False
     Create_AddData_Plots = False
     Create_Channel_PairPlots = False
-    Create_Heatmaps = True
+    Create_Heatmaps = False
     Create_NearestDist_Plots = False
-    Create_Statistics_Plots = False  # requires statistics to be True
+    Create_Statistics_Plots = True  # requires statistics to be True
     # TODO change versus-plots to be only done on selected channels/data
     Create_ChanVSAdd_Plots = False
     Create_AddVSAdd_Plots = False

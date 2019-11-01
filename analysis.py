@@ -14,7 +14,7 @@ class Samplegroups:
     _instance = None
     _groups, _chanPaths, _samplePaths, _addData, _channels = ([], [], [], [], [])
     _plotDir, _dataDir, _statsDir = pl.Path('./'), pl.Path('./'), pl.Path('./')
-    _grpPalette, _chanPalette = {}, {}
+    _grpPalette = {}
     _AllMPs = None
     _AllStarts = None
     _length = 0
@@ -166,7 +166,6 @@ class Samplegroups:
             print('\nPlotting average distances  ...')
             __nearestDist()
         # TODO add sample group total counts / plots & stats
-        # TODO add heatmaps
         # TODO add cluster plots
 
     def read_channel(self, path, groups, drop=False):
@@ -451,8 +450,7 @@ class Sample(Group):
                     nearest = nearby.Dist.idxmin()
                     pointData.loc[i, cols] = nearby.loc[nearest].values
             # Concatenate the obtained data with the read data.
-            NewData = Data.merge(pointData, how='outer', copy=False,
-                                            on=['ID'])
+            NewData = pd.concat([Data, pointData], axis=1)
             # Get bin and distance to nearest cell for each cell, then calculate
             # average distance within each bin.
             binnedData = NewData.loc[:, 'DistBin']
@@ -605,7 +603,7 @@ class statistics:
         kws = {'id_str':'Sample Group', 'hue':'Sample Group', 'height':5, 
                'aspect':4, 'var_str':'Longitudinal Position', 'value_str':unit, 
                'centerline':plot_maker.MPbin, 'xlen':self.length,
-               'title':plot_maker.title, 'Stats': stats, 
+               'title':plot_maker.title, 'Stats': stats, 'title_y':1, 
                'fliersize': {'fliersize':'2'}}
         if settings.windowed: kws.update({'windowed': True})
         plot_maker.plot_Data(plotter.catPlot, plot_maker.savepath, **kws)
