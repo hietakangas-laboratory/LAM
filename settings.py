@@ -14,7 +14,7 @@ class settings:
     # clusters. If set to False, expect all data to be in place. Can be used to 
     # e.g. create additional plots faster.
     process_counts = False
-    process_dists = True
+    process_dists = False
     # Set True/False to set all plotting functionalities ON/OFF
     Create_Plots = True     # ON / OFF switch for plots
     
@@ -106,6 +106,8 @@ class settings:
     ### STATISTICS OPTIONS ###
     # Whether to perform group-wise stat analysis.
     statistics = True
+    stat_versus = False
+    stat_total = True
     windowed = True
     trail = 1
     lead = 1

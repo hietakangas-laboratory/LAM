@@ -46,6 +46,8 @@ def main():
     # After samples have been counted and normalized
     SampleGroups = analysis.Samplegroups(store.samplegroups, store.channels,
                                         store.totalLength, store.center, systemPaths)
+#    if settings.process_counts:
+    SampleGroups.Get_Totals()
     if settings.Find_Distances and settings.process_dists:
         SampleGroups.Get_DistanceMean()
     if settings.Find_Clusters and settings.process_dists:

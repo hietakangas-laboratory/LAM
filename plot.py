@@ -270,3 +270,18 @@ class plotter:
         data = kws.pop('data')
         sns.heatmap(data=data.iloc[:,:-2], cmap='coolwarm', ax=axes)
         return axes
+    
+    def total_plot(self, stats, order):
+#        def violin():
+#            print(plotData)
+            
+        plotData = pd.melt(self.data.T, id_vars='Sample Group', 
+                           value_name='Total Count', var_name = 'Channel')
+        plotData['Total Count'] = plotData['Total Count'].astype('float64')
+        plotData['Ord'] = plotData.loc[:, 'Sample Group'].apply(lambda x: order.index(x))
+        plotData.sort_values(by='Ord', axis=1, inplace=True)
+        g = sns.catplot('Sample Group', 'Total Count', 
+                        data=plotData, row='Channel', palette=self.palette,
+                        kind='violin', sharey=False, saturation=0.5)
+#        return g
+        

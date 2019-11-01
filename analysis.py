@@ -6,6 +6,7 @@ from itertools import product, combinations, chain
 from pycg3d.cg3d_point import CG3dPoint
 from pycg3d import utils
 import scipy.stats as ss, statsmodels.stats.multitest as multi
+import copy
 with warnings.catch_warnings():
     warnings.simplefilter('ignore', category=FutureWarning)
     import pandas as pd
@@ -263,37 +264,63 @@ class Samplegroups:
                 Smpl.Clusters(settings.Cl_maxDist)
 
     def Get_Statistics(self):
-        if settings.Create_Plots:
+        if settings.Create_Plots and settings.Create_Statistics_Plots:
             print('\n---Calculating and plotting statistics---')
         else: print('\n---Calculating statistics---')
-        control = settings.cntrlGroup
-        cntrlName = re.compile(control, re.I)
-        others = [g for g in self._groups if not cntrlName.fullmatch(g)]
-        grouping = [[control], others]
-        pairs = product(*grouping)
-        current = ''
-        for pair in pairs:
-            temp, testgroup = pair
-            Cntrl = Group(control)
-            Grp = Group(testgroup)
-            if current != Grp.group:
-                current = Grp.group
-                print("{} Vs. {}  ...".format(Cntrl.group, Grp.group))
-            Stats = statistics(Cntrl, Grp)
-            for path in chain(Stats.chanPaths,Stats.avgPaths):
-                Stats = Stats.MWW_test(path)
-                if settings.Create_Plots and settings.Create_Statistics_Plots:
-                    addChan_name = str(path.stem).split('_')[1:]
-                    Stats.plottitle = "{} = {}".format(Stats.title, 
-                                       '-'.join(addChan_name))
-                    ylabel = "Count" 
-                    if len(addChan_name) > 2:
-                        temp = addChan_name.split('-')
-                        try:
-                            ylabel = settings.AddData.get(temp[0].split('_')[1])[1] 
-                        except: pass
-                    Stats.Create_Plots(Stats.statData, ylabel, 
-                                       palette=self._grpPalette)
+        if settings.stat_versus:
+            print('-Versus-')
+            control = settings.cntrlGroup
+            cntrlName = re.compile(control, re.I)
+            others = [g for g in self._groups if not cntrlName.fullmatch(g)]
+            grouping = [[control], others]
+            pairs = product(*grouping)
+            current = ''
+            for pair in pairs:
+                temp, testgroup = pair
+                Cntrl = Group(control)
+                Grp = Group(testgroup)
+                if current != Grp.group:
+                    current = Grp.group
+                    print("{} Vs. {}  ...".format(Cntrl.group, Grp.group))
+                Stats = statistics(Cntrl, Grp)
+                for path in chain(Stats.chanPaths,Stats.avgPaths):
+                    Stats = Stats.MWW_test(path)
+                    if settings.Create_Plots and settings.Create_Statistics_Plots:
+                        addChan_name = str(path.stem).split('_')[1:]
+                        Stats.plottitle = "{} = {}".format(Stats.title, 
+                                           '-'.join(addChan_name))
+                        ylabel = "Count" 
+                        if len(addChan_name) > 2:
+                            temp = addChan_name.split('-')
+                            try:
+                                ylabel = settings.AddData.get(temp[0].split('_'
+                                                              )[1])[1] 
+                            except: pass
+                        Stats.Create_Plots(Stats.statData, ylabel, 
+                                           palette=self._grpPalette)
+            if settings.stat_total:
+                print('\n')
+        if settings.stat_total:
+            print('-Total-')
+            datapath = self._dataDir.joinpath('Total Counts.csv')
+            TCounts = Total_Stats(datapath, self._groups, self._plotDir, 
+                                  self._statsDir, self._grpPalette)
+            TStats = TCounts.stats()
+            if settings.Create_Plots and settings.Create_Statistics_Plots:
+                TCounts.Create_Plots(TStats)
+              
+                    
+    def Get_Totals(self):
+        samples = self._AllStarts.columns.to_list()
+        Totals = pd.DataFrame(columns=samples)
+        for path in self._dataDir.glob('All_*'):
+            ChData = system.read_data(path, header=0, test=False)
+            ChSum = ChData.sum(axis=0, skipna=True)
+            channel = path.stem.split('_')[1]
+            Totals.loc[channel, ChSum.index] = ChSum
+        system.saveToFile(Totals, self._dataDir, 'Total Counts.csv', 
+                          append=False, w_index=True)
+        
 
 class Group(Samplegroups):
     _color = 'b'
@@ -607,6 +634,56 @@ class statistics:
                'fliersize': {'fliersize':'2'}}
         if settings.windowed: kws.update({'windowed': True})
         plot_maker.plot_Data(plotter.catPlot, plot_maker.savepath, **kws)
+        
+class Total_Stats:
+    def __init__(self, path, groups, plotDir, statsdir, palette=None):
+        self.plotDir = plotDir
+        self.statsDir = statsdir
+        self.data = system.read_data(path, header=0, test=False, index_col=0)
+        self.groups = copy.deepcopy(groups)
+        self.channels = self.data.index.to_list()
+        self.cntrlGrp = settings.cntrlGroup
+        groups.remove(self.cntrlGrp)
+        self.tstGroups = groups
+        self.palette = palette
+        
+    def stats(self):
+        namer = "{}_".format(self.cntrlGrp)
+        cntrlData = self.data.loc[:, self.data.columns.str.contains(namer)]
+        cols = ['U Score', 'P Two-sided', 'Reject Two-sided']
+        mcols = pd.MultiIndex.from_product([self.tstGroups, cols], 
+                                           names=['Sample Group', 'Statistics'])
+        TotalStats = pd.DataFrame(index=cntrlData.index, columns=mcols)
+        for grp in self.tstGroups:
+            namer = "{}_".format(grp)
+            tstData = self.data.loc[:, self.data.columns.str.contains(namer)]
+            for i, row in cntrlData.iterrows():
+                row2 = tstData.loc[i, :]
+                stat, pval = ss.mannwhitneyu(row, row2,alternative='two-sided')
+                if pval < settings.alpha:
+                    reject = True
+                else:
+                    reject = False
+                TotalStats.loc[i, (grp, cols)] = [stat, pval, reject]
+        system.saveToFile(TotalStats, self.statsDir, "Total Count Stats.csv", 
+                          append=False, w_index=True)
+        return TotalStats            
+    
+    def Create_Plots(self, stats):
+        namers = ['{}_'.format(g) for g in self.groups]
+        print(namers)
+        plotData = self.data
+        cntrlN = int(len(self.groups) /2)
+        order = self.tstGroups
+        order.insert(cntrlN, self.cntrlGrp)
+        for namer in namers:
+            plotData.loc['Sample Group', plotData.columns.str.contains(
+                                                namer)] = namer.split('_')[0]
+        plot_maker = plotter(plotData, self.plotDir, center=0, title='Total Counts', 
+                 palette=self.palette, color='b')
+        plot_maker.total_plot(stats, order)
+        
+    
         
 def DropOutlier(Data):
     with warnings.catch_warnings(): # Ignore warnings regarding empty bins

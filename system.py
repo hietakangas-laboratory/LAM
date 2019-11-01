@@ -33,17 +33,18 @@ class paths:
                      index=False, header=False)
 
 
-def read_data(filepath, header=settings.header_row, test=True):
+def read_data(filepath, header=settings.header_row, test=True, index_col=False):
     """For reading csv-data."""
     try:
-        data = pd.read_csv(filepath, header=header, index_col=False)
+        data = pd.read_csv(filepath, header=header, index_col=index_col)
         data = data.loc[:, ~data.columns.str.contains('^Unnamed')]
         if test:
             data.loc[:, 'ID']
     except KeyError:
         print('WARNING: read_data() call from {} line {}'.format(
                                 inspect.stack()[1][1], inspect.stack()[1][2]))
-        print('Key not found. Wrong header row? \nPath: {}'.format(filepath))
+        print("Key 'ID' not found. Wrong header row?")
+        print("If all correct, set test=False\nPath: {}".format(filepath))
     except FileNotFoundError:
         print('WARNING: read_data() call from {} line {}'.format(
                                 inspect.stack()[1][1], inspect.stack()[1][2]))
@@ -53,23 +54,29 @@ def read_data(filepath, header=settings.header_row, test=True):
     return data
 
 
-def saveToFile(data, directory, filename, append=True):
+def saveToFile(data, directory, filename, append=True, w_index=False):
     """Takes a Series and saves it to a DataFrame file, or alternatively saves
     a DataFrame to a file. Expects the Series to be of same length as the data
     in the csv"""
     path = directory.joinpath(filename)
     if append == False:
-        data.to_csv(str(path), index=False)
+        if isinstance(data, pd.DataFrame):
+            data.to_csv(str(path), index=w_index)
+        else:
+            data.to_frame().to_csv(str(path), index=w_index)
     elif path.exists():
-        file = pd.read_csv(str(path), index_col=False)
+        file = pd.read_csv(str(path), index_col=w_index)
         if data.name not in file.columns:
             file = pd.concat([file, data], axis=1)
         else:
             file.loc[:, data.name] = data
         file = file.sort_index(axis=1)
-        file.to_csv(str(path), index=False)
+        file.to_csv(str(path), index=w_index)
     else:
-        data.to_frame().to_csv(str(path), index=False)
+        if isinstance(data, pd.DataFrame):
+            data.to_csv(str(path), index=w_index)
+        else:
+            data.to_frame().to_csv(str(path), index=w_index)
 
 def start():
     try:
