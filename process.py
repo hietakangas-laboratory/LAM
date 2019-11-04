@@ -518,4 +518,4 @@ def relate_data(data, MP=0, center=50, TotalLength=100):
     insert = np.full(TotalLength, np.nan)
     data = np.where(data==np.nan, 0, data)
     insert[insx:end] = data
-    return (insert, insx)
+    return insert, insx

@@ -166,8 +166,9 @@ class Samplegroups:
         if settings.Create_NearestDist_Plots:
             print('\nPlotting average distances  ...')
             __nearestDist()
-        # TODO add sample group total counts / plots & stats
-        # TODO add cluster plots
+        if settings.Create_Cluster_Plots:
+            pass
+            # TODO add cluster plots
 
     def read_channel(self, path, groups, drop=False):
         Data = system.read_data(path, header=0, test=False)
@@ -388,7 +389,7 @@ class Sample(Group):
             except:
                 print("Sample doesn't have file for channel {}".format(path.stem))
                 return
-            Data = Data.loc[:, ~Data.columns.str.contains('ClusterID_')]
+            Data = Data.loc[:, ~Data.columns.str.contains('ClusterID')]
             Data.name = path.stem
             self.find_distances(Data, volIncl=settings.Cl_Vol_inclusion, 
                    compare=settings.Cl_incl_type, clusters=True, **kws)
@@ -508,19 +509,34 @@ class Sample(Group):
             targetXY.rename(columns=renames, inplace=True)
         if clusters == False:
             NewData, Means, filename = __find_nearest()
-            Means = pd.Series(Means, name=(self.name))
-            insert, _ = process.relate_data(Means, self.MP, self._center, self._length)
-            SMeans = pd.Series(data=insert, name=(self.name))
+            Means = pd.Series(Means, name=self.name)
+            insert, _ = process.relate_data(Means, self.MP, self._center, 
+                                            self._length)
+            SMeans = pd.Series(data=insert, name=self.name)
             system.saveToFile(SMeans, self._dataDir, filename)
         else:
             Clusters = __find_clusters()
             clustData = pd.DataFrame(index=Data.index, columns=['ID', 'ClusterID'])
             clustData = clustData.assign(ID = Data.ID)
+            # Gives a name from continuous range for each of the found clusters 
+            # and adds it to cell-specific data (for each belonging cell).
             for i, vals in enumerate(Clusters):
                 clustData.loc[clustData.ID.isin([int(v) for v in vals]), 
                               'ClusterID'] = i
-            NewData = Data.merge(clustData, how='outer', copy=False,
-                                            on=['ID'])
+            NewData = Data.merge(clustData, how='outer', copy=False, on=['ID'])
+            binnedData = NewData.loc[pd.notna(NewData.loc[:,'ClusterID']).index,
+                                     'DistBin']
+            bins = binnedData.sort_values().to_numpy()
+            unique, counts = np.unique(bins, return_counts=True)
+            bincounts = dict(zip(unique, counts))
+            idx = np.arange(0, len(settings.projBins))
+            binnedCounts = pd.Series(np.full(len(idx), np.nan), index=idx, 
+                                     name=self.name)
+            for key in bincounts.keys():
+                binnedCounts.at[key] = bincounts.get(key)
+            print(binnedCounts)
+            filename = 'ClusteredCells_{}.csv'.format(Data.name)
+            system.saveToFile(binnedCounts, self._dataDir, filename)
         # Overwrite the original data with the data containing new columns.
         OW_name = '{}.csv'.format(Data.name)
         system.saveToFile(NewData, self.path, OW_name, append=False)

@@ -14,7 +14,7 @@ class settings:
     # clusters. If set to False, expect all data to be in place. Can be used to 
     # e.g. create additional plots faster.
     process_counts = False
-    process_dists = False
+    process_dists = True
     # Set True/False to set all plotting functionalities ON/OFF
     Create_Plots = True     # ON / OFF switch for plots
     
@@ -95,11 +95,11 @@ class settings:
     
     ## CLUSTERS ##
     # Whether to compute clusters
-    Find_Clusters = False
+    Find_Clusters = True
     Cluster_Channels = ["GFP"]
-    Cl_maxDist = 20    # Radius around the cell
+    Cl_maxDist = 20         # Radius around the cell
     Cl_Vol_inclusion = 0    # Set to zero if not wanted.
-    Cl_incl_type = ""      # Same as above in Find_Distances
+    Cl_incl_type = ""       # Same as above in Find_Distances
     Cl_min = 3
     Cl_max = 50
     
@@ -111,9 +111,9 @@ class settings:
     windowed = True
     trail = 1
     lead = 1
-    ylim = 25   # negative log2 y-limit
+    ylim = 25               # negative log2 y-limit
     
-    alpha = 0.05 # for rejection of H_0
+    alpha = 0.05            # for rejection of H_0, applies to statistics files
     # Plots
     stars = True # Make P-value stars to the plot (*:<0.05 **:<0.01 ***:<0.001)
     fill = True
@@ -127,14 +127,15 @@ class settings:
     Create_Channel_PairPlots = False
     Create_Heatmaps = False
     Create_NearestDist_Plots = False
-    Create_Statistics_Plots = True  # requires statistics to be True
+    Create_Cluster_Plots = True
+    Create_Statistics_Plots = False  # requires statistics to be True
     # TODO change versus-plots to be only done on selected channels/data
     Create_ChanVSAdd_Plots = False
     Create_AddVSAdd_Plots = False
     vs_channels = ['DAPI', 'Pros', 'SuH', 'GFP']
     vs_adds = ['Intensity Mean']
     
-      # Whether to drop outliers from plots ONLY, and the standard deviation limit
+    # Whether to drop outliers from plots ONLY, and the standard deviation limit
     # for considering what is an outlier.
     Drop_Outliers = True
     dropSTD = 3
