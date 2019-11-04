@@ -298,8 +298,6 @@ class Samplegroups:
                             except: pass
                         Stats.Create_Plots(Stats.statData, ylabel, 
                                            palette=self._grpPalette)
-            if settings.stat_total:
-                print('\n')
         if settings.stat_total:
             print('-Total-')
             datapath = self._dataDir.joinpath('Total Counts.csv')
@@ -671,7 +669,6 @@ class Total_Stats:
     
     def Create_Plots(self, stats):
         namers = ['{}_'.format(g) for g in self.groups]
-        print(namers)
         plotData = self.data
         cntrlN = int(len(self.groups) /2)
         order = self.tstGroups

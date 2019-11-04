@@ -272,16 +272,57 @@ class plotter:
         return axes
     
     def total_plot(self, stats, order):
-#        def violin():
-#            print(plotData)
+        def __marker(value):
+                if value <= 0.001:
+                    pStr = "***"
+                    offset = 0.38
+                elif value <= 0.01:
+                    pStr = "**"
+                    offset = 0.42
+                elif value <= 0.05:
+                    pStr = "*"
+                    offset = 0.47
+                else:
+                    pStr = ""
+                    offset = 0
+                return pStr, offset
             
         plotData = pd.melt(self.data.T, id_vars='Sample Group', 
                            value_name='Total Count', var_name = 'Channel')
         plotData['Total Count'] = plotData['Total Count'].astype('float64')
         plotData['Ord'] = plotData.loc[:, 'Sample Group'].apply(lambda x: order.index(x))
-        plotData.sort_values(by='Ord', axis=1, inplace=True)
+        plotData.sort_values(by=['Ord', 'Channel'], axis=0, inplace=True)
         g = sns.catplot('Sample Group', 'Total Count', 
-                        data=plotData, row='Channel', palette=self.palette,
+                        data=plotData, col='Channel', palette=self.palette,
                         kind='violin', sharey=False, saturation=0.5)
-#        return g
+        stats.sort_index(inplace=True)
+        Cntrl_x = order.index(settings.cntrlGroup)
+        for axInd, ax in enumerate(g.axes.flat):
+            statRow = stats.iloc[axInd, :]
+            rejects = statRow.iloc[statRow.index.get_level_values(1).str.
+                               contains('Reject')].where(statRow==True).dropna()
+            rejectN = np.count_nonzero(rejects.to_numpy())
+            if rejectN > 0:
+                __, ytop = ax.get_ylim()
+                tytop = ytop*1.3
+                heights = np.linspace(ytop, ytop*1.2, rejectN)
+                ax.set_ylim(top=tytop)
+                xtick = ax.get_xticks()
+                xtick = np.delete(xtick, Cntrl_x)
+                for i, grp in enumerate(rejects.index.get_level_values(0)):
+                    y = heights[i]
+                    grp_x = order.index(grp)
+                    if grp_x < Cntrl_x:
+                        xmin, xmax = grp_x, Cntrl_x
+                    else:
+                        xmin, xmax = Cntrl_x, grp_x
+                    ax.hlines(y=y, xmin=xmin, xmax=xmax, color='dimgrey')
+                    Pvalue = statRow.loc[(grp, 'P Two-sided')]
+                    pStr, offset = __marker(Pvalue)
+                    x = xmin + offset
+                    ax.text(x, y, pStr)
+        plt.suptitle('Total Counts', weight='bold', y=1.02)
+        filepath = self.savepath.joinpath('All Channels Total Counts' + self.ext)
+        g.savefig(str(filepath), format=self.format)
+        plt.close('all')
         
