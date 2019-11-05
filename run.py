@@ -5,12 +5,13 @@ Created on Wed Mar  6 12:42:28 2019
 Script for longitudinal analysis of Drosophila midgut images. To run the script,
 have the LAM.py file at a directory containing directories of each individual sample. 
 The sample directories should be named followingly: "samplegroup_xyz_samplename", 
-where xyz can be anything. Within the sample directories, cell positions and other
-data should be in channel-specific directories, e.g. GFP or GFP+Pros, named as 
-"xyz_channel_xyz". Within these channel directories the data has to be contained 
-in csv's in similar format to statistics exported from Imaris. Most importantly 
-"xyz_Position.csv" with column labels "Position X", "Position Y", and "ID". The 
-cell ID should be the same between other data files, such as "xyz_Area.csv"
+where xyz can be anything, e.g. "starv_2018-11-06_Ctrl starved 1". Within the 
+sample directories, cell positions and other data should be in channel-specific 
+directories, e.g. GFP or GFP+Pros, named as "xyz_channel_xyz". Within these 
+channel directories the data has to be contained in csv's in similar format to 
+statistics exported from Imaris. Most importantly "Position.csv" with column 
+labels "Position X", "Position Y", and "ID". The cell ID should be the same 
+between other data files, such as "Area.csv"
 
 The script first creates a vector based on one channel ("vectChannel", typically 
 DAPI), in order to approximate the midgut along its length. Positions on other 
