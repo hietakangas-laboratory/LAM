@@ -19,8 +19,8 @@ def Create_Samples(PATHS):
         sample.vectData = sample.get_vectData(settings.vectChannel)
         # Creation of vector for projection
         sample.vector = sample.create_vector(settings.medianBins, PATHS.datadir, 
-                                             settings.SkeletonVector, settings.SkeletonResize, 
-                                             settings.BDiter, settings.SigmaGauss)
+                                 settings.SkeletonVector, settings.SkeletonResize, 
+                                 settings.BDiter, settings.SigmaGauss)
         # Finding measurement points for normalization between samples
         sample.MP, sample.secMP = sample.get_MPs(settings.MPname, settings.useMP, 
                                                  settings.useSecMP, 
@@ -360,10 +360,12 @@ class get_sample:
         return MPbin, secMPbin
 
     def project_MPs(self, Positions, vector, datadir, filename="some.csv"):
-        """For projecting coordinates onto the vector."""
+        """For the projection of spot coordinates onto the vector."""
         XYpos = list(zip(Positions['Position X'],Positions['Position Y']))
-        points = gm.MultiPoint(XYpos) # The shapely packages reguires transformation into Multipoints for the projection.
-        Positions["VectPoint"] = [vector.interpolate(vector.project(gm.Point(x))) # Find point of projection on the vector.
+        # The shapely packages reguires transformation into Multipoints for the projection.
+        points = gm.MultiPoint(XYpos) 
+        # Find point of projection on the vector.
+        Positions["VectPoint"] = [vector.interpolate(vector.project(gm.Point(x))) 
                                   for x in points]
         Positions["NormDist"] = [vector.project(x, normalized=True) for x in # Find normalized distance (0->1)
                  Positions["VectPoint"]]
@@ -378,10 +380,13 @@ class get_sample:
         """For projecting coordinates onto the vector."""
         Positions = channel.data
         XYpos = list(zip(Positions['Position X'],Positions['Position Y']))
-        points = gm.MultiPoint(XYpos) # The shapely packages reguires transformation into Multipoints for the projection.
-        Positions["VectPoint"] = [self.vector.interpolate(self.vector.project(gm.Point(x))) # Find point of projection on the vector.
+        # The shapely packages reguires transformation into Multipoints for the projection.
+        points = gm.MultiPoint(XYpos)
+        # Find point of projection on the vector.
+        Positions["VectPoint"] = [self.vector.interpolate(self.vector.project(gm.Point(x))) 
                                   for x in points]
-        Positions["NormDist"] = [self.vector.project(x, normalized=True) for x in # Find normalized distance (0->1)
+        # Find normalized distance (0->1)
+        Positions["NormDist"] = [self.vector.project(x, normalized=True) for x in
                  Positions["VectPoint"]]
         # Find the bins that the points fall into
         Positions["DistBin"] = np.digitize(Positions.loc[:,"NormDist"],
@@ -505,7 +510,7 @@ class normalize:
 #                pass
 
 def relate_data(data, MP=0, center=50, TotalLength=100):
-    """Sets the passed data into the context of all samples, ie. places the
+    """Sets the passed data into the context of all samples, i.e. places the
     data into an empty array with the exact length required to fit all 
     samples"""
     try:

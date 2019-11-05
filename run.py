@@ -46,14 +46,19 @@ def main():
     # After samples have been counted and normalized
     SampleGroups = analysis.Samplegroups(store.samplegroups, store.channels,
                                         store.totalLength, store.center, systemPaths)
+    # Computing cell numbers for each sample's each bin
     if settings.process_counts:
         SampleGroups.Get_Totals()
+    # Finding of nearest cells and distances
     if settings.Find_Distances and settings.process_dists:
         SampleGroups.Get_DistanceMean()
+    # Finding clustered cells
     if settings.Find_Clusters and settings.process_dists:
         SampleGroups.Get_Clusters()  
+    # Calculation of MWW-statistics for cell counts and other data
     if settings.statistics:
         SampleGroups.Get_Statistics()
+    # Creation of plots from various data (excluding statistical plots)
     if settings.Create_Plots:
         SampleGroups.create_plots()
     print('\nANALYSIS COMPLETED')

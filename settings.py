@@ -23,7 +23,7 @@ class settings:
     # The channel based on which the vector is created
     vectChannel = "DAPI"
     header_row = 2      # On which row does the data have its header (starts from 0)
-    # Number of bins used for projection unto vector (the third value).
+    # Number of bins used for projection unto vector (the second value).
     projBins = np.linspace(0, 1, 80)
     
     # Make vector by creating binary image and then skeletonizing. If False, vector 
@@ -79,7 +79,7 @@ class settings:
     # channels in Distance_Channels list. If use target is True, the nearest
     # cell is found on the channel defined by target_chan, otherwise they are
     # found within the channel undergoing analysis.
-    Find_Distances = False
+    Find_Distances = True
     Distance_Channels = ["GFP"]
     use_target = False
     target_chan = "Pros"
@@ -95,7 +95,7 @@ class settings:
     
     ## CLUSTERS ##
     # Whether to compute clusters
-    Find_Clusters = True
+    Find_Clusters = False
     Cluster_Channels = ["GFP"]
     Cl_maxDist = 20         # Radius around the cell
     Cl_Vol_inclusion = 0    # Set to zero if not wanted.
@@ -105,8 +105,8 @@ class settings:
     
     ### STATISTICS OPTIONS ###
     # Whether to perform group-wise stat analysis.
-    statistics = True
-    stat_versus = False
+    statistics = False
+    stat_versus = True
     stat_total = True
     windowed = True
     trail = 1
@@ -117,7 +117,7 @@ class settings:
     # Plots
     stars = True # Make P-value stars to the plot (*:<0.05 **:<0.01 ***:<0.001)
     fill = True
-    negLog2 = True # Makes stars to be False
+    negLog2 = True # Forces stars to be False
     # The name of the control group that the statistics are run against.
     cntrlGroup = "starv"
     
@@ -126,12 +126,12 @@ class settings:
     Create_AddData_Plots = False
     Create_Channel_PairPlots = False
     Create_Heatmaps = False
-    Create_NearestDist_Plots = False
+    Create_NearestDist_Plots = True
     Create_Cluster_Plots = True
-    Create_Statistics_Plots = False  # requires statistics to be True
+    Create_Statistics_Plots = True  # requires statistics to be True
     # TODO change versus-plots to be only done on selected channels/data
-    Create_ChanVSAdd_Plots = False
-    Create_AddVSAdd_Plots = False
+    Create_ChanVSAdd_Plots = True
+    Create_AddVSAdd_Plots = True
     vs_channels = ['DAPI', 'Pros', 'SuH', 'GFP']
     vs_adds = ['Intensity Mean']
     
