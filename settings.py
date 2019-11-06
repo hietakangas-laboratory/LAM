@@ -10,40 +10,42 @@ class settings:
     # pre-created datafiles in the Analysis Data directory, i.e. a previous 
     # full run has been made, and there has been no edits to the data files.
     process_samples = False
-    # Whether to count and normalize data, and to compute average distances and 
-    # clusters. If set to False, expect all data to be in place. Can be used to 
-    # e.g. create additional plots faster.
+    # Whether to count and normalize data. If set to False, expect all data to 
+    # be in place. Can be used to e.g. create additional plots faster.
     process_counts = False
+    # Whether to compute average distances and clusters.
     process_dists = True
     # Set True/False to set all plotting functionalities ON/OFF
     Create_Plots = True     # ON / OFF switch for plots
+    ##################################################################
     
-    
-    ### VECTOR CREATION & PROJECTION ###
+    #-#-#-#-#-#-#-#-# VECTOR CREATION & PROJECTION #-#-#-#-#-#-#-#-#-#
     # The channel based on which the vector is created
     vectChannel = "DAPI"
-    header_row = 2      # On which row does the data have its header (starts from 0)
+    header_row = 2  # On which row does the data have its header (starts from 0)
     # Number of bins used for projection unto vector (the second value).
     projBins = np.linspace(0, 1, 80)
     
-    # Make vector by creating binary image and then skeletonizing. If False, vector 
-    # is created by finding middle point between smallest and largest Y-axis position in bin.
+    # Make vector by creating binary image and then skeletonizing. If False, 
+    # vector is created by finding middle point between smallest and largest 
+    # Y-axis position in bin.
     SkeletonVector = False
-    SkeletonResize = 0.2    # Binary image resize for reprocessing, e.g. smoothing. Keep at steps of ten.
+    SkeletonResize = 0.2    # Binary image resize. Keep at steps of ten.
     find_dist = 30
-    BDiter = 0           # Number of iterations for binary dilation (set to 0 if not needed)
-    SigmaGauss = 1        # Sigma for gaussian smoothing (set to 0 if not needed)
-    simplifyTol = 50        # Tolerance for vector simplification. Dependent on image size.
-    # Number of bins used for vector creation when using the median vector creation. You should probably keep this 
-    # smaller than the projBins, depending on cell density (<50%).
+    BDiter = 0           # Binary dilation iterations (set to 0 if not needed)
+    SigmaGauss = 1       # Sigma for gaussian smoothing (set to 0 if not needed)
+    simplifyTol = 50     # Tolerance for vector simplification.
+    # Number of bins used for vector creation when using the median vector 
+    # creation. You should probably keep this smaller than the projBins, 
+    # depending on cell density (e.g. <50%).
     medianBins = 25
-
+    #-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#
 
     ## MEASUREMENT POINTS ##
     # Whether to use measurement point coordinates for normalization. If False,
     # the samples will be handled as perfectly aligned from beginning to end.
     useMP = True
-    # The name of the file used for normalizing between samples, i.e. R3 measurement point
+    # The name of the file used for normalizing between samples, i.e. anchoring
     MPname = "MP"
     # Include secondary measurement point. Used to see e.g. proportional change.
     useSecMP = False    # SECMP NOT PROPERLY IMPLEMENTED
@@ -79,7 +81,7 @@ class settings:
     # channels in Distance_Channels list. If use target is True, the nearest
     # cell is found on the channel defined by target_chan, otherwise they are
     # found within the channel undergoing analysis.
-    Find_Distances = True
+    Find_Distances = False
     Distance_Channels = ["GFP"]
     use_target = False
     target_chan = "Pros"
@@ -112,7 +114,6 @@ class settings:
     trail = 1
     lead = 1
     ylim = 25               # negative log2 y-limit
-    
     alpha = 0.05            # for rejection of H_0, applies to statistics files
     # Plots
     stars = True # Make P-value stars to the plot (*:<0.05 **:<0.01 ***:<0.001)
@@ -123,15 +124,15 @@ class settings:
     
     ### PLOTTING OPTIONS ###  
     Create_Channel_Plots = False
-    Create_AddData_Plots = False
+    Create_AddData_Plots = True
     Create_Channel_PairPlots = False
     Create_Heatmaps = False
     Create_NearestDist_Plots = True
     Create_Cluster_Plots = True
     Create_Statistics_Plots = True  # requires statistics to be True
-    # TODO change versus-plots to be only done on selected channels/data
-    Create_ChanVSAdd_Plots = True
-    Create_AddVSAdd_Plots = True
+    # Variable vs. variable plots:
+    Create_ChanVSAdd_Plots = False
+    Create_AddVSAdd_Plots = False
     vs_channels = ['DAPI', 'Pros', 'SuH', 'GFP']
     vs_adds = ['Intensity Mean']
     

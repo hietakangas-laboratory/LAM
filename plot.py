@@ -231,8 +231,17 @@ class plotter:
         return g
 
     def distPlot(palette, **kws):
+        pass
         # ??? Needed?
         axes = plt.gca()
+        data = kws.pop('data')
+        print(data)
+        for i, row in data.iterrows():
+            avg = row.mean()
+        sns.distplot(data=data, x=kws.get('xlabel'), y=kws.get('ylabel'), 
+                    hue=kws.get('id_str'), saturation=0.5, linewidth=0.2, 
+                    showmeans=False, notch=False, palette=palette,
+                    fliersize=kws.get('flierS'), ax=axes)
         return axes
 
     def linePlot(palette, **kws):

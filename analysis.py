@@ -1,12 +1,11 @@
 # -*- coding: utf-8 -*-
 from settings import settings
+from statistics import statistics, Total_Stats
 from plot import plotter
 import system, process, numpy as np, pathlib as pl, seaborn as sns, re, warnings
 from itertools import product, combinations, chain
 from pycg3d.cg3d_point import CG3dPoint
 from pycg3d import utils
-import scipy.stats as ss, statsmodels.stats.multitest as multi
-import copy
 with warnings.catch_warnings():
     warnings.simplefilter('ignore', category=FutureWarning)
     import pandas as pd
@@ -71,26 +70,36 @@ class Samplegroups:
                 retPaths.extend(selected)
             return retPaths
 
-        def __base(paths, func, ylabel='Cell Count', **kws):
-            """Basic plotting for LAM, i.e. some data on y-axis, and bins on 
-            x-axis."""
+        def __base(paths, func, ylabel='Cell Count', title=None, name_sep=1, **kws):
+            """Basic plotting for LAM, i.e. data of interest on y-axis, and bins 
+            on x-axis. Name_sep defines the start of data's name when file name
+            is split by '_', e.g. name_sep=1 would name the data as DAPI when
+            file name is 'Avg_DAPI'."""
             savepath = self._plotDir
             # For each data file to be plotted:
             for path in paths:
                 dropB = settings.Drop_Outliers # Find whether outliers are to be dropped
                 # Read data from file and the pass it on to the plotter-class
                 plotData, name, cntr = self.read_channel(path, self._groups, 
-                                                           drop=dropB)
+                                                 drop=dropB,name_sep=name_sep)
                 plot_maker = plotter(plotData, self._plotDir, center=cntr,
                              title=name, palette=self._grpPalette)
                 # Give additional keywords for plotting
                 kws2 = {'centerline':plot_maker.MPbin, 'title':plot_maker.title,  
-                       'value_str': 'Cell Count', 'xlen': self._length, 
+                       'value_str': ylabel, 'xlen': self._length, 
                        'ylabel':ylabel}
                 kws2.update(basekws) # update to include the base keywords
-                if ylabel is None: # If no given y-label, give name from title
-                    ylabel = settings.AddData.get(plot_maker.title)
-                    kws2.update({'ylabel': ylabel})
+                # If no given y-label, get name from file name / settings:
+                if ylabel is None:
+                    print(plot_maker.title)
+                    addName = plot_maker.title.split('-')[0].split('_')[1]
+                    if "DistanceMeans" in addName:
+                        newlabel = "Distance"
+                    else:
+                        try:
+                            newlabel = settings.AddData.get(addName)[1]
+                        except: newlabel = 'Cell Count'
+                    kws2.update({'ylabel': newlabel, 'value_str': newlabel})
                 kws2.update(kws) # Update keywords with kws passed to this function
                 plot_maker.plot_Data(func, savepath, **kws2) # Plotting
                 
@@ -205,10 +214,12 @@ class Samplegroups:
             print('Plotting average distances  ...')
             __nearestDist()
         if settings.Create_Cluster_Plots:
-            pass
+            print('Plotting clusters  ...')
+            Clpaths = self._dataDir.glob("Avg_*_ClusteredCells")
+            __base(Clpaths, plotter.boxPlot)
             # TODO add cluster plots
 
-    def read_channel(self, path, groups, drop=False):
+    def read_channel(self, path, groups, drop=False, name_sep=1):
         """Reading of channel data, and concatenation of sample group info
         into the resulting dataframe."""
         Data = system.read_data(path, header=0, test=False)
@@ -226,7 +237,7 @@ class Samplegroups:
             if plotData.empty: plotData = temp
             else: plotData = pd.concat([plotData, temp])
         # Finding the name of the data under analysis from its filepath
-        name = '_'.join(str(path.stem).split('_')[1:])
+        name = '_'.join(str(path.stem).split('_')[name_sep:])
         center = self._center # Getting the bin to which samples are centered
         return plotData, name, center
 
@@ -273,7 +284,7 @@ class Samplegroups:
                                      palette=self._grpPalette)
                 kws = {'x': name, 'y': name2, 'hue':'Sample Group', 
                        'xlabel': xlabel, 'ylabel':ylabel, 'title':title, 
-                       'height':5,  'aspect':1, 'title_y':0.95}
+                       'height':5,  'aspect':1, 'title_y':1}
                 plot_maker.plot_Data(plotter.jointPlot, savepath, 
                                      palette=self._grpPalette, **kws)
 
@@ -517,13 +528,19 @@ class Sample(Group):
             clusters."""
             def __merge(Seeds):
                 """Merging of seeds that share cells."""
-                r = sum(Seeds, [])
+                r = sum(Seeds, []) # List of all cells
+                # Create map object containing a set for each cell ID:
                 r = map(lambda x: set([x]), set(r))
-                for item in map(set, Seeds): # loop through a set of each seed
-                    outside = [x for x in r if not x & item]
-                    inside = [x for x in r if x & item]
-                    inside = set([]).union(*inside)
-                    r = outside + [inside]
+                # Loop through a set of each seed
+                for item in map(set, Seeds):
+                    # For each seed, find corresponding IDs from the set of cell 
+                    # IDs and merge them
+                    out = [x for x in r if not x & item] # ID-sets not in seed
+                    mSeeds = [x for x in r if x & item] # ID-sets found in seed
+                    # make union of the ID sets that are found
+                    mSeeds = set([]).union(*mSeeds)
+                    # Reassign r to contain the newly merged ID-sets
+                    r = out + [mSeeds]
                 yield r
             
             maxDist = kws.get('Dist') # the max distance to consider clustering
@@ -552,14 +569,14 @@ class Sample(Group):
             if 'targetXY' in locals(): 
                 target = targetXY
                 comment = settings.target_chan
-                filename = 'Avg_DistanceMeans_{}_vs_{}.csv'.format(Data.name, 
+                filename = 'Avg_{}VS{}_DistanceMeans.csv'.format(Data.name, 
                                                                   comment)
                 rmv = False
             else: # If using the same channel:
                 target = XYpos
                 rmv = True
                 comment = Data.name
-                filename = 'Avg_DistanceMeans_{}.csv'.format(Data.name)
+                filename = 'Avg_{}_DistanceMeans.csv'.format(Data.name)
             cols = ['Nearest_XYZ_{}'.format(comment),'Nearest_Dist_{}'.format(
                     comment), 'Nearest_ID_{}'.format(comment)]
             pointData = pd.DataFrame(columns=cols, index=XYpos.index)
@@ -618,179 +635,33 @@ class Sample(Group):
             for i, vals in enumerate(Clusters):
                 clustData.loc[clustData.ID.isin([int(v) for v in vals]), 
                               'ClusterID'] = i
+            # Merge obtained data with the original data
             NewData = Data.merge(clustData, how='outer', copy=False, on=['ID'])
+            # Find bins of the clustered cells to find counts per bin
             binnedData = NewData.loc[pd.notna(NewData.loc[:,'ClusterID']).index,
                                      'DistBin']
+            # Sort values and then get counts
             bins = binnedData.sort_values().to_numpy()
             unique, counts = np.unique(bins, return_counts=True)
             bincounts = dict(zip(unique, counts))
             idx = np.arange(0, len(settings.projBins))
+            # Create series to store the cell count data
             binnedCounts = pd.Series(np.full(len(idx), np.nan), index=idx, 
                                      name=self.name)
-            for key in bincounts.keys():
+            for key in bincounts.keys(): # Insert data to the series
                 binnedCounts.at[key] = bincounts.get(key)
-            filename = 'ClusteredCells_{}.csv'.format(Data.name)
+            filename = '{}_ClusteredCells.csv'.format(Data.name)
             system.saveToFile(binnedCounts, self._dataDir, filename)
-        # Overwrite the original data with the data containing new columns.
+            # Relate the counts to context, i.e. anchor them at the MP
+            insert, _ = process.relate_data(binnedCounts, self.MP, self._center, 
+                                            self._length)
+            # Save the data
+            SCounts = pd.Series(data=insert, name=self.name)
+            filename = 'Avg_{}_ClusteredCells.csv'.format(Data.name)
+            system.saveToFile(SCounts, self._dataDir, filename)
+        # Overwrite the original sample data with the data containing new columns.
         OW_name = '{}.csv'.format(Data.name)
-        system.saveToFile(NewData, self.path, OW_name, append=False)
-
-class statistics:
-    def __init__(self, control, group2):
-        """Takes two Group-objects and creates statistics based on their 
-        normalized channel counts and additional data."""
-        # Control group variables
-        self.cntrlGroup = control.group
-        self.cntrlNamer = control.namer
-        self.cntrlSamples = control.groupPaths
-        # Test group variables
-        self.tstGroup = group2.group
-        self.tstNamer = group2.namer
-        self.tstSamples = control.groupPaths
-        # Common / Stat object variables
-        self.center = control._center
-        self.length = control._length
-        self.title = '{} VS. {}'.format(self.cntrlGroup, self.tstGroup)
-        self.dataDir = control._dataDir
-        self.statsDir = control._statsDir
-        self.plotDir = control._plotDir.joinpath("Stat Plots")
-        self.plotDir.mkdir(exist_ok=True)
-        self.chanPaths = self.dataDir.glob('Norm_*')
-        self.avgPaths = self.dataDir.glob('Avg_*')
-        self.palette = {control.group: control.color, group2.group: group2.color}
-        # Statistics and data
-        self.statData = None
-        self.cntrlData = None
-        self.tstData = None
-
-    def MWW_test(self, Path):
-        def __get_stats(row, row2, ind, statData):
-            if row.any() != False or row2.any() != False:
-                if np.array_equal(row, row2) == False:
-                    with warnings.catch_warnings():
-                        warnings.simplefilter('ignore', category=RuntimeWarning)
-                        stat, pval = ss.mannwhitneyu(row, row2, 
-                                                     alternative='greater')
-                        stat2, pval2 = ss.mannwhitneyu(row, row2, 
-                                                       alternative='less')
-                        stat3, pval3 = ss.mannwhitneyu(row, row2, 
-                                                       alternative='two-sided')
-                    statData.iat[ind, 0], statData.iat[ind, 2] = stat, pval
-                    statData.iat[ind, 5] = pval2
-                    statData.iat[ind, 8] = pval3
-                else:
-                    statData.iat[ind, 0], statData.iat[ind, 2] = 0, 0
-                    statData.iat[ind, 5] = 0
-                    statData.iat[ind, 8] = 0
-            return statData
-        
-        def __correct(Pvals, corrInd, rejInd):
-            vals = Pvals.values
-            with warnings.catch_warnings():
-                warnings.simplefilter('ignore', category=RuntimeWarning)
-                Reject, CorrP, _, _ = multi.multipletests(vals, method='fdr_bh', 
-                                                      alpha=settings.alpha)
-            statData.iloc[:,corrInd], statData.iloc[:, rejInd] = CorrP, Reject
-            return statData
-                  
-        self.channel = ' '.join(str(Path.stem).split('_')[1:])
-        Data = system.read_data(Path, header=0, test=False)
-        Data = Data.replace(np.nan, 0)
-        cntrlData = Data.loc[:, Data.columns.str.contains(self.cntrlNamer, regex=True)]
-        tstData = Data.loc[:, Data.columns.str.contains(self.tstNamer, regex=True)]
-        statData = pd.DataFrame(index=Data.index, columns=['U Score',
-         'Corr. Greater', 'P Greater', 'Reject Greater', 'Corr. Lesser', 
-         'P Lesser', 'Reject Lesser', 'Corr. Two-sided', 'P Two-sided', 
-         'Reject Two-sided'])
-        if settings.windowed:
-            for ind, __ in cntrlData.iloc[settings.trail:-(settings.lead+1), 
-                                       :].iterrows():
-                sInd = ind - settings.trail
-                eInd = ind + settings.lead
-                cntrlVals = cntrlData.iloc[sInd:eInd, :].values.flatten()
-                tstVals = tstData.iloc[sInd:eInd, :].values.flatten()
-                statData = __get_stats(cntrlVals, tstVals, ind, statData)
-        else:        
-            for ind, row in cntrlData.iterrows():
-                cntrlVals = row.values
-                tstVals = tstData.loc[ind, :].values
-                statData = __get_stats(cntrlVals, tstVals, ind, statData)
-        statData = __correct(statData.iloc[:, 2], 1, 3)
-        statData = __correct(statData.iloc[:, 5], 4, 6)
-        statData = __correct(statData.iloc[:, 8], 7, 9)
-        filename = 'Stats_{} = {}.csv'.format(self.title, self.channel)
-        system.saveToFile(statData, self.statsDir, filename, append=False)
-        self.statData, self.cntrlData, self.tstData = statData, cntrlData, tstData
-        return self
-    
-    def Create_Plots(self, stats, unit="Count", palette = None):
-        if settings.Drop_Outliers:
-            cntrlData = DropOutlier(self.cntrlData)
-            tstData = DropOutlier(self.tstData)
-        else:
-            cntrlData = self.cntrlData
-            tstData = self.tstData
-        cntrlData.loc['Sample Group', :] = self.cntrlGroup
-        tstData.loc['Sample Group', :] =  self.tstGroup
-        plotData = pd.concat([cntrlData.T, tstData.T], ignore_index=True)
-        plot_maker = plotter(plotData, savepath=self.plotDir, 
-                     title=self.plottitle, palette=palette, center=self.center)
-        kws = {'id_str':'Sample Group', 'hue':'Sample Group', 'height':5, 
-               'aspect':4, 'var_str':'Longitudinal Position', 'value_str':unit, 
-               'centerline':plot_maker.MPbin, 'xlen':self.length,
-               'title':plot_maker.title, 'Stats': stats, 'title_y':1, 
-               'fliersize': {'fliersize':'2'}}
-        if settings.windowed: kws.update({'windowed': True})
-        plot_maker.plot_Data(plotter.catPlot, plot_maker.savepath, **kws)
-        
-class Total_Stats:
-    def __init__(self, path, groups, plotDir, statsdir, palette=None):
-        self.plotDir = plotDir
-        self.statsDir = statsdir
-        self.data = system.read_data(path, header=0, test=False, index_col=0)
-        self.groups = copy.deepcopy(groups)
-        self.channels = self.data.index.to_list()
-        self.cntrlGrp = settings.cntrlGroup
-        groups.remove(self.cntrlGrp)
-        self.tstGroups = groups
-        self.palette = palette
-        
-    def stats(self):
-        namer = "{}_".format(self.cntrlGrp)
-        cntrlData = self.data.loc[:, self.data.columns.str.contains(namer)]
-        cols = ['U Score', 'P Two-sided', 'Reject Two-sided']
-        mcols = pd.MultiIndex.from_product([self.tstGroups, cols], 
-                                           names=['Sample Group', 'Statistics'])
-        TotalStats = pd.DataFrame(index=cntrlData.index, columns=mcols)
-        for grp in self.tstGroups:
-            namer = "{}_".format(grp)
-            tstData = self.data.loc[:, self.data.columns.str.contains(namer)]
-            for i, row in cntrlData.iterrows():
-                row2 = tstData.loc[i, :]
-                stat, pval = ss.mannwhitneyu(row, row2,alternative='two-sided')
-                if pval < settings.alpha:
-                    reject = True
-                else:
-                    reject = False
-                TotalStats.loc[i, (grp, cols)] = [stat, pval, reject]
-        system.saveToFile(TotalStats, self.statsDir, "Total Count Stats.csv", 
-                          append=False, w_index=True)
-        return TotalStats            
-    
-    def Create_Plots(self, stats):
-        namers = ['{}_'.format(g) for g in self.groups]
-        plotData = self.data
-        cntrlN = int(len(self.groups) /2)
-        order = self.tstGroups
-        order.insert(cntrlN, self.cntrlGrp)
-        for namer in namers:
-            plotData.loc['Sample Group', plotData.columns.str.contains(
-                                                namer)] = namer.split('_')[0]
-        plot_maker = plotter(plotData, self.plotDir, center=0, title='Total Counts', 
-                 palette=self.palette, color='b')
-        plot_maker.total_plot(stats, order)
-        
-    
+        system.saveToFile(NewData, self.path, OW_name, append=False)    
         
 def DropOutlier(Data):
     with warnings.catch_warnings(): # Ignore warnings regarding empty bins

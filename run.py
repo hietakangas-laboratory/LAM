@@ -19,7 +19,7 @@ channel can then be projected onto the vector, and cell numbers can be quantifie
 along the midgut. If using a whole midgut for analysis, a measurement point (MP) "channel"
 directory should also be created for the normalization of samples. This directory 
 should contain position csv for one coordinate, typically in the middle of R3-region
-so that the samples have a point to anchor for group-wise analysis.
+so that the samples have a anchoring point for group-wise analysis.
 
 Dependencies: Anaconda-included packages (Python 3.7), Shapely, pycg3d
 
@@ -31,11 +31,11 @@ from settings import settings
 
 def main():
     systemPaths = system.start()
-    # If sample processing set to True, collect data etc. Otherwise continue to
-    # plotting and group-wise operations.
+    # If sample processing set to True, create vectors, collect and project data 
+    # etc. Otherwise continue to plotting and group-wise operations.
     if settings.process_samples:
         process.Create_Samples(systemPaths)
-    else:
+    else: # Gather pre-made data for further analysis
         process.Gather_Samples(systemPaths)                        
     # After all samples have been collected/created, find their respective MP bins and
     # normalize (anchor) cell count data. If MP's are not used, the samples are
@@ -47,7 +47,7 @@ def main():
     # After samples have been counted and normalized
     SampleGroups = analysis.Samplegroups(store.samplegroups, store.channels,
                                         store.totalLength, store.center, systemPaths)
-    # Computing cell numbers for each sample's each bin
+    # Computing total cell numbers from each sample's each bin
     if settings.process_counts:
         SampleGroups.Get_Totals()
     # Finding of nearest cells and distances
