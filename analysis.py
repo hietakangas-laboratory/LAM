@@ -91,7 +91,6 @@ class Samplegroups:
                 kws2.update(basekws) # update to include the base keywords
                 # If no given y-label, get name from file name / settings:
                 if ylabel is None:
-                    print(plot_maker.title)
                     addName = plot_maker.title.split('-')[0].split('_')[1]
                     if "DistanceMeans" in addName:
                         newlabel = "Distance"
@@ -210,13 +209,14 @@ class Samplegroups:
             print('Plotting additional data VS additional data  ...')
             paths = _select(self._addData)
             __versus(paths, folder = 'AddData VS AddData')
-        if settings.Create_NearestDist_Plots:
-            print('Plotting average distances  ...')
-            __nearestDist()
-        if settings.Create_Cluster_Plots:
-            print('Plotting clusters  ...')
-            Clpaths = self._dataDir.glob("Avg_*_ClusteredCells")
-            __base(Clpaths, plotter.boxPlot)
+#        if settings.Create_NearestDist_Plots:
+#            print('Plotting average distances  ...')
+#            __nearestDist()
+#        if settings.Create_Cluster_Plots:
+#            print('Plotting clusters  ...')
+#            print(self._dataDir)
+#            Clpaths = self._dataDir.glob("Avg_*_ClusteredCells")
+#            __base(Clpaths, plotter.boxPlot)
             # TODO add cluster plots
 
     def read_channel(self, path, groups, drop=False, name_sep=1):

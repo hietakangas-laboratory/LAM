@@ -9,10 +9,10 @@ class settings:
     # Whether to gather raw data and create vectors. If False, expects to find 
     # pre-created datafiles in the Analysis Data directory, i.e. a previous 
     # full run has been made, and there has been no edits to the data files.
-    process_samples = False
+    process_samples = True
     # Whether to count and normalize data. If set to False, expect all data to 
     # be in place. Can be used to e.g. create additional plots faster.
-    process_counts = False
+    process_counts = True
     # Whether to compute average distances and clusters.
     process_dists = True
     # Set True/False to set all plotting functionalities ON/OFF
@@ -22,7 +22,6 @@ class settings:
     #-#-#-#-#-#-#-#-# VECTOR CREATION & PROJECTION #-#-#-#-#-#-#-#-#-#
     # The channel based on which the vector is created
     vectChannel = "DAPI"
-    header_row = 2  # On which row does the data have its header (starts from 0)
     # Number of bins used for projection unto vector (the second value).
     projBins = np.linspace(0, 1, 80)
     
@@ -31,7 +30,7 @@ class settings:
     # Y-axis position in bin.
     SkeletonVector = False
     SkeletonResize = 0.2    # Binary image resize. Keep at steps of ten.
-    find_dist = 30
+    find_dist = 30      # Find distance of pixels in skeleton vector creation
     BDiter = 0           # Binary dilation iterations (set to 0 if not needed)
     SigmaGauss = 1       # Sigma for gaussian smoothing (set to 0 if not needed)
     simplifyTol = 50     # Tolerance for vector simplification.
@@ -54,6 +53,7 @@ class settings:
     
     
     ### DATA GATHERING ###
+    header_row = 2  # On which row does the data have its header (starts from 0)
     # Additional data to be collected from channels. Key (the first string before 
     # ':') must be the data column label and the following string for searching 
     # the csv-file containing the wanted data. If multiple files are to be 
@@ -61,11 +61,11 @@ class settings:
     # ID number after the search string, separated by an underscore "_". 
     # E.g. "Intensity_Mean" => "Intensity_Mean_Ch=1".
     # The last value is the unit of the values used for plotting labels, 
-    # e.g. um^2 for area.
+    # e.g. um^2 for area. um^2 = "$\u03BCm^2$"  ;   um^3 = "$\u03BCm^3$"
     AddData = {"Area": ["Area.csv", "Area, $\u03BCm^2$"], 
                "Volume": ["Volume.csv", "Volume, $\u03BCm^3$"],
                "Intensity Mean": ["Intensity_Mean", "Intensity"]
-               } # um^2 = "$\u03BCm^2$"  ;   um^3 = "$\u03BCm^3$"
+               } 
     # If set to true, replaces the above mentioned (AddData) ID numbers with an
     # alternative moniker as defined in channelID
     replaceID = True
@@ -81,9 +81,9 @@ class settings:
     # channels in Distance_Channels list. If use target is True, the nearest
     # cell is found on the channel defined by target_chan, otherwise they are
     # found within the channel undergoing analysis.
-    Find_Distances = False
+    Find_Distances = True
     Distance_Channels = ["GFP"]
-    use_target = False
+    use_target = True
     target_chan = "Pros"
     # The maximum distance the nearest cell will be looked at. Increase is
     # computationally expensive, depending on the size of the dataset and the 
@@ -97,7 +97,7 @@ class settings:
     
     ## CLUSTERS ##
     # Whether to compute clusters
-    Find_Clusters = False
+    Find_Clusters = True
     Cluster_Channels = ["GFP"]
     Cl_maxDist = 20         # Radius around the cell
     Cl_Vol_inclusion = 0    # Set to zero if not wanted.
@@ -107,7 +107,7 @@ class settings:
     
     ### STATISTICS OPTIONS ###
     # Whether to perform group-wise stat analysis.
-    statistics = False
+    statistics = True
     stat_versus = True
     stat_total = True
     windowed = True
@@ -123,12 +123,10 @@ class settings:
     cntrlGroup = "starv"
     
     ### PLOTTING OPTIONS ###  
-    Create_Channel_Plots = False
-    Create_AddData_Plots = True
-    Create_Channel_PairPlots = False
-    Create_Heatmaps = False
-    Create_NearestDist_Plots = True
-    Create_Cluster_Plots = True
+    Create_Channel_Plots = True
+    Create_AddData_Plots = True     # Plots also nearest distance & clusters
+    Create_Channel_PairPlots = True
+    Create_Heatmaps = True
     Create_Statistics_Plots = True  # requires statistics to be True
     # Variable vs. variable plots:
     Create_ChanVSAdd_Plots = False
