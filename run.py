@@ -25,7 +25,8 @@ Dependencies: Anaconda-included packages (Python 3.7), Shapely, pycg3d
 
 @author: Arto Viitanen
 """
-import system, analysis, process
+import system, analysis, process, interface
+import tkinter as tk
 from system import store
 from settings import settings
 
@@ -66,4 +67,9 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    if settings.GUI:
+        root = tk.Tk()
+        gui = interface.base_GUI(root)
+        root.mainloop()
+    else:
+        main()

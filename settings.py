@@ -3,6 +3,8 @@ import numpy as np, pathlib as pl
 class settings:
     """ A class for holding all user-end settings for the analysis."""
     ######################## PRIMARY SETTINGS ########################
+    GUI = True  # Use graphical user interface (True / False)
+    
     # DEFINE PATH TO ANALYSIS FOLDER:
     # (Use input r'PATH' where PATH is your path)
     workdir = pl.Path(r'P:\h919\hietakangas\Arto\21.01.2019 Statistics')
