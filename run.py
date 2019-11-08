@@ -2,6 +2,12 @@
 """
 Created on Wed Mar  6 12:42:28 2019
 
+Dependencies:
+    1. install Anaconda
+    2. Open Anaconda Prompt, write:
+        1: conda install shapely
+        2: pip install pycg3d
+    
 Script for longitudinal analysis of Drosophila midgut images. To run the script,
 have the LAM.py file at a directory containing directories of each individual sample. 
 The sample directories should be named followingly: "samplegroup_xyz_samplename", 

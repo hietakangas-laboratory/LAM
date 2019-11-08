@@ -79,6 +79,8 @@ def saveToFile(data, directory, filename, append=True, w_index=False):
             data.to_frame().to_csv(str(path), index=w_index)
 
 def start():
+    if not isinstance(settings.workdir, pl.Path):
+        settings.workdir = pl.Path(settings.workdir)
     try:
         if True not in [settings.process_samples, settings.process_counts, 
                     settings.Create_Plots, settings.process_dists]:

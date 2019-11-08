@@ -83,7 +83,7 @@ class settings:
     # channels in Distance_Channels list. If use target is True, the nearest
     # cell is found on the channel defined by target_chan, otherwise they are
     # found within the channel undergoing analysis.
-    Find_Distances = True
+    Find_Distances = False
     Distance_Channels = ["GFP"]
     use_target = True
     target_chan = "Pros"
@@ -99,7 +99,7 @@ class settings:
     
     ## CLUSTERS ##
     # Whether to compute clusters
-    Find_Clusters = True
+    Find_Clusters = False
     Cluster_Channels = ["GFP"]
     Cl_maxDist = 20         # Radius around the cell
     Cl_Vol_inclusion = 0    # Set to zero if not wanted.

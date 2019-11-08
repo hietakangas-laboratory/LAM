@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
-
+from multiprocessing import Process
+from run import main
 import tkinter as tk
+import sys
 from tkinter import filedialog
 from settings import settings
 
@@ -57,7 +59,7 @@ class base_GUI(tk.Toplevel):
                                command=self.RUN_button)
         self.Run_b.configure(height=2, width=7, bg='lightgreen', fg="darkgreen", )
         self.Run_b.grid(row=0, column=3, columnspan=2)
-        self.quitbutton = tk.Button(self.bottomf, text="quit", command=master.destroy)
+        self.quitbutton = tk.Button(self.bottomf, text="Quit", command=master.destroy)
         self.quitbutton.configure(height=1, width=5, fg="red")
         self.quitbutton.grid(row=0, column=8)
         # RIGHT FRAME / PLOTTING
@@ -69,22 +71,25 @@ class base_GUI(tk.Toplevel):
     def browse_button(self):
         filename = filedialog.askdirectory()
         self.folder_path.set(filename)
+        settings.workdir = str(self.folder_path.get())
+        print(settings.workdir)
         
     def RUN_button(self):
         settings.process_samples = SampleV.get()
         settings.process_counts = CountV.get()
         settings.process_dists = DistV.get()
         settings.Create_Plots = PlotV.get()
-        global running
-        running=True
-        self.Run_b.configure(text='Stop', bg="tomato", fg='darkred', command=self.STOP_button)
-        idx = 0
-        while running == True:
-            main()
+        main()
+#        self.Run_b.configure(text='Stop', bg="tomato", fg='darkred', command=self.STOP_button)
+#        global mainThread
+#        mainThread = Process(target=main)
+#        mainThread.start()
+#        mainThread.join()
+#        sys.stdout.flush()
+        
 
     def STOP_button(self):
-        global running
-        running=False
         self.Run_b.configure(text='Run', bg='lightgreen', fg="darkgreen", command=self.RUN_button)
+        mainThread.terminate()
         
     
