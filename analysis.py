@@ -183,7 +183,32 @@ class Samplegroups:
                        'title':plot_maker.title, 'xlen':self._length, 'title_y':0.95}
                 kws.update(basekws)
                 plot_maker.plot_Data(plotter.linePlot, savepath, **kws)
-        
+                
+        def __distributions():
+            chanPaths = self._dataDir.glob('All_*')
+            savepath = self._plotDir.joinpath('Distributions')
+            savepath.mkdir(exist_ok=True)
+            kws = {'id_str':'Sample Group',  'hue':'Sample Group',  
+                   'row':'Sample Group', 'height':3, 'aspect':1,  
+                   'title_y':0.95, 'gridspec':{'hspace': 0.4}}
+            for path in chain(chanPaths, self._addData):
+                plotData, name, cntr = self.read_channel(path, self._groups)
+                plot_maker = plotter(plotData, self._plotDir, center=cntr, 
+                                     title=name, palette=self._grpPalette)
+                if "All_" in path.name:
+                    newlabel = 'Density (Cell Count)'
+                else:
+                    addName = plot_maker.title.split('-')[0].split('_')[1]
+                    if "DistanceMeans" in addName:
+                        newlabel = "Distance"
+                    else:
+                        try:
+                            temp = settings.AddData.get(addName)[1]
+                            newlabel = 'Density ({})'.format(temp)
+                        except: newlabel = 'Density Distribution'
+                kws.update({'ylabel': newlabel, 'value_str': newlabel})
+                plot_maker.plot_Data(plotter.distPlot, savepath, **kws)
+                
         #-------#
         # Conditional function calls to create each of the plots.
         print("\n---Creating plots---")
@@ -209,6 +234,9 @@ class Samplegroups:
             print('Plotting additional data VS additional data  ...')
             paths = _select(self._addData)
             __versus(paths, folder = 'AddData VS AddData')
+        if settings.Create_Distribution_Plots:
+            print('Plotting distributions  ...')
+            __distributions()
 #        if settings.Create_NearestDist_Plots:
 #            print('Plotting average distances  ...')
 #            __nearestDist()

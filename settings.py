@@ -3,7 +3,7 @@ import numpy as np, pathlib as pl
 class settings:
     """ A class for holding all user-end settings for the analysis."""
     ######################## PRIMARY SETTINGS ########################
-    GUI = True  # Use graphical user interface (True / False)
+    GUI = False  # Use graphical user interface (True / False)
     
     # DEFINE PATH TO ANALYSIS FOLDER:
     # (Use input r'PATH' where PATH is your path)
@@ -11,12 +11,12 @@ class settings:
     # Whether to gather raw data and create vectors. If False, expects to find 
     # pre-created datafiles in the Analysis Data directory, i.e. a previous 
     # full run has been made, and there has been no edits to the data files.
-    process_samples = True
+    process_samples = False  # CLEARS DATA FILES-DIRECTORY
     # Whether to count and normalize data. If set to False, expect all data to 
     # be in place. Can be used to e.g. create additional plots faster.
-    process_counts = True
+    process_counts = False
     # Whether to compute average distances and clusters.
-    process_dists = True
+    process_dists = False
     # Set True/False to set all plotting functionalities ON/OFF
     Create_Plots = True     # ON / OFF switch for plots
     ##################################################################
@@ -83,7 +83,7 @@ class settings:
     # channels in Distance_Channels list. If use target is True, the nearest
     # cell is found on the channel defined by target_chan, otherwise they are
     # found within the channel undergoing analysis.
-    Find_Distances = True
+    Find_Distances = False
     Distance_Channels = ["GFP"]
     use_target = True
     target_chan = "Pros"
@@ -99,7 +99,7 @@ class settings:
     
     ## CLUSTERS ##
     # Whether to compute clusters
-    Find_Clusters = True
+    Find_Clusters = False
     Cluster_Channels = ["GFP"]
     Cl_maxDist = 20         # Radius around the cell
     Cl_Vol_inclusion = 0    # Set to zero if not wanted.
@@ -109,7 +109,7 @@ class settings:
     
     ### STATISTICS OPTIONS ###
     # Whether to perform group-wise stat analysis.
-    statistics = True
+    statistics = False
     stat_versus = True
     stat_total = True
     windowed = True
@@ -125,11 +125,12 @@ class settings:
     cntrlGroup = "starv"
     
     ### PLOTTING OPTIONS ###  
-    Create_Channel_Plots = True
-    Create_AddData_Plots = True     # Plots also nearest distance & clusters
-    Create_Channel_PairPlots = True
-    Create_Heatmaps = True
-    Create_Statistics_Plots = True  # requires statistics to be True
+    Create_Channel_Plots = False
+    Create_AddData_Plots = False     # Plots also nearest distance & clusters
+    Create_Channel_PairPlots = False
+    Create_Heatmaps = False
+    Create_Distribution_Plots = True
+    Create_Statistics_Plots = False  # requires statistics to be True
     # Variable vs. variable plots:
     Create_ChanVSAdd_Plots = False
     Create_AddVSAdd_Plots = False
