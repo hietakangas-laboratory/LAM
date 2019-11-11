@@ -183,8 +183,10 @@ class plotter:
                 g = sns.FacetGrid(plotData, row=kws.get('row'), hue=kws.get('hue'), 
                           sharex=True, sharey=True, gridspec_kws=kws.get('gridspec'),
                           height=kws.get('height'),aspect=kws.get('aspect'),
-                          legend_out=True, dropna=False)
+                          legend_out=True, dropna=False, palette=self.palette)
                 g = g.map_dataframe(plotfunc, self.palette, **kws).add_legend()
+                if plotfunc.__name__ == 'distPlot':
+                    g._legend.remove()
                 for ax in g.axes.flat:
                     ax.xaxis.set_tick_params(labelbottom=True)
                 __add()
@@ -237,7 +239,7 @@ class plotter:
         color = palette.get(data['Sample Group'].iloc[0])
         values = kws.get('value_str')
         sns.distplot(a=data[values], hist=True, rug=True, norm_hist=True, 
-                     color=color, ax=axes)
+                     color=color, axlabel=kws.get('xlabel'), ax=axes)
         return axes
 
     def linePlot(palette, **kws):
@@ -273,6 +275,10 @@ class plotter:
         axes = plt.gca()
         data = kws.pop('data')
         sns.heatmap(data=data.iloc[:,:-2], cmap='coolwarm', ax=axes)
+        axes.set_yticklabels(labels=data.index.to_list(), rotation=0)
+        MPbin = kws.get('center')
+        ybot, ytop = plt.ylim()
+        axes.plot((MPbin, MPbin), (ybot+0.5, ytop-0.5), 'r--')
         return axes
     
     def total_plot(self, stats, order):

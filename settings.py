@@ -131,9 +131,11 @@ class settings:
     Create_Heatmaps = False
     Create_Distribution_Plots = True
     Create_Statistics_Plots = False  # requires statistics to be True
+    
     # Variable vs. variable plots:
-    Create_ChanVSAdd_Plots = False
-    Create_AddVSAdd_Plots = False
+    Create_ChanVSAdd_Plots = False  # Pairs of channel and additional data
+    Create_AddVSAdd_Plots = False # Pairs of additional data and additional data
+    # Create plots of all possible pair combinations of the following:
     vs_channels = ['DAPI', 'Pros', 'SuH', 'GFP']
     vs_adds = ['Intensity Mean']
     

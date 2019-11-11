@@ -124,7 +124,7 @@ class Samplegroups:
             plot_maker = plotter(fullData, self._plotDir, center=cntr,
                          title=name, palette=self._grpPalette)
             kws = {'height':3, 'aspect':5, 'gridspec':{'hspace': 0.5}, 
-                   'row':'Channel', 'title_y':0.95}
+                   'row':'Channel', 'title_y':0.95,'center':plot_maker.MPbin}
             plot_maker.plot_Data(plotter.Heatmap, savepath, **kws)
 
         def __versus(paths1, paths2=None, folder=None):
@@ -189,24 +189,25 @@ class Samplegroups:
             savepath = self._plotDir.joinpath('Distributions')
             savepath.mkdir(exist_ok=True)
             kws = {'id_str':'Sample Group',  'hue':'Sample Group',  
-                   'row':'Sample Group', 'height':3, 'aspect':1,  
+                   'row':'Sample Group', 'height':5, 'aspect':1,  
                    'title_y':0.95, 'gridspec':{'hspace': 0.4}}
+            ylabel = 'Density'
             for path in chain(chanPaths, self._addData):
                 plotData, name, cntr = self.read_channel(path, self._groups)
                 plot_maker = plotter(plotData, self._plotDir, center=cntr, 
                                      title=name, palette=self._grpPalette)
                 if "All_" in path.name:
-                    newlabel = 'Density (Cell Count)'
+                    xlabel = 'Cell Count'
                 else:
                     addName = plot_maker.title.split('-')[0].split('_')[1]
                     if "DistanceMeans" in addName:
-                        newlabel = "Distance"
+                        xlabel = "Distance"
                     else:
                         try:
-                            temp = settings.AddData.get(addName)[1]
-                            newlabel = 'Density ({})'.format(temp)
-                        except: newlabel = 'Density Distribution'
-                kws.update({'ylabel': newlabel, 'value_str': newlabel})
+                            xlabel = settings.AddData.get(addName)[1]
+                        except: xlabel = 'Value'
+                kws.update({'var_str': xlabel, 'ylabel': ylabel, 
+                            'value_str': ylabel})
                 plot_maker.plot_Data(plotter.distPlot, savepath, **kws)
                 
         #-------#
