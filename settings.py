@@ -3,7 +3,7 @@ import numpy as np, pathlib as pl
 class settings:
     """ A class for holding all user-end settings for the analysis."""
     ######################## PRIMARY SETTINGS ########################
-    GUI = False  # Use graphical user interface (True / False)
+    GUI = True  # Use graphical user interface (True / False)
     
     # DEFINE PATH TO ANALYSIS FOLDER:
     # (Use input r'PATH' where PATH is your path)
@@ -127,8 +127,8 @@ class settings:
     ### PLOTTING OPTIONS ###  
     Create_Channel_Plots = False
     Create_AddData_Plots = False     # Plots also nearest distance & clusters
-    Create_Channel_PairPlots = False
-    Create_Heatmaps = False
+    Create_Channel_PairPlots = True
+    Create_Heatmaps = True
     Create_Distribution_Plots = True
     Create_Statistics_Plots = False  # requires statistics to be True
     
