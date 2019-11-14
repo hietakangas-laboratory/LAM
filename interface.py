@@ -77,10 +77,10 @@ class base_GUI(tk.Toplevel):
                                     command=master.destroy)
         self.quitbutton.configure(height=1, width=5, fg="red")
         self.quitbutton.grid(row=0, column=8)
-        self.additbutton = tk.Button(self.bottomf, text="Add. data ...", 
+        self.additbutton = tk.Button(self.bottomf, text="Add. Data", 
                                     font=('Arial', 9), 
                                     command=self.Open_AddSettings)
-        self.additbutton.configure(height=2, width=10)
+        self.additbutton.configure(height=2, width=7)
         self.additbutton.grid(row=0, column=1, columnspan=2, padx=(15,100), 
                              sticky="w")
         
@@ -343,8 +343,10 @@ class Additional_data(tk.Toplevel):
         self.window.bind('<Return>', self.save_setts)
         self.frame = tk.Frame(self.window)
         self.frame.grid(row=0, rowspan=11, columnspan=9, sticky="new")
+        self.Dframe = tk.Frame(self.window, relief='groove')
+        self.Dframe.grid(row=8, rowspan=5, columnspan=9, sticky="new")
         self.Bframe = tk.Frame(self.window)
-        self.Bframe.grid(row=11, rowspan=2, columnspan=9, sticky="ne")
+        self.Bframe.grid(row=13, rowspan=2, columnspan=9, sticky="ne")
         col_count, row_count = self.window.grid_size()
         for col in range(col_count):
             self.window.grid_columnconfigure(col, minsize=45)        
@@ -414,7 +416,39 @@ class Additional_data(tk.Toplevel):
             l3.grid(row=row, column=5, columnspan=2)
             self.buttons.append(tk.Button(self.frame, text='x', font=('Arial',10), 
                               relief='raised', command=lambda i=i: self.rmv_data(i)))
-            self.buttons[i].grid(row=row, column=7, sticky='w')        
+            self.buttons[i].grid(row=row, column=7, sticky='w')
+        # additional data ID-replacement
+        self.repID = tk.BooleanVar(value=Sett.replaceID)
+        self.repIDC = tk.Checkbutton(self.Dframe, text="Replace file ID", 
+                                     variable=self.repID,  relief='groove', bd=4,  
+                                     command=self.replace_check)
+        self.repIDC.grid(row=0, column=0, columnspan=4)
+        self.chanlbl = tk.Label(self.Dframe, text='File descriptor:', bd=1)
+        self.chanlbl.grid(row=1, column=0, columnspan=3)
+        self.changelbl = tk.Label(self.Dframe, text='Change to:', bd=1)
+        self.changelbl.grid(row=1, column=3, columnspan=3)
+        for i, key in enumerate(Sett.channelID.keys()):
+            changevalues = Sett.channelID.get(key)
+            fileID = tk.StringVar(value=key)
+            ChanID = tk.StringVar(value=changevalues)
+            self.fIDIn = tk.Entry(self.Dframe, text=fileID.get(), bg='white', 
+                             textvariable=fileID, bd=2, relief='sunken')
+            self.cIDIn = tk.Entry(self.Dframe, text=ChanID.get(), bg='white', 
+                             textvariable=ChanID, bd=2, relief='sunken')
+            row = i+2
+            self.fIDIn.grid(row=row, column=0, columnspan=3)
+            self.cIDIn.grid(row=row, column=3, columnspan=3)
+        self.replace_check()
+        
+    def replace_check(self):
+        if not self.repID.get():
+            for child in self.Dframe.winfo_children():
+                if isinstance(child, tk.Entry):
+                    child.configure(state = 'disable')
+        else:
+            for child in self.Dframe.winfo_children():
+                    if isinstance(child, tk.Entry):
+                        child.configure(state = 'normal')
         
     def add_data(self):
         if setLbl.get() not in self.addDict.keys():
@@ -445,7 +479,6 @@ class Additional_data(tk.Toplevel):
                 key = widget.cget("text")
                 if key in self.addDict.keys():
                     self.addDict.pop(key, None)
-#                    self.rowN = self.rowN -1
                     widget.grid_forget()
                 else:
                     print("USER-WARNING: removed label not found in add. data.")
@@ -454,4 +487,18 @@ class Additional_data(tk.Toplevel):
             
     def save_setts(self):
         Sett.AddData = self.addDict
+        Sett.replaceID = self.repID.get()
+        if Sett.replaceID:
+            fileIDs = []
+            changeIDs = []
+            for child in self.Dframe.winfo_children():
+                if isinstance(child, tk.Entry)and int(child.grid_info()[
+                                                            "column"]) == 0:
+                    fileIDs.append(child.get())
+                if isinstance(child, tk.Entry)and int(child.grid_info()[
+                                                            "column"]) == 3:
+                    changeIDs.append(child.get())
+            Sett.channelID = {}
+            for i, key in enumerate(fileIDs):
+                Sett.channelID.update({key: changeIDs[i]})           
         self.window.destroy()

@@ -51,7 +51,7 @@ class settings:
     # Include secondary measurement point. Used to see e.g. proportional change.
     useSecMP = False    # SECMP NOT PROPERLY IMPLEMENTED
     # Name of secondary measurement point
-    secMP = 'R45'
+    secMP = 'R45'       # SECMP NOT PROPERLY IMPLEMENTED
     
     
     ### DATA GATHERING ###
@@ -70,7 +70,7 @@ class settings:
                } 
     # If set to true, replaces the above mentioned (AddData) ID numbers with an
     # alternative moniker as defined in channelID
-    replaceID = True
+    replaceID = False
     channelID = {"Ch=1": "Pros",
                  "Ch=2": "GFP",
                  "Ch=3": "SuH",
