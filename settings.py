@@ -136,8 +136,8 @@ class settings:
     Create_ChanVSAdd_Plots = False  # Pairs of channel and additional data
     Create_AddVSAdd_Plots = False # Pairs of additional data and additional data
     # Create plots of all possible pair combinations of the following:
-    vs_channels = ['DAPI', 'Pros', 'SuH', 'GFP']
-    vs_adds = ['Intensity Mean']
+    vs_channels = ['DAPI', 'Pros', 'SuH', 'GFP']    # !!!
+    vs_adds = ['Intensity Mean']    # !!!
     
     # Whether to drop outliers from plots ONLY, and the standard deviation limit
     # for considering what is an outlier.
@@ -163,4 +163,4 @@ class settings:
     # size order small to large: 'paper', 'talk', 'poster'
     
     # Define colors used for sample groups (xkcd colors: 'https://xkcd.com/color/rgb/')
-    palette_colors = ['orange yellow', 'aqua marine', 'tomato', 'dark lime', 'tan brown']
+    palette_colors = ['orange yellow', 'aqua marine', 'tomato', 'dark lime', 'tan brown'] # !!! Add colors
