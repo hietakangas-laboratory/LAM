@@ -54,18 +54,19 @@ class base_GUI(tk.Toplevel):
         StatsV = tk.BooleanVar(value=Sett.statistics)
         self.pSample = tk.Checkbutton(self.midf, text="Process",variable=SampleV, 
                                       relief='groove', bd=4, font=('Arial', 8, 'bold'),  
-                                      command=self.Process_check)
+                                      command=self.Process_check, bg='lightgrey')
         self.pCounts = tk.Checkbutton(self.midf, text="Counts ", variable=CountV, 
-                                      relief='groove', bd=4, font=('Arial', 8, 'bold'))
+                                      relief='groove', bd=4, font=('Arial', 8, 'bold'), 
+                                      bg='lightgrey')
         self.pDists = tk.Checkbutton(self.midf, text="Distance", variable=DistV, 
                                      relief='groove', bd=4, font=('Arial', 8, 'bold'),
-                                     command=self.Distance_check)
+                                     command=self.Distance_check, bg='lightgrey')
         self.pPlots = tk.Checkbutton(self.midf, text="Plots   ", variable=PlotV, 
                                      relief='groove', bd=4, font=('Arial', 8, 'bold'), 
-                                     command=self.Plot_check)
+                                     command=self.Plot_check, bg='lightgrey')
         self.pStats = tk.Checkbutton(self.midf, text="Stats   ", variable=StatsV, 
                                      relief='groove', bd=4, font=('Arial', 8, 'bold'), 
-                                     command=self.Stat_check)
+                                     command=self.Stat_check, bg='lightgrey')
         self.pSample.grid(row=2, column=0, columnspan=1, padx=(2,2))
         self.pCounts.grid(row=2, column=1, columnspan=1, padx=(2,2))
         self.pDists.grid(row=2, column=2, columnspan=1, padx=(2,2))
@@ -734,50 +735,150 @@ class Plot_Settings(tk.Toplevel):
     def __init__(self, master):
         self.window = tk.Toplevel(master)
         self.window.grab_set()
-        self.window.title("Plotting Settings")
-        self.window.bind('<Escape>', self.window.destroy)
+        self.window.title("Plot Settings")
+        self.window.bind('<Escape>', self.func_destroy)
         self.window.bind('<Return>', self.save_setts)
-        self.frame = tk.Frame(self.window)
-        self.frame.grid(row=0, rowspan=11, columnspan=9, sticky="new")
+        self.frame = tk.Frame(self.window, bd=3, relief='groove')
+        self.frame.grid(row=0, column=0, rowspan=6, columnspan=4, sticky="nw")
+        self.statframe = tk.Frame(self.window, bd=2, relief='groove')
+        self.statframe.grid(row=6, column=0, rowspan=7, columnspan=4, sticky="n")
+        self.Bframe = tk.Frame(self.window)
+        self.Bframe.grid(row=13, column=0, rowspan=2, columnspan=4, pady=5, 
+                         sticky="ne")
+        ## General settings:
+        # Outliers
+        self.lbl1 = tk.Label(self.frame, text="General Settings:")
+        self.lbl1.grid(row=0, column=0, columnspan=2)
+        self.DropV = tk.BooleanVar(value=Sett.Drop_Outliers)
+        self.DropC = tk.Checkbutton(self.frame, text="Drop outliers", 
+                                     variable=self.DropV,  relief='groove', bd=1,  
+                                     command=self.Drop_check)
+        self.DropC.grid(row=1, column=0, columnspan=2)
+        self.lbl2 = tk.Label(self.frame, text='Std dev.:')
+        self.lbl2.grid(row=2, column=0, columnspan=2)
+        self.setSTD = tk.IntVar(value=Sett.dropSTD)
+        self.stdIn = tk.Entry(self.frame, text=self.setSTD.get(), bg='white', 
+                             textvariable=self.setSTD, bd=2, relief='sunken')
+        self.stdIn.grid(row=2, column=2, columnspan=2)
+        self.Drop_check()
+        # Pairplot jitter
+        self.JitterV = tk.BooleanVar(value=Sett.Drop_Outliers)
+        self.JitterC = tk.Checkbutton(self.frame, text="Pairplot jitter", 
+                                     variable=self.JitterV)
+        self.JitterC.grid(row=3, column=0, columnspan=2)
+        # Save format
+        self.lbl3 = tk.Label(self.frame, text='Save format:')
+        self.lbl3.grid(row=4, column=0, columnspan=1)
+        self.setSF = tk.StringVar(value=Sett.saveformat)
+        self.SFIn = tk.Entry(self.frame, text=self.setSF.get(), bg='white', 
+                             textvariable=self.setSF, bd=2, relief='sunken')
+        self.SFIn.grid(row=4, column=1, columnspan=2)
+        comment = "Supported formats:\n\
+        eps, jpeg, jpg, pdf, pgf, png, ps, raw, rgba,\nsvg, svgz, tif, tiff"
+        self.lbl4 = tk.Label(self.frame, text=comment, fg='dimgrey')
+        self.lbl4.grid(row=5, column=0, columnspan=4, pady=(0,10))
+        ## Statistics settings:
+        self.lbl5 = tk.Label(self.statframe, text='Statistical Plotting:')
+        self.lbl5.grid(row=0, column=0, columnspan=3)
         
-#        # statPlots
-#        stars = True
-#        fill = True
-#        negLog2 = True
-#        ylim = 25
+        self.starsV = tk.BooleanVar(value=Sett.Drop_Outliers)
+        self.starC = tk.Checkbutton(self.statframe, text="Sign. stars", 
+                                     variable=self.starsV,  
+                                     command=self.sign_check)
+        self.starC.grid(row=1, column=0, columnspan=2)
         
-#        # Versus plots
-#        vs_channels = ['DAPI', 'Pros', 'SuH', 'GFP']
-#        vs_adds = ['Intensity Mean'] 
-#        
-#        Drop_Outliers = True
-#        dropSTD = 3
-#        plot_jitter = True
-#        
-#        # Supported formats for the plot files: eps, jpeg, jpg, pdf, pgf, png, ps, raw, rgba, svg, svgz, tif, tiff.
-#        saveformat = "pdf"
+        self.CfillV = tk.BooleanVar(value=Sett.fill)
+        self.CfillC = tk.Checkbutton(self.statframe, text="Sign. color", 
+                                     variable=self.CfillV)
+        self.CfillC.grid(row=1, column=2, columnspan=2)
         
-        # Buttons
-        self.Save_b = tk.Button(self.But_frame, text='Save & Return\n<Enter>', 
+        self.neglogV = tk.BooleanVar(value=Sett.negLog2)
+        self.neglogC = tk.Checkbutton(self.statframe, text="Neg. log2", 
+                                     variable=self.neglogV,  
+                                     command=self.sign_check)
+        self.neglogC.grid(row=2, column=0, columnspan=1)
+        
+        self.lbl7 = tk.Label(self.statframe, text='y-limit:')
+        self.lbl7.grid(row=2, column=1, columnspan=1)
+        self.setLogy = tk.IntVar(value=Sett.ylim)
+        self.ylimIn = tk.Entry(self.statframe, text=self.setLogy.get(), bg='white', 
+                             textvariable=self.setLogy, bd=2, relief='sunken')
+        self.ylimIn.grid(row=2, column=2, columnspan=2)
+        self.sign_check()
+        
+        # versus
+        self.lbl8 = tk.Label(self.statframe, text='Versus statistics:')
+        self.lbl8.grid(row=4, column=0, columnspan=3)
+        
+        self.lbl9 = tk.Label(self.statframe, text='Plotted channels:')
+        self.lbl9.grid(row=5, column=0, columnspan=2)
+        self.setVsCh = tk.StringVar(value=','.join(Sett.vs_channels))
+        self.VsChIn = tk.Entry(self.statframe, text=self.setVsCh.get(), bg='white', 
+                             textvariable=self.setVsCh, bd=2, relief='sunken')
+        self.VsChIn.grid(row=5, column=2, columnspan=2)
+        
+        self.lbl8 = tk.Label(self.statframe, text='Plotted add. data:')
+        self.lbl8.grid(row=6, column=0, columnspan=2)
+        self.setVsAdds = tk.StringVar(value=','.join(Sett.vs_adds))
+        self.VsAddIn = tk.Entry(self.statframe, text=self.setVsAdds.get(), bg='white', 
+                             textvariable=self.setVsAdds, bd=2, relief='sunken')
+        self.VsAddIn.grid(row=6, column=2, columnspan=2)
+        self.Save_b = tk.Button(self.Bframe, text='Save & Return\n<Enter>', 
                        font=('Arial', 10, 'bold'), 
                        command=self.save_setts)
         self.Save_b.configure(height=2, width=12, bg='lightgreen',fg="darkgreen")
         self.Save_b.grid(row=0, column=2, rowspan=2, columnspan=2, padx=(0,10))
-        self.exit_b = tk.Button(self.But_frame, text="Return", 
+        self.exit_b = tk.Button(self.Bframe, text="Return", 
                                     font=('Arial', 9, 'bold'), 
-                                    command=self.window.destroy)
+                                    command=self.func_destroy)
         self.exit_b.configure(height=1, width=5, fg="red")
         self.exit_b.grid(row=0, column=4)
+    
+    def Drop_check(self):
+        if not self.DropV.get():
+            self.stdIn.configure(state = 'disable')
+        else:
+            self.stdIn.configure(state = 'normal')
+    
+    def sign_check(self):
+        if not self.neglogV.get():
+            self.starC.configure(state = 'normal')
+            self.lbl7.configure(state = 'disable')
+            self.ylimIn.configure(state = 'disable')
+        else:
+            self.starsV.set(False)
+            self.starC.configure(state = 'disable')
+            self.lbl7.configure(state = 'normal')
+            self.ylimIn.configure(state = 'normal')
         
-    def save_setts(self):
-        pass
+    def save_setts(self, event=None):
+        Sett.Drop_Outliers = self.DropV.get()
+        Sett.dropSTD = self.setSTD.get()
+        Sett.plot_jitter = self.JitterV.get()
+        Sett.saveformat = self.setSF.get()
+        Sett.negLog2 = self.neglogV.get()
+        Sett.stars = self.starsV.get()
+        Sett.fill = self.CfillV.get()
+        Sett.ylim = self.setLogy.get()
+        ChStr = self.setVsCh.get().split(',')
+        for i, channel in enumerate(ChStr):
+            ChStr[i] = channel.strip()
+        Sett.vs_channels = ChStr
+        ChStr = self.setVsAdds.get().split(',')
+        for i, channel in enumerate(ChStr):
+            ChStr[i] = channel.strip()
+        Sett.vs_adds = ChStr
+        self.window.destroy()
+    
+    def func_destroy(self, event=None):
+        self.window.destroy()
         
 class Stat_Settings(tk.Toplevel):
     def __init__(self, master):
         self.window = tk.Toplevel(master)
         self.window.grab_set()
         self.window.title("Statistics Settings")
-        self.window.bind('<Escape>', self.window.destroy)
+        self.window.bind('<Escape>', self.func_destroy)
         self.window.bind('<Return>', self.save_setts)
         self.frame = tk.Frame(self.window)
         self.frame.grid(row=0, rowspan=4, columnspan=4, sticky="new")
@@ -837,7 +938,7 @@ class Stat_Settings(tk.Toplevel):
         self.Save_b.grid(row=0, column=2, rowspan=2, columnspan=2, padx=(0,10))
         self.exit_b = tk.Button(self.But_frame, text="Return", 
                                     font=('Arial', 9, 'bold'), 
-                                    command=self.window.destroy)
+                                    command=self.func_destroy)
         self.exit_b.configure(height=1, width=5, fg="red")
         self.exit_b.grid(row=0, column=4)
         
@@ -858,4 +959,7 @@ class Stat_Settings(tk.Toplevel):
         if Sett.windowed:
             Sett.trail = self.setTrail.get()
             Sett.lead = self.setLead.get()
+        self.window.destroy()
+    
+    def func_destroy(self, event=None):
         self.window.destroy()
