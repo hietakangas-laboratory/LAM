@@ -23,13 +23,13 @@ class base_GUI(tk.Toplevel):
         
         ## LAYOUT:
         self.topf.grid(row=0, columnspan=6, sticky="new")
-        self.midf.grid(row=1, columnspan=6, sticky="new")
-        self.Up_leftf.grid(row=2, column=0, columnspan=3, rowspan=4, pady=(3,0), 
+        self.midf.grid(row=1, rowspan=3, columnspan=6, sticky="new")
+        self.Up_leftf.grid(row=4, column=0, columnspan=3, rowspan=4, pady=(3,0), 
                            sticky="new")
-        self.rightf.grid(row=2, column=3, columnspan=3, rowspan=10, pady=(3,0), 
+        self.rightf.grid(row=4, column=3, columnspan=3, rowspan=10, pady=(3,0), 
                          sticky="new")
-        self.distf.grid(row=9, rowspan=8, columnspan=6, sticky="new", pady=(3,0))
-        self.bottomf.grid(row=16, columnspan=6, sticky="sew", pady=(0,2))
+        self.distf.grid(row=11, rowspan=8, columnspan=6, sticky="new", pady=(3,0))
+        self.bottomf.grid(row=18, columnspan=6, sticky="sew", pady=(0,2))
         col_count, row_count = self.master.grid_size()
         for col in range(col_count):
             self.master.grid_columnconfigure(col, minsize=45)        
@@ -46,12 +46,13 @@ class base_GUI(tk.Toplevel):
         self.browse.grid(row=0, column=0)
         
         ## MIDDLE FRAME / PRIMARY SETTINGS BOX
-        global SampleV, CountV, DistV, PlotV, StatsV
+        global SampleV, CountV, DistV, PlotV, StatsV, MPV, setMP, setHead
         SampleV = tk.BooleanVar(value=Sett.process_samples)
         CountV = tk.BooleanVar(value=Sett.process_counts)
         DistV = tk.BooleanVar(value=Sett.process_dists)
         PlotV = tk.BooleanVar(value=Sett.Create_Plots)
         StatsV = tk.BooleanVar(value=Sett.statistics)
+        MPV = tk.BooleanVar(value=Sett.useMP)
         self.pSample = tk.Checkbutton(self.midf, text="Process",variable=SampleV, 
                                       relief='groove', bd=4, font=('Arial', 8, 'bold'),  
                                       command=self.Process_check, bg='lightgrey')
@@ -67,11 +68,30 @@ class base_GUI(tk.Toplevel):
         self.pStats = tk.Checkbutton(self.midf, text="Stats   ", variable=StatsV, 
                                      relief='groove', bd=4, font=('Arial', 8, 'bold'), 
                                      command=self.Stat_check, bg='lightgrey')
-        self.pSample.grid(row=2, column=0, columnspan=1, padx=(2,2))
-        self.pCounts.grid(row=2, column=1, columnspan=1, padx=(2,2))
-        self.pDists.grid(row=2, column=2, columnspan=1, padx=(2,2))
-        self.pPlots.grid(row=2, column=3, columnspan=1, padx=(2,2))
-        self.pStats.grid(row=2, column=4, columnspan=1, padx=(2,2))
+        self.pSample.grid(row=0, column=0, columnspan=1, padx=(2,2))
+        self.pCounts.grid(row=0, column=1, columnspan=1, padx=(2,2))
+        self.pDists.grid(row=0, column=2, columnspan=1, padx=(2,2))
+        self.pPlots.grid(row=0, column=3, columnspan=1, padx=(2,2))
+        self.pStats.grid(row=0, column=4, columnspan=1, padx=(2,2))
+        # Measurement point & file header settings
+        self.pMP = tk.Checkbutton(self.midf, text="Use MP ",variable=MPV, 
+                                  relief='groove', bd=4, font=('Arial', 8),
+                                  command=self.MP_check)
+        self.pMP.grid(row=1, column=0, columnspan=2, padx=(2,2))
+        self.lblMP = tk.Label(self.midf, text='MP label:', bd=1, font=('Arial', 8))
+        self.lblMP.grid(row=1, column=2)
+        setMP = tk.StringVar(value=Sett.MPname)
+        self.MPIn = tk.Entry(self.midf, text=setMP.get(), bg='white', 
+                             textvariable=setMP, bd=2, relief='sunken')
+        self.MPIn.grid(row=1, column=3, columnspan=3)
+        lbltext = 'Data file header row:\n(Starts from zero)'
+        self.lblHead = tk.Label(self.midf, text=lbltext, bd=1, 
+                              font=('Arial', 8))
+        self.lblHead.grid(row=2, column=0, columnspan=3)
+        setHead = tk.StringVar(value=Sett.header_row)
+        self.HeadIn = tk.Entry(self.midf, text=setHead.get(), bg='white', 
+                             textvariable=setHead, bd=2, relief='sunken')
+        self.HeadIn.grid(row=2, column=2, columnspan=3)
         
         ## BOTTOM BUTTONS
         self.Run_b = tk.Button(self.bottomf, text='Run\n<Enter>', 
@@ -177,7 +197,7 @@ class base_GUI(tk.Toplevel):
         for F in (Skel_settings, Median_settings):
             frame = F(self.master, self)
             self.frames[F] = frame
-            frame.grid(row=5, column=0, columnspan=3, rowspan=5, sticky="new")
+            frame.grid(row=7, column=0, columnspan=3, rowspan=5, sticky="new")
             frame.grid_remove()
         if VType.get():
             self.show_VSett(Skel_settings)
@@ -352,6 +372,14 @@ class base_GUI(tk.Toplevel):
             if self.clustV.get():
                 for widget in [self.ClSizlbl, self.ClSizIn, self.VClbut1, self.VClbut2]:
                     widget.configure(state='normal')
+                    
+    def MP_check(self):
+        if not MPV.get():
+            self.lblMP.configure(state='disable')
+            self.MPIn.configure(state='disable')
+        else:
+            self.lblMP.configure(state='normal')
+            self.MPIn.configure(state='normal')
             
     def Target_check(self):
         if not self.UseTargetV.get():
@@ -380,10 +408,20 @@ class base_GUI(tk.Toplevel):
                 
     def Process_check(self):
         if SampleV.get() == False:
+            self.pMP.configure(state = 'disable')
+            self.lblMP.configure(state = 'disable')
+            self.MPIn.configure(state = 'disable')
+            self.lblHead.configure(state = 'disable')
+            self.HeadIn.configure(state = 'disable')
             for widget in self.Up_leftf.winfo_children():
                 widget.configure(state = 'disable')
             hidev = 'disable'
         else:
+            self.pMP.configure(state = 'normal')
+            self.lblMP.configure(state = 'normal')
+            self.MPIn.configure(state = 'normal')
+            self.lblHead.configure(state = 'normal')
+            self.HeadIn.configure(state = 'normal')
             for widget in self.Up_leftf.winfo_children():
                 widget.configure(state = 'normal')
                 self.switch_pages()
@@ -406,6 +444,9 @@ class base_GUI(tk.Toplevel):
         Sett.process_counts = CountV.get()
         Sett.process_dists = DistV.get()
         Sett.Create_Plots = PlotV.get()
+        Sett.useMP = MPV.get()
+        Sett.MPname = setMP.get()
+        Sett.header_row = setHead.get()
         Sett.Create_Channel_Plots = Pchans.get()
         Sett.Create_AddData_Plots = Padds.get()
         Sett.Create_Channel_PairPlots = Ppairs.get()
@@ -493,8 +534,8 @@ class Skel_settings(tk.Frame):
     def __init__(self, parent, master):
         tk.Frame.__init__(self,parent, bd=2, relief='groove')
         self.lblSetS = tk.Label(self, text='Vector Parameters:', bd=1, 
-                                font=('Arial', 9, 'bold'))
-        self.lblSetS.grid(row=0, column=0, columnspan=3, pady=(0,10))
+                                font=('Arial', 10))
+        self.lblSetS.grid(row=0, column=0, columnspan=3, pady=(0,4))
         
         global SimpTol, reSz, fDist, dilI, SSmooth
         self.lbl6 = tk.Label(self, text='Simplify tol.', bd=1, 
@@ -554,7 +595,7 @@ class Median_settings(tk.Frame):
                              textvariable=SimpTol, bd=2, relief='sunken')
         self.simpIn.grid(row=1, column=1)
         
-        self.lbl7 = tk.Label(self, text='Median bins', bd=1, 
+        self.lbl7 = tk.Label(self, text='Median bins  ', bd=1, 
                              font=('Arial', 9))
         self.lbl7.grid(row=2, column=0, columnspan=1, pady=(0,64))
         medBins = tk.IntVar(value=Sett.medianBins)
@@ -739,15 +780,16 @@ class Plot_Settings(tk.Toplevel):
         self.window.bind('<Escape>', self.func_destroy)
         self.window.bind('<Return>', self.save_setts)
         self.frame = tk.Frame(self.window, bd=3, relief='groove')
-        self.frame.grid(row=0, column=0, rowspan=6, columnspan=4, sticky="nw")
+        self.frame.grid(row=0, column=0, rowspan=9, columnspan=4, sticky="nw")
         self.statframe = tk.Frame(self.window, bd=2, relief='groove')
-        self.statframe.grid(row=6, column=0, rowspan=7, columnspan=4, sticky="n")
+        self.statframe.grid(row=9, column=0, rowspan=4, columnspan=4, sticky="n")
         self.Bframe = tk.Frame(self.window)
         self.Bframe.grid(row=13, column=0, rowspan=2, columnspan=4, pady=5, 
                          sticky="ne")
         ## General settings:
         # Outliers
-        self.lbl1 = tk.Label(self.frame, text="General Settings:")
+        self.lbl1 = tk.Label(self.frame, text="General Settings:", 
+                             font=('Arial', 10, 'bold'))
         self.lbl1.grid(row=0, column=0, columnspan=2)
         self.DropV = tk.BooleanVar(value=Sett.Drop_Outliers)
         self.DropC = tk.Checkbutton(self.frame, text="Drop outliers", 
@@ -777,6 +819,24 @@ class Plot_Settings(tk.Toplevel):
         eps, jpeg, jpg, pdf, pgf, png, ps, raw, rgba,\nsvg, svgz, tif, tiff"
         self.lbl4 = tk.Label(self.frame, text=comment, fg='dimgrey')
         self.lbl4.grid(row=5, column=0, columnspan=4, pady=(0,10))
+        # versus
+        self.lbl8 = tk.Label(self.frame, text='Versus plots:')
+        self.lbl8.grid(row=6, column=0, columnspan=3)
+        
+        self.lbl9 = tk.Label(self.frame, text='Plotted channels:')
+        self.lbl9.grid(row=7, column=0, columnspan=2)
+        self.setVsCh = tk.StringVar(value=','.join(Sett.vs_channels))
+        self.VsChIn = tk.Entry(self.frame, text=self.setVsCh.get(), bg='white', 
+                             textvariable=self.setVsCh, bd=2, relief='sunken')
+        self.VsChIn.grid(row=7, column=2, columnspan=2)
+        
+        self.lbl8 = tk.Label(self.frame, text='Plotted add. data:')
+        self.lbl8.grid(row=8, column=0, columnspan=2)
+        self.setVsAdds = tk.StringVar(value=','.join(Sett.vs_adds))
+        self.VsAddIn = tk.Entry(self.frame, text=self.setVsAdds.get(), bg='white', 
+                             textvariable=self.setVsAdds, bd=2, relief='sunken')
+        self.VsAddIn.grid(row=8, column=2, columnspan=2)
+        
         ## Statistics settings:
         self.lbl5 = tk.Label(self.statframe, text='Statistical Plotting:')
         self.lbl5.grid(row=0, column=0, columnspan=3)
@@ -805,24 +865,7 @@ class Plot_Settings(tk.Toplevel):
                              textvariable=self.setLogy, bd=2, relief='sunken')
         self.ylimIn.grid(row=2, column=2, columnspan=2)
         self.sign_check()
-        
-        # versus
-        self.lbl8 = tk.Label(self.statframe, text='Versus statistics:')
-        self.lbl8.grid(row=4, column=0, columnspan=3)
-        
-        self.lbl9 = tk.Label(self.statframe, text='Plotted channels:')
-        self.lbl9.grid(row=5, column=0, columnspan=2)
-        self.setVsCh = tk.StringVar(value=','.join(Sett.vs_channels))
-        self.VsChIn = tk.Entry(self.statframe, text=self.setVsCh.get(), bg='white', 
-                             textvariable=self.setVsCh, bd=2, relief='sunken')
-        self.VsChIn.grid(row=5, column=2, columnspan=2)
-        
-        self.lbl8 = tk.Label(self.statframe, text='Plotted add. data:')
-        self.lbl8.grid(row=6, column=0, columnspan=2)
-        self.setVsAdds = tk.StringVar(value=','.join(Sett.vs_adds))
-        self.VsAddIn = tk.Entry(self.statframe, text=self.setVsAdds.get(), bg='white', 
-                             textvariable=self.setVsAdds, bd=2, relief='sunken')
-        self.VsAddIn.grid(row=6, column=2, columnspan=2)
+        ## Buttons
         self.Save_b = tk.Button(self.Bframe, text='Save & Return\n<Enter>', 
                        font=('Arial', 10, 'bold'), 
                        command=self.save_setts)

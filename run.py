@@ -4,29 +4,54 @@ Created on Wed Mar  6 12:42:28 2019
 
 Dependencies:
     1. install Anaconda
-    2. Open Anaconda Prompt, write:
-        1: conda config --ad channels conda-forge
-        2: conda install shapely
-        3: pip install pycg3d
+    2. add Shapely-package:
+        Windows: 
+            get Shapely .whl from "https://www.lfd.uci.edu/~gohlke/pythonlibs/#shapely"
+            then write following commands in Anaconda prompt:
+                pip install wheel
+                pip install <path-to-the-downloaded-file>
+        OS X & Linux:
+            open Anaconda prompt and write following command:
+                pip install shapely
+    2. add pycg3d-package: 
+        Open Anaconda Prompt, write command:
+            pip install pycg3d
     
 Script for longitudinal analysis of Drosophila midgut images. To run the script,
-have the LAM.py file at a directory containing directories of each individual sample. 
-The sample directories should be named followingly: "samplegroup_xyz_samplename", 
+change the work directory in either settings.py or the GUI to the directory 
+containing directories of each individual sample. 
+The sample directories should be named as "<samplegroup>_xyz_<samplename>", 
 where xyz can be anything, e.g. "starv_2018-11-06_Ctrl starved 1". Within the 
 sample directories, cell positions and other data should be in channel-specific 
-directories, e.g. GFP or GFP+Pros, named as "xyz_channel_xyz". Within these 
-channel directories the data has to be contained in csv's in similar format to 
-statistics exported from Imaris. Most importantly "Position.csv" with column 
-labels "Position X", "Position Y", and "ID". The cell ID should be the same 
-between other data files, such as "Area.csv"
+directories named as"<channel>_xyz", e.g. GFP_Statistics or GFP+Pros_whatevs. 
+Avoid using underscore "_" in naming of directories and files, as it is used
+as delimiter between the various information contained in the paths. Doing so
+may cause the analysis to fail.
+
+The channel directories have to contain "Position.csv" with column labels 
+"Position X", "Position Y", "Position Z", and "ID". The cell ID should be the 
+same between files containing other used data, such as "Area.csv", to properly 
+associate the data.
 
 The script first creates a vector based on one channel ("vectChannel", typically 
 DAPI), in order to approximate the midgut along its length. Positions on other 
-channel can then be projected onto the vector, and cell numbers can be quantified 
-along the midgut. If using a whole midgut for analysis, a measurement point (MP) "channel"
-directory should also be created for the normalization of samples. This directory 
-should contain position csv for one coordinate, typically in the middle of R3-region
-so that the samples have a anchoring point for group-wise analysis.
+channels can then be projected onto the vector, and cell numbers can be quantified 
+along the midgut. The vector is divided into user-defined number of bins that 
+are used for comparative analyses.
+
+On some experiments, the size proportions of different regions may alter, e.g.
+when comparing starved and fully-fed midguts, more accurate results can be 
+obtained by dividing the image/data into multiple analyses. A typical way to do 
+this is to run separate analyses for R1-2, R3, and R4-5. Alternatively, a user-
+defined coordinate (MP = measurement point) at a distinguishable point can be 
+used to anchor the individual samples for comparison, e.g. points at R2-3-border 
+are lined, with each sample having variable numbers of bins on either side. The
+variation however may lead to a compounding error as distance from the MP grows.
+When MP is not used, the samples are lined at bin 0, and compared bin-by-bin.
+The MP-input is done similarly to channel data, i.e. a separate directory that 
+contain position.csv for a single coordinate, the MP.
+
+For more extensive instructions, see user manual. 
 
 Dependencies: Anaconda-included packages (Python 3.7), Shapely, pycg3d
 
@@ -71,7 +96,6 @@ def main():
     if settings.Create_Plots:
         SampleGroups.create_plots()
     print('\nANALYSIS COMPLETED')
-
 
 if __name__ == '__main__':
     if settings.GUI:
