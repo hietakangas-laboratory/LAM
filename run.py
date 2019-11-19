@@ -3,23 +3,23 @@
 Created on Wed Mar  6 12:42:28 2019
 
 Dependencies:
-    1. install Anaconda
+    1. install Anaconda3 distribution (https://www.anaconda.com/distribution/)
     2. add Shapely-package:
         Windows: 
             get Shapely .whl from "https://www.lfd.uci.edu/~gohlke/pythonlibs/#shapely"
-            then write following commands in Anaconda prompt:
-                pip install wheel
-                pip install <path-to-the-downloaded-file>
+            then write following command(s) in Anaconda prompt:
+                (0.) pip install wheel          (should be in Anaconda)
+                1. pip install <path-to-the-downloaded-whl-file>
         OS X & Linux:
             open Anaconda prompt and write following command:
                 pip install shapely
-    2. add pycg3d-package: 
+    3. add pycg3d-package: 
         Open Anaconda Prompt, write command:
             pip install pycg3d
     
 Script for longitudinal analysis of Drosophila midgut images. To run the script,
 change the work directory in either settings.py or the GUI to the directory 
-containing directories of each individual sample. 
+containing the directories for each individual sample. 
 The sample directories should be named as "<samplegroup>_xyz_<samplename>", 
 where xyz can be anything, e.g. "starv_2018-11-06_Ctrl starved 1". Within the 
 sample directories, cell positions and other data should be in channel-specific 
@@ -46,10 +46,10 @@ this is to run separate analyses for R1-2, R3, and R4-5. Alternatively, a user-
 defined coordinate (MP = measurement point) at a distinguishable point can be 
 used to anchor the individual samples for comparison, e.g. points at R2-3-border 
 are lined, with each sample having variable numbers of bins on either side. The
-variation however may lead to a compounding error as distance from the MP grows.
+variation however likely leads to a compounding error as distance from the MP grows.
 When MP is not used, the samples are lined at bin 0, and compared bin-by-bin.
-The MP-input is done similarly to channel data, i.e. a separate directory that 
-contain position.csv for a single coordinate, the MP.
+The MP-input is done similarly to channel data, i.e. as a separate directory 
+that contains position.csv for a single coordinate, the MP.
 
 For more extensive instructions, see user manual. 
 

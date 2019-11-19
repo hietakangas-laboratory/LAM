@@ -333,8 +333,8 @@ class get_sample:
             except: pass
         if useMP:
             try: # Get primary MP
-                MPdirPath = next(self.channelpaths.pop(i) for i, s in enumerate(self.channelpaths) \
-                                  if str('_'+MPname+'_') in str(s))
+                MPdirPath = next(self.channelpaths.pop(i) for i, s in enumerate(
+                        self.channelpaths) if str('_'+MPname+'_') in str(s))
                 MPpath = next(MPdirPath.glob("*_Position.csv"))
                 MPdata = system.read_data(MPpath)
                 self.MPdata = MPdata.loc[:,['Position X', 'Position Y']]
@@ -349,8 +349,8 @@ class get_sample:
                     MP = pd.Series(MPbin, name = "MP")
                     MPs = pd.concat([MPs, MP], axis=1)
                 if useSecMP and hasattr(self, "secMPdata"):
-                    secMPbin = self.project_MPs(self.secMPdata, self.vector, datadir,
-                                                 filename="secMPs.csv")
+                    secMPbin = self.project_MPs(self.secMPdata, self.vector, 
+                                                datadir, filename="secMPs.csv")
                     secMP = pd.Series(secMPbin, name = "secMP")
                     MPs = pd.concat([MPs, secMP], axis=1)
                 MPs.to_csv(self.sampledir.joinpath("MPs.csv"), index=False)
@@ -362,7 +362,8 @@ class get_sample:
     def project_MPs(self, Positions, vector, datadir, filename="some.csv"):
         """For the projection of spot coordinates onto the vector."""
         XYpos = list(zip(Positions['Position X'],Positions['Position Y']))
-        # The shapely packages reguires transformation into Multipoints for the projection.
+        # The shapely packages reguires transformation into Multipoints for the 
+        # projection.
         points = gm.MultiPoint(XYpos) 
         # Find point of projection on the vector.
         Positions["VectPoint"] = [vector.interpolate(vector.project(gm.Point(x))) 

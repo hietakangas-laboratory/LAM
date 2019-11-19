@@ -136,8 +136,8 @@ class settings:
     Create_ChanVSAdd_Plots = False  # Pairs of channel and additional data
     Create_AddVSAdd_Plots = False # Pairs of additional data and additional data
     # Create plots of all possible pair combinations of the following:
-    vs_channels = ['DAPI', 'Pros', 'SuH', 'GFP']    # !!!
-    vs_adds = ['Intensity Mean']    # !!!
+    vs_channels = ['DAPI', 'Pros', 'SuH', 'GFP']
+    vs_adds = ['Intensity Mean']
     
     # Whether to drop outliers from plots ONLY, and the standard deviation limit
     # for considering what is an outlier.
