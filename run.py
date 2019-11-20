@@ -68,8 +68,8 @@ def main():
     # etc. Otherwise continue to plotting and group-wise operations.
     if settings.process_samples:
         process.Create_Samples(systemPaths)
-    else: # Gather pre-made data for further analysis
-        process.Gather_Samples(systemPaths)                        
+    if settings.process_counts:
+        process.Project(systemPaths)                   
     # After all samples have been collected/created, find their respective MP bins and
     # normalize (anchor) cell count data. If MP's are not used, the samples are
     # anchored at bin == 0.

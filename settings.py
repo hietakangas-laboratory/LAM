@@ -11,10 +11,10 @@ class settings:
     # Whether to gather raw data and create vectors. If False, expects to find 
     # pre-created datafiles in the Analysis Data directory, i.e. a previous 
     # full run has been made, and there has been no edits to the data files.
-    process_samples = False  # CLEARS DATA FILES-DIRECTORY
-    # Whether to count and normalize data. If set to False, expect all data to 
+    process_samples = True  # CLEARS DATA FILES-DIRECTORY
+    # Whether to project, count and normalize data. If set to False, expect all data to 
     # be in place. Can be used to e.g. create additional plots faster.
-    process_counts = False
+    process_counts = True
     # Whether to compute average distances and clusters.
     process_dists = False
     # Set True/False to set all plotting functionalities ON/OFF
@@ -109,7 +109,7 @@ class settings:
     
     ### STATISTICS OPTIONS ###
     # Whether to perform group-wise stat analysis.
-    statistics = False
+    statistics = True
     stat_versus = True
     stat_total = True
     windowed = True
@@ -127,10 +127,10 @@ class settings:
     ### PLOTTING OPTIONS ###  
     Create_Channel_Plots = False
     Create_AddData_Plots = False     # Plots also nearest distance & clusters
-    Create_Channel_PairPlots = True
-    Create_Heatmaps = True
-    Create_Distribution_Plots = True
-    Create_Statistics_Plots = False  # requires statistics to be True
+    Create_Channel_PairPlots = False
+    Create_Heatmaps = False
+    Create_Distribution_Plots = False
+    Create_Statistics_Plots = True  # requires statistics to be True
     
     # Variable vs. variable plots:
     Create_ChanVSAdd_Plots = False  # Pairs of channel and additional data

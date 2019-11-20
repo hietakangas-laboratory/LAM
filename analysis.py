@@ -394,11 +394,11 @@ class Samplegroups:
                         ylabel = "Count"
                         # If name is longer, the data is not cell counts, but
                         # e.g. intensities, and requires different naming
-                        if len(addChan_name) > 2:
-                            temp = addChan_name.split('-')
+                        if len(addChan_name) >= 2:
+                            datakey = addChan_name[1].split('-')[0]
                             try: # Get the name given in settings
-                                ylabel = settings.AddData.get(temp[0].split('_'
-                                                              )[1])[1] 
+                                ylabel = settings.AddData.get(datakey)[1]
+                                print(ylabel)
                             except: pass
                         # Create statistical plots
                         Stats.Create_Plots(Stats.statData, ylabel, 
@@ -421,7 +421,7 @@ class Samplegroups:
     def Get_Totals(self):
         """Counting of sample & channel -specific cell count totals."""
         # Get names of all samples and create a dataframe with samples as columns
-        samples = self._AllStarts.columns.to_list()
+        samples = self._AllStarts.columns.tolist()
         Totals = pd.DataFrame(columns=samples)
         # Loop through files containing cell count data, read, and calculate sums
         for path in self._dataDir.glob('All_*'):

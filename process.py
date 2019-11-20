@@ -14,59 +14,31 @@ def Create_Samples(PATHS):
     print("---Processing samples---")
     for path in [p for p in settings.workdir.iterdir() if p.is_dir() and p.stem 
                  != 'Analysis Data']:
-        sample = get_sample(path, PATHS, process=True)
+        sample = get_sample(path, PATHS)
         print("{}  ...".format(sample.name))
         sample.vectData = sample.get_vectData(settings.vectChannel)
         # Creation of vector for projection
-        sample.vector = sample.create_vector(settings.medianBins, PATHS.datadir, 
-                                 settings.SkeletonVector, settings.SkeletonResize, 
-                                 settings.BDiter, settings.SigmaGauss)
-        # Finding measurement points for normalization between samples
+        sample.create_vector(settings.medianBins, PATHS.datadir, 
+                             settings.SkeletonVector, settings.SkeletonResize, 
+                             settings.BDiter, settings.SigmaGauss)
+
+def Project(PATHS):
+    print("\n---Projecting channels---")
+    for path in [p for p in settings.workdir.iterdir() if p.is_dir() and p.stem 
+             != 'Analysis Data']:
+        sample = get_sample(path, PATHS, process=False, project=True)
+        print("{}  ...".format(sample.name))
         sample.MP, sample.secMP = sample.get_MPs(settings.MPname, settings.useMP, 
                                                  settings.useSecMP, 
                                                  settings.secMP, PATHS.datadir)
         # Collection of data for each channel
-        for path2 in sample.channelpaths:
+        for path2 in [p for p in sample.channelpaths if settings.MPname \
+                      != str(p).split('_')[-2]]:
             channel = get_channel(path2, sample, settings.AddData)
             sample.data = sample.project_channel(channel, PATHS.datadir)
             channelName = str(path2.stem)
-            if channelName not in ["MPs", "MP", "R45"]:
+            if channelName not in ["MPs"]:
                 sample.find_counts(channel.name, PATHS.datadir)
-    print("\nAll samples processed")
-
-
-def Gather_Samples(PATHS):
-# When samples are not to be processed, the data is gathered from 
-    # "./Analysis Data/Samples".
-    print("\nGathering sample data  ...")
-    if not settings.process_samples:
-        try:
-            pd.read_csv(PATHS.datadir.joinpath("MPs.csv"))
-        except FileNotFoundError:
-            samples = [p.stem for p in PATHS.samplesdir.iterdir() if p.is_dir()]
-            MPs = pd.DataFrame(np.zeros((1, len(samples))), columns=samples)
-            system.saveToFile(MPs, PATHS.datadir, 'MPs.csv', append=False) 
-    # For each sample, the data is collected, and cell numbers are quantified
-    # for each channel.
-    for path in [p for p in PATHS.samplesdir.iterdir() if p.is_dir()]:
-        sample = get_sample(path, PATHS, process=False)
-        chanDir = settings.workdir.joinpath(sample.name)
-        if not settings.process_samples and settings.process_counts:
-            for chanPath in [p for p in chanDir.iterdir() if p.is_dir()]:
-                channel = get_channel(chanPath, sample, settings.AddData)
-                sample.data = sample.project_channel(channel, PATHS.datadir)
-        # Looping through every channel found in the sample's directory
-        for channelPath in sample.channelpaths:
-            channelName = str(channelPath.stem)
-            if channelName not in ["MPs", "MP", "R45"]: # Collecting microscopy channel relevant data
-                sample.data = system.read_data(channelPath, header = 0)
-                sample.find_counts(channelName, PATHS.datadir)
-            else: # Collecting measurement point data for anchoring of samples
-                if hasattr(sample, "MP"):
-                    system.saveToFile(sample.MP, PATHS.datadir, "MPs.csv")
-                if hasattr(sample, "secMP"):
-                    system.saveToFile(sample.secMP, PATHS.datadir, "secMPs.csv")
-
 
 def Get_Counts(PATHS):
     MPs = system.read_data(next(PATHS.datadir.glob('MPS.csv')), header=0, test=False)
@@ -79,6 +51,11 @@ def Get_Counts(PATHS):
      # Store the bin number of the row onto which samples are anchored to
     store.centerpoint = MPmax
     if settings.process_counts == False and settings.process_samples == False:
+        # Find all sample groups in the analysis from the found MPs.
+        samples = MPs.columns.tolist()
+        Groups = set({s.casefold(): s.split('_')[0] for s in samples}.values())
+        store.samplegroups = Groups
+        print(store.samplegroups)
         return
     print('\n---Counting and normalizing sample data---')
     countpaths = PATHS.datadir.glob('All_*')
@@ -96,7 +73,7 @@ def Get_Counts(PATHS):
 
 
 class get_sample:
-    def __init__(self, path, PATHS, process=True):
+    def __init__(self, path, PATHS, process=True, project=False):
         self.name = str(path.stem)
         self.sampledir = PATHS.samplesdir.joinpath(self.name)
         self.group = self.name.split('_')[0]
@@ -106,46 +83,23 @@ class get_sample:
             store.samplegroups.append(self.group)
         if self.sampledir.exists() == False:
             pl.Path.mkdir(self.sampledir)
-        if process == True:
-            self.channelpaths = list([p for p in path.iterdir() if p.is_dir()])
-            self.channels = [str(p).split('_')[(-2)] for p in self.channelpaths]
-        else: # If the samples are not to be processed, the data is only gathered
-              # from the csv-files in the sample's directory ("./Analysis Data/Samples/")
-            self.channelpaths = list([p for p in path.iterdir() if '.csv' in 
-                                     p.name and p.stem not in ['Vector', 'MPs']])
-            self.channels = [p.stem for p in self.channelpaths]
+        self.channelpaths = list([p for p in path.iterdir() if p.is_dir()])
+        self.channels = [str(p).split('_')[(-2)] for p in self.channelpaths]
+        if process == False and project == True:
+        # If the samples are not to be processed, the vector data is gathered
+        # from the csv-file in the sample's directory ("./Analysis Data/Samples/")
             for channel in self.channels:
                 if channel.lower() not in [c.lower() for c in store.channels]:
                     store.channels.append(channel)
-            tempVect = pd.read_csv(self.sampledir.joinpath('Vector.csv'))
-            Vect = list(zip(tempVect.loc[:, 'X'], tempVect.loc[:, 'Y']))
-            self.vector = gm.LineString(Vect)
-            self.vectorLength = self.vector.length
-            lenS = pd.Series(self.vectorLength, name=self.name)
-            system.saveToFile(lenS, PATHS.datadir, 'Length.csv')            
-        try:
-            MPs = pd.read_csv(PATHS.datadir.joinpath('MPs.csv'))
-            self.MP = MPs.loc[:, self.name]
             try:
-                if settings.useSecMP:
-                    self.secMP = MPs.loc[:, 'secMP']
-            except KeyError:
-                pass
-
-        except FileNotFoundError:
-            if not settings.process_samples and settings.useMP:
-                print('MPs.csv NOT found for sample {}!'.format(self.name))
-            else: 
-                self.MP = pd.Series(0, name=self.name)
-        except KeyError:
-            if not settings.process_samples:
-                string='Measurement point for sample {} NOT found in MPs.csv!'
-                print(string.format(self.name))
-        finally:
-            try:
-                MPS = pd.Series(self.MP, name=self.name)
-                system.saveToFile(MPS, self.datadir, 'MPs.csv')
-            except: pass
+                tempVect = pd.read_csv(self.sampledir.joinpath('Vector.csv'))
+                Vect = list(zip(tempVect.loc[:, 'X'], tempVect.loc[:, 'Y']))
+                self.vector = gm.LineString(Vect)
+                self.vectorLength = self.vector.length
+                lenS = pd.Series(self.vectorLength, name=self.name)
+                system.saveToFile(lenS, PATHS.datadir, 'Length.csv')
+            except FileNotFoundError:
+                print('Vector.csv NOT found for {}'.format(self.name))
 
     def get_vectData(self, channel):
         try:
@@ -176,7 +130,6 @@ class get_sample:
         system.saveToFile(lineDF, self.sampledir, 'Vector.csv', append=False)
         create_plot = plotter(self, self.sampledir)
         create_plot.vector(self.name, vector, X, Y, binaryArray, skeleton)
-        return vector
 
     def SkeletonVector(self, X, Y, resize, BDiter, SigmaGauss):
         def resize_minmax(minv, maxv, axis, resize):
@@ -320,7 +273,7 @@ class get_sample:
             try:
                 secMPdirpath = next(self.channelpaths.pop(i) for i, s in 
                                  enumerate(self.channelpaths) if str('_'+secMPname+'_') in str(s))
-                secMPpath = next(secMPdirpath.glob("*_Position.csv"))
+                secMPpath = next(secMPdirpath.glob("*Position.csv"))
                 secMPdata = system.read_data(secMPpath)
                 self.secMPdata = secMPdata.loc[:,['Position X', 'Position Y']]
             except:
@@ -335,7 +288,7 @@ class get_sample:
             try: # Get primary MP
                 MPdirPath = next(self.channelpaths.pop(i) for i, s in enumerate(
                         self.channelpaths) if str('_'+MPname+'_') in str(s))
-                MPpath = next(MPdirPath.glob("*_Position.csv"))
+                MPpath = next(MPdirPath.glob("*Position.csv"))
                 MPdata = system.read_data(MPpath)
                 self.MPdata = MPdata.loc[:,['Position X', 'Position Y']]
             except:
@@ -346,7 +299,7 @@ class get_sample:
                 if not self.MPdata.empty:
                     MPbin = self.project_MPs(self.MPdata, self.vector, datadir, 
                                              filename="MPs.csv")
-                    MP = pd.Series(MPbin, name = "MP")
+                    MP = pd.Series(MPbin, name="MP")
                     MPs = pd.concat([MPs, MP], axis=1)
                 if useSecMP and hasattr(self, "secMPdata"):
                     secMPbin = self.project_MPs(self.secMPdata, self.vector, 
@@ -354,9 +307,10 @@ class get_sample:
                     secMP = pd.Series(secMPbin, name = "secMP")
                     MPs = pd.concat([MPs, secMP], axis=1)
                 MPs.to_csv(self.sampledir.joinpath("MPs.csv"), index=False)
-        else:
+        else: # Sets measurement point values to zero when MP's are not used
             MPbin = pd.Series(0, name = self.name)
             system.saveToFile(MPbin, datadir, "MPs.csv")
+            system.saveToFile(MPbin, self.sampledir, "MPs.csv", append=False)
         return MPbin, secMPbin
 
     def project_MPs(self, Positions, vector, datadir, filename="some.csv"):
@@ -405,11 +359,9 @@ class get_sample:
 
 
 class get_channel:
-
     def __init__(self, path, sample, dataKeys):
         self.name = str(path.stem).split('_')[(-2)]
         self.path = path
-#        namer = str('*{}_Position*'.format(self.name))
         pospath = next(self.path.glob("*Position.csv"))
         self.data = self.read_channel(pospath)
         self.data = self.read_additional(dataKeys)
@@ -446,7 +398,6 @@ class get_channel:
 
 
 class normalize:
-
     def __init__(self, path):
         self.path = pl.Path(path)
         self.channel = str(self.path.stem).split('_')[1]
@@ -518,7 +469,6 @@ def relate_data(data, MP=0, center=50, TotalLength=100):
         length = data.shape[0]
     except:
         length = len(data)
-
     insx = int(center - MP)
     end = int(insx + length)
     insert = np.full(TotalLength, np.nan)
