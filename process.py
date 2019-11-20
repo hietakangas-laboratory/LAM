@@ -320,7 +320,7 @@ class get_sample:
             try:
                 secMPdirpath = next(self.channelpaths.pop(i) for i, s in 
                                  enumerate(self.channelpaths) if str('_'+secMPname+'_') in str(s))
-                secMPpath = next(secMPdirpath.glob("*_Position.csv"))
+                secMPpath = next(secMPdirpath.glob("*Position.csv"))
                 secMPdata = system.read_data(secMPpath)
                 self.secMPdata = secMPdata.loc[:,['Position X', 'Position Y']]
             except:
@@ -335,7 +335,7 @@ class get_sample:
             try: # Get primary MP
                 MPdirPath = next(self.channelpaths.pop(i) for i, s in enumerate(
                         self.channelpaths) if str('_'+MPname+'_') in str(s))
-                MPpath = next(MPdirPath.glob("*_Position.csv"))
+                MPpath = next(MPdirPath.glob("*Position.csv"))
                 MPdata = system.read_data(MPpath)
                 self.MPdata = MPdata.loc[:,['Position X', 'Position Y']]
             except:
@@ -409,7 +409,7 @@ class get_channel:
     def __init__(self, path, sample, dataKeys):
         self.name = str(path.stem).split('_')[(-2)]
         self.path = path
-#        namer = str('*{}_Position*'.format(self.name))
+#        namer = str('*{}Position*'.format(self.name))
         pospath = next(self.path.glob("*Position.csv"))
         self.data = self.read_channel(pospath)
         self.data = self.read_additional(dataKeys)
