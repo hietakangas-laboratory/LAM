@@ -54,7 +54,7 @@ def Get_Counts(PATHS):
         # Find all sample groups in the analysis from the found MPs.
         samples = MPs.columns.tolist()
         Groups = set({s.casefold(): s.split('_')[0] for s in samples}.values())
-        store.samplegroups = Groups
+        store.samplegroups = sorted(Groups)
         print(store.samplegroups)
         return
     print('\n---Counting and normalizing sample data---')
@@ -81,6 +81,7 @@ class get_sample:
             store.samples.append(self.name)
         if self.group not in store.samplegroups:
             store.samplegroups.append(self.group)
+            store.samplegroups = sorted(store.samplegroups)
         if self.sampledir.exists() == False:
             pl.Path.mkdir(self.sampledir)
         self.channelpaths = list([p for p in path.iterdir() if p.is_dir()])

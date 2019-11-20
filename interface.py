@@ -444,6 +444,7 @@ class base_GUI(tk.Toplevel):
         Sett.process_counts = CountV.get()
         Sett.process_dists = DistV.get()
         Sett.Create_Plots = PlotV.get()
+        Sett.statistics = StatsV.get()
         Sett.useMP = MPV.get()
         Sett.MPname = setMP.get()
         Sett.header_row = setHead.get()
