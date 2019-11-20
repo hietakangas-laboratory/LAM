@@ -39,7 +39,7 @@ channels can then be projected onto the vector, and cell numbers can be quantifi
 along the midgut. The vector is divided into user-defined number of bins that 
 are used for comparative analyses.
 
-On some experiments, the size proportions of different regions may alter, e.g.
+On some experiments the size proportions of different regions may alter, e.g.
 when comparing starved and fully-fed midguts, more accurate results can be 
 obtained by dividing the image/data into multiple analyses. A typical way to do 
 this is to run separate analyses for R1-2, R3, and R4-5. Alternatively, a user-

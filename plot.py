@@ -265,6 +265,10 @@ class plotter:
         plotData = data.dropna(subset=[col])
         flierprops = kws.pop('fliersize')
         fkws = {'dropna': False}
+        plotData[kws.get('xlabel')] = plotData.loc[:, kws.get('xlabel')].astype(
+                                                                    np.float64)
+        plotData[kws.get('ylabel')] = plotData.loc[:, kws.get('ylabel')].astype(
+                                                                    np.float64)
         g = sns.catplot(data=plotData, x=kws.get('xlabel'), y=kws.get('ylabel'), 
                     hue="Sample Group", kind="box", palette=palette, 
                     linewidth=0.15, height=kws.get('height'),

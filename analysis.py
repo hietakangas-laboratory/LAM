@@ -398,7 +398,6 @@ class Samplegroups:
                             datakey = addChan_name[1].split('-')[0]
                             try: # Get the name given in settings
                                 ylabel = settings.AddData.get(datakey)[1]
-                                print(ylabel)
                             except: pass
                         # Create statistical plots
                         Stats.Create_Plots(Stats.statData, ylabel, 

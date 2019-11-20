@@ -121,7 +121,7 @@ class Total_Stats:
         self.statsDir = statsdir
         self.data = system.read_data(path, header=0, test=False, index_col=0)
         self.groups = copy.deepcopy(groups)
-        self.channels = self.data.index.to_list()
+        self.channels = self.data.index.tolist()
         self.cntrlGrp = settings.cntrlGroup
         groups.remove(self.cntrlGrp)
         self.tstGroups = groups
