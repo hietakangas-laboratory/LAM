@@ -14,14 +14,17 @@ import os
 path = pl.Path(r"P:\h919\hietakangas\Arto\Statistics_DANA\Temp\Posterior")
 fsavepath = pl.Path(r"P:\h919\hietakangas\Arto\Statistics_DANA\New folder")
 
+# Input samples to be rotated and rspective number of degrees to rotate clock-wise
 degDict = { "CtrlYS_S1A": 45, "CtrlYS_S4A": -45, 
            "CtrlYS_S3B": -100, "CtrlYS_S4B": -45, 
            "CtrlYS_S3A": -100, "CtrlYS_S1B": 45}
+# Channels to rotate
+CHANNELS = ["DAPI", "PROS"]
 
 MAKEPLOTS = True
-CHANGETYPE = True
+CHANGETYPE = False
 
-def rotate_around_point_highperf(x, y, radians, origin=(0, 0)):
+def rotate_around_point(x, y, radians, origin=(0, 0)):
     """Rotate a point around a given point."""
     offset_x, offset_y = origin
     adjusted_x = (x - offset_x)
@@ -51,7 +54,7 @@ def make_plots(data1, data2, samplename, channel, savepath):
 
 for samplepath in path.iterdir():
     samplename = str(samplepath.stem).split('-')[0]
-    for channel in ["DAPI", "PROS"]:
+    for channel in CHANNELS:
         path = pl.Path(next(samplepath.glob('*{}*'.format(channel))))
         if CHANGETYPE:
             change_to_csv(path)
@@ -76,12 +79,12 @@ for samplepath in path.iterdir():
             ymin, ymax = xy.loc[:,"Position Y"].min(), xy.loc[:,"Position Y"].max()
             xmed = (xmax-xmin)/2
             ymed = (ymax-ymin)/2
-            point = (xmed, ymed)
+#            point = (xmed, ymed)
             orgData = data.copy()
             for i, row in data.iterrows():
                 x = row.at["Position X"]
                 y = row.at["Position Y"]
-                x, y = rotate_around_point_highperf(x, y, rads, point)
+                x, y = rotate_around_point(x, y, rads)
                 data.at[i, "Position X"] = x
                 data.at[i, "Position Y"] = y
             if MAKEPLOTS:
