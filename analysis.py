@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 from settings import settings
 from statistics import statistics, Total_Stats
+from system import store
 from plot import plotter
 import system, process, numpy as np, pathlib as pl, seaborn as sns, re, warnings
 from itertools import product, combinations, chain
@@ -361,6 +362,17 @@ class Samplegroups:
         if settings.Create_Plots and settings.Create_Statistics_Plots:
             print('\n---Calculating and plotting statistics---')
         else: print('\n---Calculating statistics---')
+        if settings.cntrlGroup not in store.samplegroups: # !!! add to log
+            test = 0
+            namer = re.compile(r"{}$".format(re.escape(settings.cntrlGroup)), re.I)
+            for group in store.samplegroups:
+                if re.match(namer, group):
+                    print("WARNING: Control group-setting is case-sensitive!")
+                    settings.cntrlGroup = group
+                    print("Control group has been changed to '{}'\n".format(group))
+                    test += 1
+            if test == 0:
+                print("WARNING: control group NOT found in sample groups!\n")
         # Create stats of control vs. other groups if stat_versus set to True
         if settings.stat_versus:
             print('-Versus-')

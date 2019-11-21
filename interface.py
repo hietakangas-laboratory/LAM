@@ -242,7 +242,7 @@ class base_GUI(tk.Toplevel):
         
         self.ClDistlbl = tk.Label(self.distf, text='Max Dist.:')
         self.ClDistlbl.grid(row=4, column=0, columnspan=2)
-        setClDist = tk.IntVar(value=Sett.Cl_maxDist)
+        setClDist = tk.DoubleVar(value=Sett.Cl_maxDist)
         self.ClDistIn = tk.Entry(self.distf, text=setClDist.get(), bg='white', 
                              textvariable=setClDist, bd=2, relief='sunken')
         self.ClDistIn.grid(row=4, column=2, columnspan=2)
@@ -263,7 +263,7 @@ class base_GUI(tk.Toplevel):
         
         self.ClSizlbl = tk.Label(self.distf, text='Size incl.:')
         self.ClSizlbl.grid(row=7, column=0, columnspan=2)
-        setClSiz = tk.IntVar(value=Sett.Cl_Vol_inclusion)
+        setClSiz = tk.DoubleVar(value=Sett.Cl_Vol_inclusion)
         self.ClSizIn = tk.Entry(self.distf, text=setClSiz.get(), bg='white', 
                              textvariable=setClSiz, bd=2, relief='sunken')
         self.ClSizIn.grid(row=7, column=2, columnspan=2)
@@ -287,7 +287,7 @@ class base_GUI(tk.Toplevel):
         
         self.DDistlbl = tk.Label(self.distf, text='Max Dist.:')
         self.DDistlbl.grid(row=4, column=4, columnspan=2)
-        setDDist = tk.IntVar(value=Sett.maxDist)
+        setDDist = tk.DoubleVar(value=Sett.maxDist)
         self.DDistIn = tk.Entry(self.distf, text=setDDist.get(), bg='white', 
                              textvariable=setDDist, bd=2, relief='sunken')
         self.DDistIn.grid(row=4, column=6, columnspan=2)
@@ -304,7 +304,7 @@ class base_GUI(tk.Toplevel):
         
         self.DSizlbl = tk.Label(self.distf, text='Size incl.:')
         self.DSizlbl.grid(row=7, column=4, columnspan=2)
-        setDSiz = tk.IntVar(value=Sett.Vol_inclusion)
+        setDSiz = tk.DoubleVar(value=Sett.Vol_inclusion)
         self.DSizIn = tk.Entry(self.distf, text=setDSiz.get(), bg='white', 
                              textvariable=setDSiz, bd=2, relief='sunken')
         self.DSizIn.grid(row=7, column=6, columnspan=2)
@@ -459,9 +459,11 @@ class base_GUI(tk.Toplevel):
         Sett.vectChannel = setCh.get()        
         Sett.projBins = np.linspace(0, 1, setBin.get())
         if not VType.get():
+            Sett.SkeletonVector = False
             Sett.simplifyTol = SimpTol.get()
             Sett.medianBins = medBins.get()
         else:
+            Sett.SkeletonVector = True
             Sett.simplifyTol = SimpTol.get()
             Sett.SkeletonResize = reSz.get()
             Sett.find_dist = fDist.get()
@@ -542,7 +544,7 @@ class Skel_settings(tk.Frame):
         self.lbl6 = tk.Label(self, text='Simplify tol.', bd=1, 
                              font=('Arial', 9))
         self.lbl6.grid(row=1, column=0, columnspan=1)
-        SimpTol = tk.IntVar(value=Sett.simplifyTol)
+        SimpTol = tk.DoubleVar(value=Sett.simplifyTol)
         self.simpIn = tk.Entry(self, text=SimpTol.get(), bg='white', 
                              textvariable=SimpTol, bd=2, relief='sunken')
         self.simpIn.grid(row=1, column=1)
@@ -550,7 +552,7 @@ class Skel_settings(tk.Frame):
         self.lbl7 = tk.Label(self, text='Resize', bd=1, 
                              font=('Arial', 9))
         self.lbl7.grid(row=2, column=0, columnspan=1)
-        reSz = tk.IntVar(value=Sett.SkeletonResize)
+        reSz = tk.DoubleVar(value=Sett.SkeletonResize)
         self.rszIn = tk.Entry(self, text=reSz.get(), bg='white', 
                              textvariable=reSz, bd=2, relief='sunken')
         self.rszIn.grid(row=2, column=1)
@@ -558,7 +560,7 @@ class Skel_settings(tk.Frame):
         self.lbl8 = tk.Label(self, text='Find distance', bd=1, 
                              font=('Arial', 9))
         self.lbl8.grid(row=3, column=0, columnspan=1)
-        fDist = tk.IntVar(value=Sett.find_dist)
+        fDist = tk.DoubleVar(value=Sett.find_dist)
         self.distIn = tk.Entry(self, text=fDist.get(), bg='white', 
                              textvariable=fDist, bd=2, relief='sunken')
         self.distIn.grid(row=3, column=1)
@@ -574,7 +576,7 @@ class Skel_settings(tk.Frame):
         self.lbl10 = tk.Label(self, text='Smoothing', bd=1, 
                               font=('Arial', 9))
         self.lbl10.grid(row=5, column=0, columnspan=1)
-        SSmooth = tk.IntVar(value=Sett.SigmaGauss)
+        SSmooth = tk.DoubleVar(value=Sett.SigmaGauss)
         self.smoothIn = tk.Entry(self, text=SSmooth.get(), bg='white', 
                              textvariable=SSmooth, bd=2, relief='sunken')
         self.smoothIn.grid(row=5, column=1)
@@ -591,7 +593,7 @@ class Median_settings(tk.Frame):
         self.lbl6 = tk.Label(self, text='Simplify tol.', bd=1, 
                              font=('Arial', 9))
         self.lbl6.grid(row=1, column=0, columnspan=1)
-        SimpTol = tk.IntVar(value=Sett.simplifyTol)
+        SimpTol = tk.DoubleVar(value=Sett.simplifyTol)
         self.simpIn = tk.Entry(self, text=SimpTol.get(), bg='white', 
                              textvariable=SimpTol, bd=2, relief='sunken')
         self.simpIn.grid(row=1, column=1)
@@ -799,7 +801,7 @@ class Plot_Settings(tk.Toplevel):
         self.DropC.grid(row=1, column=0, columnspan=2)
         self.lbl2 = tk.Label(self.frame, text='Std dev.:')
         self.lbl2.grid(row=2, column=0, columnspan=2)
-        self.setSTD = tk.IntVar(value=Sett.dropSTD)
+        self.setSTD = tk.DoubleVar(value=Sett.dropSTD)
         self.stdIn = tk.Entry(self.frame, text=self.setSTD.get(), bg='white', 
                              textvariable=self.setSTD, bd=2, relief='sunken')
         self.stdIn.grid(row=2, column=2, columnspan=2)
@@ -861,7 +863,7 @@ class Plot_Settings(tk.Toplevel):
         
         self.lbl7 = tk.Label(self.statframe, text='y-limit:')
         self.lbl7.grid(row=2, column=1, columnspan=1)
-        self.setLogy = tk.IntVar(value=Sett.ylim)
+        self.setLogy = tk.DoubleVar(value=Sett.ylim)
         self.ylimIn = tk.Entry(self.statframe, text=self.setLogy.get(), bg='white', 
                              textvariable=self.setLogy, bd=2, relief='sunken')
         self.ylimIn.grid(row=2, column=2, columnspan=2)

@@ -55,7 +55,6 @@ def Get_Counts(PATHS):
         samples = MPs.columns.tolist()
         Groups = set({s.casefold(): s.split('_')[0] for s in samples}.values())
         store.samplegroups = sorted(Groups)
-        print(store.samplegroups)
         return
     print('\n---Counting and normalizing sample data---')
     countpaths = PATHS.datadir.glob('All_*')

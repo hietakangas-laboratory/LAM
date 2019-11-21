@@ -7,7 +7,7 @@ class settings:
     
     # DEFINE PATH TO ANALYSIS FOLDER:
     # (Use input r'PATH' where PATH is your path)
-    workdir = pl.Path(r'P:\h919\hietakangas\Arto\21.01.2019 Statistics')
+    workdir = pl.Path(r'P:\h919\hietakangas\Arto\Test set 21.11.2019')
     # Whether to gather raw data and create vectors. If False, expects to find 
     # pre-created datafiles in the Analysis Data directory, i.e. a previous 
     # full run has been made, and there has been no edits to the data files.
@@ -30,7 +30,7 @@ class settings:
     # Make vector by creating binary image and then skeletonizing. If False, 
     # vector is created by finding middle point between smallest and largest 
     # Y-axis position in bin.
-    SkeletonVector = False
+    SkeletonVector = True
     SkeletonResize = 0.2    # Binary image resize. Keep at steps of ten.
     find_dist = 30      # Find distance of pixels in skeleton vector creation
     BDiter = 0           # Binary dilation iterations (set to 0 if not needed)

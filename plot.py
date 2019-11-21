@@ -96,7 +96,10 @@ class plotter:
                 settings.stars = False
                 Y = stats.iloc[:, 7]
                 X = Y.index.tolist()
-                logvals = np.log2(Y.astype(np.float64))
+                Y.replace(0, np.nan, inplace=True)
+                ind = Y[Y.notnull()].index
+                logvals = pd.Series(np.zeros(Y.shape[0]), index=Y.index)
+                logvals.loc[ind] = np.log2(Y[ind].astype(np.float64))
                 xmin, xtop = stats.index.min(), stats.index.max()
                 # Create twin axis with -log2 P-values
                 ax2 = plt.twinx()
@@ -265,14 +268,12 @@ class plotter:
         plotData = data.dropna(subset=[col])
         flierprops = kws.pop('fliersize')
         fkws = {'dropna': False}
-        plotData[kws.get('xlabel')] = plotData.loc[:, kws.get('xlabel')].astype(
-                                                                    np.float64)
-        plotData[kws.get('ylabel')] = plotData.loc[:, kws.get('ylabel')].astype(
-                                                                    np.float64)
-        g = sns.catplot(data=plotData, x=kws.get('xlabel'), y=kws.get('ylabel'), 
-                    hue="Sample Group", kind="box", palette=palette, 
-                    linewidth=0.15, height=kws.get('height'),
-                    aspect=kws.get('aspect'), facet_kws = fkws, **flierprops)
+        xlabel, ylabel = kws.get('xlabel'), kws.get('ylabel')
+        plotData = plotData.astype({xlabel: 'int', ylabel: 'int'})
+        g = sns.catplot(data=plotData, x=xlabel, y=ylabel, hue="Sample Group", 
+                        kind="box", palette=palette, linewidth=0.15, 
+                        height=kws.get('height'), aspect=kws.get('aspect'), 
+                        facet_kws = fkws, **flierprops)
         return g
     
     def Heatmap(palette, **kws):

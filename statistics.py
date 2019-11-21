@@ -6,6 +6,7 @@ import numpy as np, pandas as pd
 import scipy.stats as ss, statsmodels.stats.multitest as multi
 import copy
 import warnings
+import re
 
 class statistics:
     def __init__(self, control, group2):
@@ -18,7 +19,7 @@ class statistics:
         # Test group variables
         self.tstGroup = group2.group
         self.tstNamer = group2.namer
-        self.tstSamples = control.groupPaths
+        self.tstSamples = group2.groupPaths
         # Common / Stat object variables
         self.center = control._center
         self.length = control._length
@@ -29,7 +30,7 @@ class statistics:
         self.plotDir.mkdir(exist_ok=True)
         self.chanPaths = self.dataDir.glob('Norm_*')
         self.avgPaths = self.dataDir.glob('Avg_*')
-        self.palette = {control.group: control.color, group2.group: group2.color}
+        self.palette = {control: control.color, group2.group: group2.color}
         # Statistics and data
         self.statData = None
         self.cntrlData = None
@@ -38,14 +39,15 @@ class statistics:
     def MWW_test(self, Path):
         def __get_stats(row, row2, ind, statData):
             if row.any() != False or row2.any() != False:
-                if np.array_equal(row, row2) == False:
+                if not np.array_equal(np.unique(row), np.unique(row2)) and \
+                    len(np.unique(row)) > 1 and len(np.unique(row2)) > 1:
                     with warnings.catch_warnings():
                         warnings.simplefilter('ignore', category=RuntimeWarning)
                         stat, pval = ss.mannwhitneyu(row, row2, 
                                                      alternative='greater')
-                        stat2, pval2 = ss.mannwhitneyu(row, row2, 
+                        __, pval2 = ss.mannwhitneyu(row, row2, 
                                                        alternative='less')
-                        stat3, pval3 = ss.mannwhitneyu(row, row2, 
+                        __, pval3 = ss.mannwhitneyu(row, row2, 
                                                        alternative='two-sided')
                     statData.iat[ind, 0], statData.iat[ind, 2] = stat, pval
                     statData.iat[ind, 5] = pval2
@@ -64,12 +66,14 @@ class statistics:
                                                       alpha=settings.alpha)
             statData.iloc[:,corrInd], statData.iloc[:, rejInd] = CorrP, Reject
             return statData
-                  
+                
         self.channel = ' '.join(str(Path.stem).split('_')[1:])
         Data = system.read_data(Path, header=0, test=False)
         Data = Data.replace(np.nan, 0)
-        cntrlData = Data.loc[:, Data.columns.str.contains(self.cntrlNamer, regex=True)]
-        tstData = Data.loc[:, Data.columns.str.contains(self.tstNamer, regex=True)]
+        Cntrlreg = re.compile(self.cntrlNamer, re.I)
+        tstreg = re.compile(self.tstNamer, re.I)
+        cntrlData = Data.loc[:, Data.columns.str.contains(Cntrlreg, regex=True)]
+        tstData = Data.loc[:, Data.columns.str.contains(tstreg, regex=True)]
         statData = pd.DataFrame(index=Data.index, columns=['U Score',
          'Corr. Greater', 'P Greater', 'Reject Greater', 'Corr. Lesser', 
          'P Lesser', 'Reject Lesser', 'Corr. Two-sided', 'P Two-sided', 
@@ -128,7 +132,7 @@ class Total_Stats:
         self.palette = palette
         
     def stats(self):
-        namer = "{}_".format(self.cntrlGrp)
+        namer = re.compile("{}_".format(self.cntrlGrp), re.I)
         cntrlData = self.data.loc[:, self.data.columns.str.contains(namer)]
         cols = ['U Score', 'P Two-sided', 'Reject Two-sided']
         mcols = pd.MultiIndex.from_product([self.tstGroups, cols], 
