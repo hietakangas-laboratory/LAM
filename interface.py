@@ -5,6 +5,7 @@ from tkinter import filedialog
 from settings import settings as Sett
 import numpy as np
 import copy
+import pathlib as pl
 
 class base_GUI(tk.Toplevel):   
     def __init__(self, master=None):
@@ -22,14 +23,14 @@ class base_GUI(tk.Toplevel):
         self.bottomf = tk.Frame(self.master)
         
         ## LAYOUT:
-        self.topf.grid(row=0, columnspan=6, sticky="new")
-        self.midf.grid(row=1, rowspan=3, columnspan=6, sticky="new")
-        self.Up_leftf.grid(row=4, column=0, columnspan=3, rowspan=4, pady=(3,0), 
+        self.topf.grid(row=0, rowspan=2, columnspan=6, pady=(3,0), sticky="new")
+        self.midf.grid(row=2, rowspan=3, columnspan=6, sticky="new")
+        self.Up_leftf.grid(row=5, column=0, columnspan=3, rowspan=4, pady=(3,0), 
                            sticky="new")
-        self.rightf.grid(row=4, column=3, columnspan=3, rowspan=10, pady=(3,0), 
+        self.rightf.grid(row=5, column=3, columnspan=3, rowspan=10, pady=(3,0), 
                          sticky="new")
-        self.distf.grid(row=11, rowspan=8, columnspan=6, sticky="new", pady=(3,0))
-        self.bottomf.grid(row=18, columnspan=6, sticky="sew", pady=(0,2))
+        self.distf.grid(row=12, rowspan=8, columnspan=6, sticky="new", pady=(3,0))
+        self.bottomf.grid(row=19, columnspan=6, sticky="sew", pady=(0,2))
         col_count, row_count = self.master.grid_size()
         for col in range(col_count):
             self.master.grid_columnconfigure(col, minsize=45)        
@@ -44,6 +45,11 @@ class base_GUI(tk.Toplevel):
         self.lbl1.grid(row=0, column=1, columnspan=7)
         self.browse = tk.Button(self.topf, text="Directory", command=self.browse_button)
         self.browse.grid(row=0, column=0)
+        self.DetChans = tk.StringVar()
+        self.Detect_Channels()
+        self.lblChannels = tk.Label(self.topf, text=self.DetChans.get(), bg='lightgrey', 
+                             textvariable=self.DetChans, bd=2, relief='sunken')
+        self.lblChannels.grid(row=1, column=0, columnspan=8)
         
         ## MIDDLE FRAME / PRIMARY SETTINGS BOX
         global SampleV, CountV, DistV, PlotV, StatsV, MPV, setMP, setHead
@@ -197,7 +203,7 @@ class base_GUI(tk.Toplevel):
         for F in (Skel_settings, Median_settings):
             frame = F(self.master, self)
             self.frames[F] = frame
-            frame.grid(row=7, column=0, columnspan=3, rowspan=5, sticky="new")
+            frame.grid(row=8, column=0, columnspan=3, rowspan=5, sticky="new")
             frame.grid_remove()
         if VType.get():
             self.show_VSett(Skel_settings)
@@ -438,6 +444,7 @@ class base_GUI(tk.Toplevel):
         filename = filedialog.askdirectory()
         self.folder_path.set(filename)
         Sett.workdir = str(self.folder_path.get())
+        self.Detect_Channels()
         
     def RUN_button(self, event=None):
         Sett.process_samples = SampleV.get()
@@ -532,6 +539,25 @@ class base_GUI(tk.Toplevel):
         
     def Open_StatSettings(self):
         Stat_Settings(self.master)
+        
+    def Detect_Channels(self):
+        workdir = pl.Path(self.folder_path.get())
+        chans = []
+        for samplepath in [p for p in workdir.iterdir() if p.is_dir() and 
+                           'Analysis Data' not in p.name]:
+            for channelpath in [p for p in samplepath.iterdir() if p.is_dir()]:
+                try:
+                    channel = str(channelpath.name).split('_')[-2]
+                    if channel not in chans:
+                        chans.append(channel)
+                except:
+                    pass
+        if chans:
+            chanstring = tk.StringVar(value="Detected channels: {}".format(
+                                            ', '.join(chans)))
+        else:
+            chanstring = tk.StringVar(value='No detected channels!')
+        self.DetChans.set(chanstring.get())
         
 class Skel_settings(tk.Frame):
     def __init__(self, parent, master):
