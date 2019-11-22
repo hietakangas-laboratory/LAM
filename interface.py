@@ -24,10 +24,10 @@ class base_GUI(tk.Toplevel):
         
         ## LAYOUT:
         self.topf.grid(row=0, rowspan=2, columnspan=6, pady=(3,0), sticky="new")
-        self.midf.grid(row=2, rowspan=3, columnspan=6, sticky="new")
-        self.Up_leftf.grid(row=5, column=0, columnspan=3, rowspan=4, pady=(3,0), 
+        self.midf.grid(row=2, rowspan=3, columnspan=6, pady=(1,1), sticky="new")
+        self.Up_leftf.grid(row=5, column=0, columnspan=3, rowspan=4, pady=(1,0), 
                            sticky="new")
-        self.rightf.grid(row=5, column=3, columnspan=3, rowspan=10, pady=(3,0), 
+        self.rightf.grid(row=5, column=3, columnspan=3, rowspan=10, pady=(1,0), 
                          sticky="new")
         self.distf.grid(row=12, rowspan=8, columnspan=6, sticky="new", pady=(3,0))
         self.bottomf.grid(row=19, columnspan=6, sticky="sew", pady=(0,2))
@@ -46,10 +46,14 @@ class base_GUI(tk.Toplevel):
         self.browse = tk.Button(self.topf, text="Directory", command=self.browse_button)
         self.browse.grid(row=0, column=0)
         self.DetChans = tk.StringVar()
+        self.DetGroups = tk.StringVar()
         self.Detect_Channels()
-        self.lblChannels = tk.Label(self.topf, text=self.DetChans.get(), bg='lightgrey', 
-                             textvariable=self.DetChans, bd=2, relief='sunken')
-        self.lblChannels.grid(row=1, column=0, columnspan=8)
+        self.lblGroups = tk.Label(self.topf, text=self.DetGroups.get(), 
+                                  textvariable=self.DetGroups)
+        self.lblGroups.grid(row=1, column=0, columnspan=8, pady=(0,1))
+        self.lblChannels = tk.Label(self.topf, text=self.DetChans.get(), 
+                                    textvariable=self.DetChans)
+        self.lblChannels.grid(row=2, column=0, columnspan=8, pady=(0,2))
         
         ## MIDDLE FRAME / PRIMARY SETTINGS BOX
         global SampleV, CountV, DistV, PlotV, StatsV, MPV, setMP, setHead
@@ -543,8 +547,15 @@ class base_GUI(tk.Toplevel):
     def Detect_Channels(self):
         workdir = pl.Path(self.folder_path.get())
         chans = []
+        groups = []
         for samplepath in [p for p in workdir.iterdir() if p.is_dir() and 
                            'Analysis Data' not in p.name]:
+            try:
+                group = str(samplepath.name).split('_')[0]
+                if group not in groups:
+                    groups.append(group)
+            except:
+                pass
             for channelpath in [p for p in samplepath.iterdir() if p.is_dir()]:
                 try:
                     channel = str(channelpath.name).split('_')[-2]
@@ -557,6 +568,12 @@ class base_GUI(tk.Toplevel):
                                             ', '.join(chans)))
         else:
             chanstring = tk.StringVar(value='No detected channels!')
+        if groups:
+            grpstring = tk.StringVar(value="Detected groups: {}".format(
+                                            ', '.join(groups)))
+        else:
+            grpstring = tk.StringVar(value='No detected groups!')
+        self.DetGroups.set(grpstring.get())
         self.DetChans.set(chanstring.get())
         
 class Skel_settings(tk.Frame):
