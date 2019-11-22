@@ -373,6 +373,8 @@ class Samplegroups:
                     test += 1
             if test == 0:
                 print("WARNING: control group NOT found in sample groups!\n")
+                print("Statistical analysis passed.")
+                return
         # Create stats of control vs. other groups if stat_versus set to True
         if settings.stat_versus:
             print('-Versus-')

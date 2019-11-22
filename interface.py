@@ -68,7 +68,7 @@ class base_GUI(tk.Toplevel):
                                       command=self.Process_check, bg='lightgrey')
         self.pCounts = tk.Checkbutton(self.midf, text="Counts ", variable=CountV, 
                                       relief='groove', bd=4, font=('Arial', 8, 'bold'), 
-                                      bg='lightgrey')
+                                      bg='lightgrey', command=self.Count_check)
         self.pDists = tk.Checkbutton(self.midf, text="Distance", variable=DistV, 
                                      relief='groove', bd=4, font=('Arial', 8, 'bold'),
                                      command=self.Distance_check, bg='lightgrey')
@@ -214,6 +214,7 @@ class base_GUI(tk.Toplevel):
         else:
             self.show_VSett(Median_settings)
         self.Process_check()
+        self.Count_check()
         
         # UPPER BOTTOM / DISTANCES
         global clustV, FdistV
@@ -424,7 +425,8 @@ class base_GUI(tk.Toplevel):
             self.lblHead.configure(state = 'disable')
             self.HeadIn.configure(state = 'disable')
             for widget in self.Up_leftf.winfo_children():
-                widget.configure(state = 'disable')
+                if widget not in [self.binIn, self.lbl5]:
+                    widget.configure(state = 'disable')
             hidev = 'disable'
         else:
             self.pMP.configure(state = 'normal')
@@ -433,16 +435,24 @@ class base_GUI(tk.Toplevel):
             self.lblHead.configure(state = 'normal')
             self.HeadIn.configure(state = 'normal')
             for widget in self.Up_leftf.winfo_children():
-                widget.configure(state = 'normal')
-                self.switch_pages()
-            hidev = 'normal'
-                
+                if widget not in [self.binIn, self.lbl5]:
+                    widget.configure(state = 'normal')
+            self.switch_pages()
+            hidev = 'normal'                
         if not VType.get():
             for widget in self.frames[Median_settings].winfo_children():
                 widget.configure(state = hidev)
         else:
             for widget in self.frames[Skel_settings].winfo_children():
                 widget.configure(state = hidev)
+                
+    def Count_check(self):
+        if not CountV.get():
+            self.binIn.configure(state = 'disable')
+            self.lbl5.configure(state = 'disable')
+        else:
+            self.binIn.configure(state = 'normal')
+            self.lbl5.configure(state = 'normal')
         
     def browse_button(self):
         filename = filedialog.askdirectory()

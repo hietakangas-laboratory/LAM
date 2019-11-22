@@ -7,18 +7,18 @@ class settings:
     
     # DEFINE PATH TO ANALYSIS FOLDER:
     # (Use input r'PATH' where PATH is your path)
-    workdir = pl.Path(r'P:\h919\hietakangas\Arto\Test set 21.11.2019')
+    workdir = pl.Path(r'P:\h919\hietakangas\Arto\0.3% Tryptophan analysis\R1_R2')
     # Whether to gather raw data and create vectors. If False, expects to find 
     # pre-created datafiles in the Analysis Data directory, i.e. a previous 
     # full run has been made, and there has been no edits to the data files.
     process_samples = True  # CLEARS DATA FILES-DIRECTORY
     # Whether to project, count and normalize data. If set to False, expect all data to 
     # be in place. Can be used to e.g. create additional plots faster.
-    process_counts = True
+    process_counts = False
     # Whether to compute average distances and clusters.
     process_dists = False
     # Set True/False to set all plotting functionalities ON/OFF
-    Create_Plots = True     # ON / OFF switch for plots
+    Create_Plots = False     # ON / OFF switch for plots
     ##################################################################
     
     #-#-#-#-#-#-#-#-# VECTOR CREATION & PROJECTION #-#-#-#-#-#-#-#-#-#
@@ -45,7 +45,7 @@ class settings:
     ## MEASUREMENT POINTS ##
     # Whether to use measurement point coordinates for normalization. If False,
     # the samples will be handled as perfectly aligned from beginning to end.
-    useMP = True
+    useMP = False
     # The name of the file used for normalizing between samples, i.e. anchoring
     MPname = "MP"
     # Include secondary measurement point. Used to see e.g. proportional change.
@@ -83,7 +83,7 @@ class settings:
     # channels in Distance_Channels list. If use target is True, the nearest
     # cell is found on the channel defined by target_chan, otherwise they are
     # found within the channel undergoing analysis.
-    Find_Distances = False
+    Find_Distances = True
     Distance_Channels = ["GFP"]
     use_target = True
     target_chan = "Pros"
@@ -99,7 +99,7 @@ class settings:
     
     ## CLUSTERS ##
     # Whether to compute clusters
-    Find_Clusters = False
+    Find_Clusters = True
     Cluster_Channels = ["GFP"]
     Cl_maxDist = 20         # Radius around the cell
     Cl_Vol_inclusion = 0    # Set to zero if not wanted.
@@ -122,19 +122,19 @@ class settings:
     fill = True
     negLog2 = True # Forces stars to be False
     # The name of the control group that the statistics are run against.
-    cntrlGroup = "starv"
+    cntrlGroup = "ctrl"
     
     ### PLOTTING OPTIONS ###  
-    Create_Channel_Plots = False
-    Create_AddData_Plots = False     # Plots also nearest distance & clusters
-    Create_Channel_PairPlots = False
-    Create_Heatmaps = False
-    Create_Distribution_Plots = False
+    Create_Channel_Plots = True
+    Create_AddData_Plots = True     # Plots also nearest distance & clusters
+    Create_Channel_PairPlots = True
+    Create_Heatmaps = True
+    Create_Distribution_Plots = True
     Create_Statistics_Plots = True  # requires statistics to be True
     
     # Variable vs. variable plots:
-    Create_ChanVSAdd_Plots = False  # Pairs of channel and additional data
-    Create_AddVSAdd_Plots = False # Pairs of additional data and additional data
+    Create_ChanVSAdd_Plots = True  # Pairs of channel and additional data
+    Create_AddVSAdd_Plots = True # Pairs of additional data and additional data
     # Create plots of all possible pair combinations of the following:
     vs_channels = ['DAPI', 'Pros', 'SuH', 'GFP']
     vs_adds = ['Intensity Mean']

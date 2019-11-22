@@ -5,7 +5,7 @@ Created on Fri Aug 23 14:07:33 2019
 @author: artoviit
 """
 from settings import settings
-import warnings
+import warnings, sys
 import numpy as np, matplotlib.pyplot as plt, seaborn as sns
 with warnings.catch_warnings():
     warnings.simplefilter('ignore', category=FutureWarning)
@@ -30,7 +30,7 @@ class plotter:
 
     def vector(self, samplename, vectordata, X, Y, binaryArray=None, skeleton=None):
         if skeleton is not None and settings.SkeletonVector:
-            fig, axes = plt.subplots(nrows=1, ncols=2, figsize=(12, 6), sharex=True,
+            figskel, axes = plt.subplots(nrows=1, ncols=2, figsize=(12, 6), sharex=True,
               sharey=True)
             ax = axes.ravel()
             ax[0].imshow(binaryArray, cmap=(plt.cm.gray))
@@ -39,9 +39,9 @@ class plotter:
             ax[1].imshow(skeleton, cmap=(plt.cm.gray))
             ax[1].axis('off')
             ax[1].set_title('skeleton', fontsize=16)
-            fig.tight_layout()
+            figskel.tight_layout()
             name = str('Skeleton_' + samplename + self.ext)
-            fig.savefig(str(self.savepath.joinpath(name)), format=self.format)
+            figskel.savefig(str(self.savepath.joinpath(name)), format=self.format)
         fig, ax = plt.subplots(figsize=(12, 6))
         ax = sns.scatterplot(x=X, y=Y, color='brown')
         ax = plt.plot(*vectordata.xy)

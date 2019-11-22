@@ -41,34 +41,52 @@ def Project(PATHS):
                 sample.find_counts(channel.name, PATHS.datadir)
 
 def Get_Counts(PATHS):
-    MPs = system.read_data(next(PATHS.datadir.glob('MPS.csv')), header=0, test=False)
+    try:
+        MPs = system.read_data(next(PATHS.datadir.glob('MPs.csv')), header=0, test=False)
+    except:
+        if not settings.useMP:
+            MPs = pd.DataFrame(np.zeros((1, len(store.samples))), 
+                            columns=store.samples)
+            system.saveToFile(MPs, PATHS.datadir, 'MPs.csv', append=False)
+        else:
+            print("WARNING: 'MPs.csv' NOT found!")
     # Find the smallest and largest bin-number of the dataset
     MPmax, MPmin = MPs.max(axis=1).values[0], MPs.min(axis=1).values[0]
+    # Store the bin number of the row onto which samples are anchored to
     store.center = MPmax
     # Find the size of needed dataframe, i.e. so that all anchored samples fit
     MPdiff = MPmax - MPmin
-    store.totalLength = int(len(settings.projBins) + MPdiff)
-     # Store the bin number of the row onto which samples are anchored to
-    store.centerpoint = MPmax
     if settings.process_counts == False and settings.process_samples == False:
         # Find all sample groups in the analysis from the found MPs.
         samples = MPs.columns.tolist()
         Groups = set({s.casefold(): s.split('_')[0] for s in samples}.values())
         store.samplegroups = sorted(Groups)
+        try:
+            temp = system.read_data(PATHS.datadir.joinpath("All_{}.csv".format(
+                                settings.vectChannel)), test=False, header=0)
+            store.totalLength = temp.shape[0]
+        except FileNotFoundError:
+            print("ERROR: {} not found in 'Analysis Data/Data Files'".format(
+                                                        settings.vectChannel))
+            print("Must count channels.")
+            return
         return
-    print('\n---Counting and normalizing sample data---')
-    countpaths = PATHS.datadir.glob('All_*')
-    for path in countpaths:
-        name = str(path.stem).split('_')[1]
-        print('{}  ...'.format(name))
-        # Aforementionad data is used to create dataframes onto which each sample's
-        # MP is anchored to one row, with bin-respective (index) cell counts in 
-        # each element of a sample (column) to allow relative comparison.
-        ChCounts = normalize(path)
-        ChCounts.starts, NormCounts = ChCounts.normalize_samples(MPs, 
-                                                             store.totalLength)
-        ChCounts.averages(NormCounts)
-        ChCounts.Avg_AddData(PATHS, settings.AddData, store.totalLength)
+    else:
+        store.totalLength = int(len(settings.projBins) + MPdiff)
+    if settings.process_counts:
+        print('\n---Counting and normalizing sample data---')
+        countpaths = PATHS.datadir.glob('All_*')
+        for path in countpaths:
+            name = str(path.stem).split('_')[1]
+            print('{}  ...'.format(name))
+            # Aforementionad data is used to create dataframes onto which each sample's
+            # MP is anchored to one row, with bin-respective (index) cell counts in 
+            # each element of a sample (column) to allow relative comparison.
+            ChCounts = normalize(path)
+            ChCounts.starts, NormCounts = ChCounts.normalize_samples(MPs, 
+                                                                 store.totalLength)
+            ChCounts.averages(NormCounts)
+            ChCounts.Avg_AddData(PATHS, settings.AddData, store.totalLength)
 
 
 class get_sample:
@@ -241,9 +259,11 @@ class get_sample:
             
 #            print(sx, sy)
 #            print(type(sy))
-
-        vector = gm.LineString(line)
-        vector = vector.simplify(settings.simplifyTol)
+        try:
+            vector = gm.LineString(line)
+            vector = vector.simplify(settings.simplifyTol)
+        except ValueError:
+            print("WARNING: Faulty vector. Try different settings.")
         linedf = pd.DataFrame(line, columns=['X', 'Y'])
         return vector, BA, skeleton, linedf
 
@@ -411,7 +431,7 @@ class normalize:
         for col in self.counts.columns:
             handle = self.counts.loc[:, col].values
             mp = MPs.loc[0, col]
-            insert, insx = relate_data(handle, mp, store.centerpoint, arrayLength)
+            insert, insx = relate_data(handle, mp, store.center, arrayLength)
             data[col] = insert
             SampleStart.at[col] = insx
         filename = str('Norm_{}.csv'.format(self.channel))

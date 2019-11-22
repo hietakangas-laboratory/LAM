@@ -138,6 +138,7 @@ class Total_Stats:
         mcols = pd.MultiIndex.from_product([self.tstGroups, cols], 
                                            names=['Sample Group', 'Statistics'])
         TotalStats = pd.DataFrame(index=cntrlData.index, columns=mcols)
+        TotalStats.sort_index(level=['Sample Group', 'Statistics'], inplace=True)
         for grp in self.tstGroups:
             namer = "{}_".format(grp)
             tstData = self.data.loc[:, self.data.columns.str.contains(namer)]
