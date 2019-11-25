@@ -84,7 +84,7 @@ class settings:
     # cell is found on the channel defined by target_chan, otherwise they are
     # found within the channel undergoing analysis.
     Find_Distances = True
-    Distance_Channels = ["GFP"]
+    Distance_Channels = ["GFP", "DAPI"]
     use_target = True
     target_chan = "Pros"
     # The maximum distance the nearest cell will be looked at. Increase is
@@ -100,7 +100,7 @@ class settings:
     ## CLUSTERS ##
     # Whether to compute clusters
     Find_Clusters = True
-    Cluster_Channels = ["GFP"]
+    Cluster_Channels = ["GFP", "Pros"]
     Cl_maxDist = 20         # Radius around the cell
     Cl_Vol_inclusion = 0    # Set to zero if not wanted.
     Cl_incl_type = ""       # Same as above in Find_Distances
@@ -122,7 +122,7 @@ class settings:
     fill = True
     negLog2 = True # Forces stars to be False
     # The name of the control group that the statistics are run against.
-    cntrlGroup = "ctrl"
+    cntrlGroup = "starv"
     
     ### PLOTTING OPTIONS ###  
     Create_Channel_Plots = True

@@ -445,7 +445,7 @@ class Samplegroups:
                 print('\n') # For making a cleaner print out
         # Create stats of total cell numbers if stat_total set to True
         if settings.stat_total:
-            print('Totals  ...')
+            print('-Totals-')
             # Find the data file, initialize class, and count stats
             datapath = self._dataDir.joinpath('Total Counts.csv')
             TCounts = Total_Stats(datapath, self._groups, self._plotDir, 
@@ -527,15 +527,15 @@ class Sample(Group):
                 tData = system.read_data(targetPath[0], header=0)
                 kws.update({'tData': tData})
             except:
-                print("Sample doesn't have file for channel {}".format(target))
+                print("-> Sample doesn't have file for channel {}".format(
+                                                                    target))
                 return
         # Loop through the channels, read, and find distances
         for path in distChans: 
             try:
                 Data = system.read_data(path, header=0)
             except:
-                print("Sample doesn't have file for channel {}".format(
-                                                                    path.stem))
+                print("-> No file for channel {}".format(path.stem))
                 return
             Data = Data.loc[:, ~Data.columns.str.contains('Nearest_')]
             Data.name = path.stem
@@ -552,8 +552,7 @@ class Sample(Group):
             try:
                 Data = system.read_data(path, header=0)
             except:
-                print("Sample doesn't have file for channel {}".format(
-                                                                    path.stem))
+                print("-> No file for channel {}".format(path.stem))
                 return
             Data = Data.loc[:, ~Data.columns.str.contains('ClusterID')]
             Data.name = path.stem # The name of the clustering channel
@@ -677,6 +676,7 @@ class Sample(Group):
             dInd = self.subset_data(Data, compare, volIncl)
             if 'tData' in kws.keys(): # Obtain target channel if used.
                 tData = kws.pop('tData')
+                tData.name = Data.name
                 tInd = self.subset_data(tData, compare, volIncl)
         elif 'tData' in kws.keys():
             tData = kws.pop('tData')

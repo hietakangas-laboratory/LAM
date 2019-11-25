@@ -70,7 +70,7 @@ def Get_Counts(PATHS):
         except AttributeError:
             print("ERROR: Cannot determine length of sample matrix".format(
                                                         settings.vectChannel))
-            print("Must perform 'Count' before continuing.")
+            print("-> Must perform 'Count' before continuing.")
             return
             
         return
@@ -134,8 +134,7 @@ class get_sample:
             vectPath = next(dirPath.glob('*Position.csv'))
             vectData = system.read_data(vectPath)
         except:
-            print('Sample {} has no valid file for vector creation'.format(
-                                                                    self.name))
+            print('-> No valid file for vector creation'.format(self.name))
             vectData = None
         finally:
             return vectData
@@ -318,8 +317,7 @@ class get_sample:
                 secMPdata = system.read_data(secMPpath)
                 self.secMPdata = secMPdata.loc[:,['Position X', 'Position Y']]
             except:
-                print("Failed to find secondary MP positions for sample {}"\
-                      .format(self.name))
+                print("-> Failed to find secondary MP positions")
         else: # If samplefolder contains unused secondary MP data, remove path
             secMPbin = None
             try:
@@ -335,8 +333,7 @@ class get_sample:
                 MPdata = system.read_data(MPpath)
                 self.MPdata = MPdata.loc[:,['Position X', 'Position Y']]
             except:
-                print("Failed to find MP positions for sample {}".format(
-                                                                    self.name))
+                print("-> Failed to find MP positions")
             finally:
                 MPbin, secMPbin = None, None
                 MPs = pd.DataFrame()
