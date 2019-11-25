@@ -31,7 +31,8 @@ class Samplegroups:
             Samplegroups._groups = groups
             Samplegroups._channels = channels
             Samplegroups._chanPaths = list(PATHS.datadir.glob('Norm_*'))
-            Samplegroups._samplePaths = [p for p in PATHS.samplesdir.iterdir() if p.is_dir()]
+            Samplegroups._samplePaths = [p for p in PATHS.samplesdir.iterdir() 
+                                        if p.is_dir()]
             Samplegroups._addData = list(PATHS.datadir.glob('Avg_*'))
             Samplegroups._plotDir = PATHS.plotdir
             Samplegroups._dataDir = PATHS.datadir
@@ -71,7 +72,8 @@ class Samplegroups:
                 retPaths.extend(selected)
             return retPaths
 
-        def __base(paths, func, ylabel='Cell Count', title=None, name_sep=1, **kws):
+        def __base(paths, func, ylabel='Cell Count', title=None, name_sep=1, 
+                   **kws):
             """Basic plotting for LAM, i.e. data of interest on y-axis, and bins 
             on x-axis. Name_sep defines the start of data's name when file name
             is split by '_', e.g. name_sep=1 would name the data as DAPI when
@@ -79,7 +81,8 @@ class Samplegroups:
             savepath = self._plotDir
             # For each data file to be plotted:
             for path in paths:
-                dropB = settings.Drop_Outliers # Find whether outliers are to be dropped
+                # Find whether outliers are to be dropped
+                dropB = settings.Drop_Outliers 
                 # Read data from file and the pass it on to the plotter-class
                 plotData, name, cntr = self.read_channel(path, self._groups, 
                                                  drop=dropB,name_sep=name_sep)
@@ -100,7 +103,7 @@ class Samplegroups:
                             newlabel = settings.AddData.get(addName)[1]
                         except: newlabel = 'Cell Count'
                     kws2.update({'ylabel': newlabel, 'value_str': newlabel})
-                kws2.update(kws) # Update keywords with kws passed to this function
+                kws2.update(kws) # Update with kws passed to this function
                 plot_maker.plot_Data(func, savepath, **kws2) # Plotting
                 
         def __heat(paths):
@@ -112,11 +115,12 @@ class Samplegroups:
             # channel is concatenated to one dataframe for easier plotting.
             for path in paths:
                 plotData, name, cntr = self.read_channel(path, self._groups)
-                # change each sample's group to be contained in its index within
-                # the dataframe.
+                # change each sample's group to be contained in its index 
+                # within the dataframe.
                 plotData.index = plotData.loc[:,'Sample Group']
                 plotData.drop(labels='Sample Group', axis=1, inplace=True)
-                plotData.loc[:, 'Channel'] = name # Channel-variable is added for ID
+                # Channel-variable is added for identification
+                plotData.loc[:, 'Channel'] = name 
                 fullData = pd.concat([fullData, plotData], axis=0, copy=False)
             # The plotting can't handle NaN's, so they are changed to zero.
             fullData = fullData.replace(np.nan, 0)
@@ -130,8 +134,8 @@ class Samplegroups:
 
         def __versus(paths1, paths2=None, folder=None):
             """Creation of bivariant jointplots."""
-            # Can create a lot ofplots, so when given a folder-input, the figures
-            # are saved there instead of the normal plotting folder.
+            # Can create a lot ofplots, so when given a folder-input, the 
+            # figures are saved there instead of the normal plotting folder.
             if folder:
                 savepath = self._plotDir.joinpath(folder)
             else: savepath = self._plotDir
@@ -149,8 +153,9 @@ class Samplegroups:
                 dropB = settings.Drop_Outliers
                 plotData, __, cntr = self.read_channel(path, self._groups, 
                                                            drop=dropB)
-                channel = str(path.stem).split('_')[1] # get channel name from path
-                plotData['Sample'] = plotData.index # Create identification variable
+                # get channel name from path, and add identification ('Sample')
+                channel = str(path.stem).split('_')[1]
+                plotData['Sample'] = plotData.index 
                 # Change data into long form (one observation per row):
                 plotData = pd.melt(plotData, id_vars=['Sample','Sample Group'],
                                    var_name='Longitudinal Position',
@@ -163,14 +168,15 @@ class Samplegroups:
                                                 'Longitudinal Position'])
             name = 'All Channels Pairplots'
             # Initialize plotter, create plot keywords, and then create plots
-            plot_maker = plotter(allData, self._plotDir, title=name, center=cntr,
-                                 palette=self._grpPalette)
+            plot_maker = plotter(allData, self._plotDir, title=name, 
+                                 center=cntr, palette=self._grpPalette)
             kws = {'hue':'Sample Group', 'kind': 'reg', 'diag_kind': 'kde',
                    'height':3.5, 'aspect':1, 'title_y':0.95}
             plot_maker.plot_Data(plotter.pairPlot, self._plotDir, **kws)            
 
         def __nearestDist():
-            """Creation of plots regarding average distances to nearest cell."""
+            """Creation of plots regarding average distances to nearest cell.
+            """
             # Find files containing calculated average distances
             paths = self._dataDir.glob('Avg_DistanceMeans_*')
             savepath = self._plotDir
@@ -181,7 +187,8 @@ class Samplegroups:
                 plot_maker = plotter(plotData, self._plotDir, center=cntr, 
                                      title=name, palette=self._grpPalette)
                 kws = {'centerline':plot_maker.MPbin,  'ylabel':'Distance',  
-                       'title':plot_maker.title, 'xlen':self._length, 'title_y':0.95}
+                       'title':plot_maker.title, 'xlen':self._length, 
+                       'title_y':0.95}
                 kws.update(basekws)
                 plot_maker.plot_Data(plotter.linePlot, savepath, **kws)
                 
@@ -254,13 +261,13 @@ class Samplegroups:
         into the resulting dataframe."""
         Data = system.read_data(path, header=0, test=False)
         plotData = pd.DataFrame()
-        # Loop through given groups and give an identification variable for each
-        # sample belonging to the group.
+        # Loop through given groups and give an identification variable for 
+        # each sample belonging to the group.
         for grp in groups:
             namer = str(grp + '_')
             namerreg = re.compile(namer, re.I)
             # Get only the samples that belong to the loop's current group
-            temp = Data.loc[:, Data.columns.str.contains(namerreg, regex=True)].T
+            temp = Data.loc[:, Data.columns.str.contains(namerreg,regex=True)].T
             if settings.Drop_Outliers and drop: # conditionally drop outliers
                 temp = DropOutlier(temp)
             temp['Sample Group'] = grp # Giving of sample group identification
@@ -309,7 +316,8 @@ class Samplegroups:
             # Get one sample group at a time for plotting:
             for group in self._groups:
                 title = '{} {} VS {}'.format(group, name, name2)
-                grpData = fullData.where(fullData['Sample Group'] == group).dropna()
+                grpData = fullData.where(fullData['Sample Group'] == group
+                                         ).dropna()
                 plot_maker = plotter(grpData, self._plotDir, title=title, 
                                      palette=self._grpPalette)
                 kws = {'x': name, 'y': name2, 'hue':'Sample Group', 
@@ -321,7 +329,8 @@ class Samplegroups:
     def subset_data(self, Data, compare, volIncl):
         """Get indexes of cells based on volume."""
         if not isinstance(Data, pd.DataFrame):
-            print('Wrong datatype for find_distance(), has to be pandas DataFrame.')
+            C='Wrong datatype for find_distance(), has to be pandas DataFrame.'
+            print(C)
             return
         ErrorM = "Volume not found in {}_{}'s {}".format(self.group, 
                                                   self.name, Data.name)
@@ -344,7 +353,8 @@ class Samplegroups:
             for path in SampleGroup._groupPaths: # Get one sample of the group
                 Smpl = Sample(path, SampleGroup.group)
                 print('{}  ...'.format(Smpl.name))
-                Smpl.DistanceMean(settings.maxDist) # Find distances within sample
+                # Find distances between nuclei within the sample
+                Smpl.DistanceMean(settings.maxDist) 
     
     def Get_Clusters(self):
         """Gathers sample-data to compute cell clusters."""
@@ -364,12 +374,14 @@ class Samplegroups:
         else: print('\n---Calculating statistics---')
         if settings.cntrlGroup not in store.samplegroups: # !!! add to log
             test = 0
-            namer = re.compile(r"{}$".format(re.escape(settings.cntrlGroup)), re.I)
+            namer = re.compile(r"{}$".format(re.escape(settings.cntrlGroup)), 
+                               re.I)
             for group in store.samplegroups:
                 if re.match(namer, group):
                     print("WARNING: Control group-setting is case-sensitive!")
                     settings.cntrlGroup = group
-                    print("Control group has been changed to '{}'\n".format(group))
+                    print("Control group has been changed to '{}'\n".format(
+                                                                        group))
                     test += 1
             if test == 0:
                 print("WARNING: control group NOT found in sample groups!\n")
@@ -400,7 +412,8 @@ class Samplegroups:
                 for path in chain(Stats.chanPaths,Stats.avgPaths):
                     Stats = Stats.MWW_test(path)
                     # If plotting set to True, make plots of current stats
-                    if settings.Create_Plots and settings.Create_Statistics_Plots:
+                    if settings.Create_Statistics_Plots and \
+                                                        settings.Create_Plots:
                         # Find name of data and make title and y-label
                         addChan_name = str(path.stem).split('_')[1:]
                         Stats.plottitle = "{} = {}".format(Stats.title, 
@@ -433,15 +446,15 @@ class Samplegroups:
                     
     def Get_Totals(self):
         """Counting of sample & channel -specific cell count totals."""
-        # Get names of all samples and create a dataframe with samples as columns
+        # Get names of samples and create a dataframe with them as columns
         samples = self._AllStarts.columns.tolist()
         Totals = pd.DataFrame(columns=samples)
-        # Loop through files containing cell count data, read, and calculate sums
+        # Loop through files containing cell count data, read, and find sums
         for path in self._dataDir.glob('All_*'):
             ChData = system.read_data(path, header=0, test=False)
             ChSum = ChData.sum(axis=0, skipna=True) # Sums
             channel = path.stem.split('_')[1] # Channel name
-            Totals.loc[channel, ChSum.index] = ChSum # Insert data into dataframe
+            Totals.loc[channel, ChSum.index] = ChSum # Insert data into DF
         # Save dataframe containing sums of each channel for each sample
         system.saveToFile(Totals, self._dataDir, 'Total Counts.csv', 
                           append=False, w_index=True)
@@ -454,7 +467,7 @@ class Group(Samplegroups):
     _MPs = None
 
     def __init__(self, group, child=False):
-        super().__init__(child=True) # Inherits variables from samplegroups-class
+        super().__init__(child=True) # Inherit from samplegroups-class
         self.group = group # group name
         self.namer = '{}_'.format(group) # For finding group-specific columns etc.
         # When first initialized, create variables that are inherited by samples:
@@ -471,10 +484,12 @@ class Group(Samplegroups):
 
 
 class Sample(Group):
-    """For storing sample-specific data and handling sample-related functionalities."""
+    """For storing sample-specific data and handling sample-related 
+    functionalities."""
     def __init__(self, path, grp):
-        super().__init__(grp, child=True) # Inherit variables from the sample's group
-        # Sample's name, path to its directory, and paths to channel-data it has
+        # Inherit variables from the sample's group
+        super().__init__(grp, child=True)
+        # Sample's name, path to its directory, and paths to data it has
         self.name = str(path.stem)
         self.path = path
         self.channelPaths = [p for p in path.iterdir() if p.suffix == '.csv' if 
@@ -507,7 +522,8 @@ class Sample(Group):
             try:
                 Data = system.read_data(path, header=0)
             except:
-                print("Sample doesn't have file for channel {}".format(path.stem))
+                print("Sample doesn't have file for channel {}".format(
+                                                                    path.stem))
                 return
             Data = Data.loc[:, ~Data.columns.str.contains('Nearest_')]
             Data.name = path.stem
@@ -524,15 +540,16 @@ class Sample(Group):
             try:
                 Data = system.read_data(path, header=0)
             except:
-                print("Sample doesn't have file for channel {}".format(path.stem))
+                print("Sample doesn't have file for channel {}".format(
+                                                                    path.stem))
                 return
             Data = Data.loc[:, ~Data.columns.str.contains('ClusterID')]
             Data.name = path.stem # The name of the clustering channel
             self.find_distances(Data, volIncl=settings.Cl_Vol_inclusion, 
                    compare=settings.Cl_incl_type, clusters=True, **kws)
 
-    def find_distances(self, Data, volIncl=200, compare='smaller', clusters=False, 
-                       **kws):
+    def find_distances(self, Data, volIncl=200, compare='smaller', 
+                       clusters=False, **kws):
         """Calculate distances between cells to either find the nearest cell 
         and distance means per bin, or to find cell clusters. Argument "Data" 
         is channel data from a sample."""
@@ -552,13 +569,14 @@ class Sample(Group):
             if not near.empty: # Then get distances to nearby cells:
                 cols = ['XYZ', 'Dist', 'ID']
                 nearby = pd.DataFrame(columns=cols)
-                for i2, row2 in target.loc[near, :].iterrows():# Loop nearby cells
+                # Loop through the nearby cells
+                for i2, row2 in target.loc[near, :].iterrows():
                     point2 = CG3dPoint(row2.x, row2.y, row2.z)
                     # Distance from the first cell to the second
                     dist = utils.distance(point, point2)
                     if dist <= maxDist: # If distance is acceptable, store data
-                        temp = pd.Series([(row2.x, row2.y, row2.z), dist, row2.ID], 
-                                          index=cols, name=i2)
+                        temp = pd.Series([(row2.x, row2.y, row2.z), dist, 
+                                          row2.ID], index=cols, name=i2)
                         nearby = nearby.append(temp, ignore_index=True)
                 # if there are cells nearby, return data
                 if not nearby.empty: return nearby
@@ -588,13 +606,15 @@ class Sample(Group):
             maxDist = kws.get('Dist') # the max distance to consider clustering
             clusterSeed = {} # For storing cluster 'seeds'
             for i, row in XYpos.iterrows(): # Iterate over all cells
-                nearby = __get_nearby(i, row, XYpos, maxDist, **kws)# Nearby cells
+                # Find nearby cells
+                nearby = __get_nearby(i, row, XYpos, maxDist, **kws)
                 # If nearby cells, make a list of their IDs and add to seeds
                 if nearby is not None:
                     if nearby.shape[0] > 1:
                         clusterSeed[i] = nearby.ID.tolist()
             # Make a sorted list of lists of the found cluster seeds
-            Cl_lst = [sorted(list(clusterSeed.get(key))) for key in clusterSeed.keys()]
+            Cl_lst = [sorted(list(clusterSeed.get(key))) for key in 
+                      clusterSeed.keys()]
             # Merging of the seeds
             Cl_gen = __merge(Cl_lst) 
             # Change the generator into list of lists and drop clusters of size 
@@ -624,7 +644,8 @@ class Sample(Group):
             pointData = pd.DataFrame(columns=cols, index=XYpos.index)
             # Iterate over each cell (row) in the data
             for i, row in XYpos.iterrows():
-                nearby = __get_nearby(i, row, target, maxDist, rmv_self=rmv, **kws)
+                nearby = __get_nearby(i, row, target, maxDist, rmv_self=rmv, 
+                                      **kws)
                 if nearby is not None:
                     nearest = nearby.Dist.idxmin()
                     pointData.loc[i, cols] = nearby.loc[nearest].values

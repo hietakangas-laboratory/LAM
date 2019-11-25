@@ -12,8 +12,8 @@ class settings:
     # pre-created datafiles in the Analysis Data directory, i.e. a previous 
     # full run has been made, and there has been no edits to the data files.
     process_samples = True  # CLEARS DATA FILES-DIRECTORY
-    # Whether to project, count and normalize data. If set to False, expect all data to 
-    # be in place. Can be used to e.g. create additional plots faster.
+    # Whether to project, count and normalize data. If set to False, expect all 
+    # data to be in place. Can be used to e.g. create additional plots faster.
     process_counts = False
     # Whether to compute average distances and clusters.
     process_dists = False
@@ -93,7 +93,7 @@ class settings:
     maxDist = 30    # Radius around the cell
     # Whether to look only at cells of certain size. Default is to include cells 
     # smaller than Vol_inclusion. If cells of greater volume are wanted, 
-    # designate incl_type to be 'greater'. Otherwise, the string can be left empty.
+    # designate incl_type to be 'greater'. Otherwise, it can be left empty.
     Vol_inclusion = 0    # Set to zero if not wanted.
     incl_type = ""
     
@@ -144,13 +144,14 @@ class settings:
     Drop_Outliers = True
     dropSTD = 3
     
-    # Gives values some coordinate-shift in channel pairplots. Useful in presenting
-    # the data, as it is discrete; most of the data would be hidden under others.
-    # Doesn't affect the underlying data.
+    # Gives values some coordinate-shift in channel pairplots. Useful in pre-
+    # senting the data, as it is discrete; most of the data would be hidden 
+    # under others. Does not affect the underlying data.
     plot_jitter = True
     
     ## Figure save-format ##
-    # Supported formats for the plot files: eps, jpeg, jpg, pdf, pgf, png, ps, raw, rgba, svg, svgz, tif, tiff.
+    # Supported formats for the plot files: eps, jpeg, jpg, pdf, pgf, png, ps,
+    # raw, rgba, svg, svgz, tif, tiff.
     saveformat = "pdf"
     
     seaborn_style = 'ticks'   # Different styles of plots, e.g. background
@@ -162,5 +163,7 @@ class settings:
     seaborn_context = 'talk'  # Defines plot object sizes, i.e. text
     # size order small to large: 'paper', 'talk', 'poster'
     
-    # Define colors used for sample groups (xkcd colors: 'https://xkcd.com/color/rgb/')
-    palette_colors = ['orange yellow', 'aqua marine', 'tomato', 'dark lime', 'tan brown'] # !!! Add colors
+    # Define colors used for sample groups 
+    # (xkcd colors: 'https://xkcd.com/color/rgb/')
+    palette_colors = ['orange yellow', 'aqua marine', 'tomato', 'dark lime', 
+                      'tan brown'] # !!! Add colors

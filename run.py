@@ -35,21 +35,21 @@ associate the data.
 
 The script first creates a vector based on one channel ("vectChannel", typically 
 DAPI), in order to approximate the midgut along its length. Positions on other 
-channels can then be projected onto the vector, and cell numbers can be quantified 
-along the midgut. The vector is divided into user-defined number of bins that 
-are used for comparative analyses.
+channels can then be projected onto the vector, and cell numbers can be quanti-
+fied along the midgut. The vector is divided into user-defined number of bins 
+that are used for comparative analyses.
 
 On some experiments the size proportions of different regions may alter, e.g.
 when comparing starved and fully-fed midguts, more accurate results can be 
 obtained by dividing the image/data into multiple analyses. A typical way to do 
 this is to run separate analyses for R1-2, R3, and R4-5. Alternatively, a user-
 defined coordinate (MP = measurement point) at a distinguishable point can be 
-used to anchor the individual samples for comparison, e.g. points at R2-3-border 
+used to anchor the individual samples for comparison, e.g. points at R2/3-border 
 are lined, with each sample having variable numbers of bins on either side. The
-variation however likely leads to a compounding error as distance from the MP grows.
-When MP is not used, the samples are lined at bin 0, and compared bin-by-bin.
-The MP-input is done similarly to channel data, i.e. as a separate directory 
-that contains position.csv for a single coordinate, the MP.
+variation however likely leads to a compounding error as distance from the MP 
+grows. When MP is not used, the samples are lined at bin 0, and compared bin-
+by-bin. The MP-input is done similarly to channel data, i.e. as a separate 
+directory that contains position.csv for a single coordinate, the MP.
 
 For more extensive instructions, see user manual. 
 
@@ -64,22 +64,24 @@ from settings import settings
 
 def main():
     systemPaths = system.start()
-    # If sample processing set to True, create vectors, collect and project data 
-    # etc. Otherwise continue to plotting and group-wise operations.
+    # If sample processing set to True, create vectors, collect and project 
+    # data etc. Otherwise continue to plotting and group-wise operations.
     if settings.process_samples:
         process.Create_Samples(systemPaths)
     if settings.process_counts:
         process.Project(systemPaths)                   
-    # After all samples have been collected/created, find their respective MP bins and
-    # normalize (anchor) cell count data. If MP's are not used, the samples are
-    # anchored at bin == 0.
+    # After all samples have been collected/created, find their respective MP 
+    # bins and normalize (anchor) cell count data. If MP's are not used, the 
+    # samples are anchored at bin == 0.
     process.Get_Counts(systemPaths)
     # Storing of descriptive data of analysis, i.e. channels/samples/groups
-    systemPaths.save_AnalysisInfo(store.samples, store.samplegroups, store.channels)
+    systemPaths.save_AnalysisInfo(store.samples, store.samplegroups, 
+                                  store.channels)
     
     # After samples have been counted and normalized
     SampleGroups = analysis.Samplegroups(store.samplegroups, store.channels,
-                                        store.totalLength, store.center, systemPaths)
+                                        store.totalLength, store.center, 
+                                        systemPaths)
     # Computing total cell numbers from each sample's each bin
     if settings.process_counts:
         SampleGroups.Get_Totals()

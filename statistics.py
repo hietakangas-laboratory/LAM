@@ -163,6 +163,7 @@ class Total_Stats:
         for namer in namers:
             plotData.loc['Sample Group', plotData.columns.str.contains(
                                                 namer)] = namer.split('_')[0]
-        plot_maker = plotter(plotData, self.plotDir, center=0, title='Total Counts', 
-                 palette=self.palette, color='b')
+        plot_maker = plotter(plotData, self.plotDir, center=0, 
+                             title='Total Counts', palette=self.palette, 
+                             color='b')
         plot_maker.total_plot(stats, order)

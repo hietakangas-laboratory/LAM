@@ -13,7 +13,8 @@ class paths:
         self.samplesdir = pl.Path(self.outputdir / 'Samples')
         self.statsdir = pl.Path(self.outputdir / 'Statistics')
         # If samples are to be processed and output data directory exists, the 
-        # directory will be removed with all files as not to interfere with analysis.
+        # directory will be removed with all files as not to interfere with 
+        # analysis.
         if self.datadir.exists() == True and any([settings.process_samples, 
                               settings.process_counts]):
             shutil.rmtree(self.datadir)

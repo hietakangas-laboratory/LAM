@@ -1,9 +1,10 @@
 # -*- coding: utf-8 -*-
 from settings import settings
 from plot import plotter
-import system
+import system, math
 from system import store
-import pandas as pd, numpy as np, warnings, shapely.geometry as gm, pathlib as pl, math
+import pandas as pd, numpy as np, warnings, shapely.geometry as gm
+import pathlib as pl
 from scipy.ndimage import morphology as mp
 from skimage.morphology import skeletonize
 from skimage.filters import gaussian
@@ -42,7 +43,8 @@ def Project(PATHS):
 
 def Get_Counts(PATHS):
     try:
-        MPs = system.read_data(next(PATHS.datadir.glob('MPs.csv')), header=0, test=False)
+        MPs = system.read_data(next(PATHS.datadir.glob('MPs.csv')), header=0, 
+                               test=False)
     except:
         if not settings.useMP:
             MPs = pd.DataFrame(np.zeros((1, len(store.samples))), 
@@ -79,12 +81,13 @@ def Get_Counts(PATHS):
         for path in countpaths:
             name = str(path.stem).split('_')[1]
             print('{}  ...'.format(name))
-            # Aforementionad data is used to create dataframes onto which each sample's
-            # MP is anchored to one row, with bin-respective (index) cell counts in 
-            # each element of a sample (column) to allow relative comparison.
+            # Aforementionad data is used to create dataframes onto which each 
+            # sample's MP is anchored to one row, with bin-respective (index) 
+            # cell counts in each element of a sample (column) to allow 
+            # relative comparison.
             ChCounts = normalize(path)
             ChCounts.starts, NormCounts = ChCounts.normalize_samples(MPs, 
-                                                                 store.totalLength)
+                                                             store.totalLength)
             ChCounts.averages(NormCounts)
             ChCounts.Avg_AddData(PATHS, settings.AddData, store.totalLength)
 
@@ -123,17 +126,21 @@ class get_sample:
         try:
             namer = str("_{}_".format(channel))
             namerreg = re.compile(namer, re.I)
-            dirPath = [self.channelpaths[i] for i, s in enumerate(self.channelpaths) if namerreg.search(str(s))][0]
+            dirPath = [self.channelpaths[i] for i, s in enumerate(
+                            self.channelpaths) if namerreg.search(str(s))][0]
             vectPath = next(dirPath.glob('*Position.csv'))
             vectData = system.read_data(vectPath)
         except:
-            print('Sample {} has no valid file for vector creation'.format(self.name))
+            print('Sample {} has no valid file for vector creation'.format(
+                                                                    self.name))
             vectData = None
         finally:
             return vectData
 
-    def create_vector(self, creationBins, datadir, Skeletonize, resize, BDiter, SigmaGauss):
-        """For creating the vector from the running median of the DAPI-positions."""
+    def create_vector(self, creationBins, datadir, Skeletonize, resize, BDiter, 
+                      SigmaGauss):
+        """For creating the vector from the running median of the DAPI-positions.
+        """
         positions = self.vectData
         X, Y = positions.loc[:, 'Position X'], positions.loc[:, 'Position Y']
         if Skeletonize:
@@ -164,7 +171,8 @@ class get_sample:
         ylabels = np.arange(int(rminy) - buffer, int(rmaxy + (buffer + 1)), 10)
         xlabels = np.arange(int(rminx) - buffer, int(rmaxx + (buffer + 1)), 10)
         ylen, xlen = len(ylabels), len(xlabels)
-        BA = pd.DataFrame(np.zeros((ylen, xlen)), index=np.flip(ylabels, 0), columns=xlabels)
+        BA = pd.DataFrame(np.zeros((ylen, xlen)), index=np.flip(ylabels, 0), 
+                          columns=xlabels)
         BAind, BAcol = BA.index, BA.columns
         for coord in coords:
             y = round(coord[1] * resize / 10) * 10
@@ -183,8 +191,9 @@ class get_sample:
         BA = mp.binary_fill_holes(BA)
         skeleton = skeletonize(BA)
         skelDF = pd.DataFrame(skeleton, index=BAind, columns=BAcol)
-        skelValues = [(skelDF.index[y], skelDF.columns[x]) for y, x in zip(*np.where(skelDF.values == True))]
-        coordDF = pd.DataFrame(np.zeros((len(skelValues), 2)), columns=['X', 'Y'])
+        skelValues = [(skelDF.index[y], skelDF.columns[x]) for y, x in zip(
+                *np.where(skelDF.values == True))]
+        coordDF = pd.DataFrame(np.zeros((len(skelValues),2)),columns=['X', 'Y'])
         for i, coord in enumerate(skelValues):
             coordDF.loc[i, ['X', 'Y']] = [coord[1], coord[0]]
         finder = settings.find_dist
@@ -193,7 +202,8 @@ class get_sample:
         sx, sy = coordDF.loc[start, 'X'], coordDF.loc[start, 'Y']
         nearStart = coordDF[(abs(coordDF.loc[:, 'X'] - sx) <= finder/2) & 
                             (abs(coordDF.loc[:, 'Y'] - sy) <= finder/1)].index
-        sx, sy = coordDF.loc[nearStart, 'X'].mean(), coordDF.loc[nearStart, 'Y'].mean()
+        sx, sy = coordDF.loc[nearStart, 'X'].mean(), coordDF.loc[nearStart, 'Y'
+                            ].mean()
         line.append((sx / resize, sy / resize))
         coordDF.drop(nearStart, inplace=True)
         flag = False
@@ -203,7 +213,8 @@ class get_sample:
             with warnings.catch_warnings():
                 warnings.simplefilter('ignore', category=UserWarning)
                 nearest = coordDF[(abs(coordDF.loc[:, 'X'] - sx) <= finder) & 
-                                 (abs(coordDF.loc[:, 'Y'] - sy) <= finder)].index
+                                 (abs(coordDF.loc[:, 'Y'] - sy) <= finder)
+                                 ].index
 #            points = pd.Series(np.zeros(nearpixels.size), index=nearpixels)
 #            for i, row in coordDF.loc[nearpixels, :].iterrows():
 #                coord = row.loc['X':'Y'].tolist()
@@ -229,8 +240,9 @@ class get_sample:
                 shifty = y2 - y1
                 x3, y3 = x2 + 2 * shiftx, y2 + 2 * shifty
                 testpoint = gm.Point(x3, y3)
-                distances = pd.DataFrame(np.zeros((nearest.size, 5)), index=nearest, 
-                                         columns=['dist', 'distOG', 'score', 'X', 'Y'])
+                distances = pd.DataFrame(np.zeros((nearest.size, 5)), 
+                                         index=nearest, columns=['dist', 
+                                         'distOG', 'score', 'X', 'Y'])
                 for index, row in coordDF.loc[nearest, :].iterrows():
                     x4, y4 = coordDF.loc[index, 'X'], coordDF.loc[index, 'Y']
                     point3 = gm.Point(x4, y4)
@@ -248,7 +260,7 @@ class get_sample:
 #                print(distances)
 #                print(huh, drop_dist * huh)
                 forfeit = distances[(distances.dist >= dropdist) & 
-                                  (distances.distOG <= dropdist2)].dropna().index
+                              (distances.distOG <= dropdist2)].dropna().index
 #                print(type(nearest))
                 forfeit.union([nearest])
                 coordDF.drop(forfeit, inplace=True)
@@ -280,9 +292,11 @@ class get_sample:
             if cells.size == 0:
                 Ymedian[b] = Ymedian[b - 1]
             else:
-                Ymedian[b] = Y[idx == b].min() + (Y[idx == b].max() - Y[idx == b].min()) / 2
+                Ymedian[b] = Y[idx==b].min() + (Y[idx==b].max() - Y[idx==b
+                       ].min())/2
 
-        XYmedian = [p for p in tuple(np.stack((bins, Ymedian), axis=1)) if ~np.isnan(p).any()]
+        XYmedian = [p for p in tuple(np.stack((bins, Ymedian), axis=1)) if 
+                    ~np.isnan(p).any()]
         vector = gm.LineString(XYmedian)
         linedf = pd.DataFrame(XYmedian, columns=['X', 'Y'])
         return vector, linedf
@@ -292,16 +306,19 @@ class get_sample:
         if useSecMP: # If True, get secondary MP
             try:
                 secMPdirpath = next(self.channelpaths.pop(i) for i, s in 
-                                 enumerate(self.channelpaths) if str('_'+secMPname+'_') in str(s))
+                                 enumerate(self.channelpaths) if 
+                                 str('_'+secMPname+'_') in str(s))
                 secMPpath = next(secMPdirpath.glob("*Position.csv"))
                 secMPdata = system.read_data(secMPpath)
                 self.secMPdata = secMPdata.loc[:,['Position X', 'Position Y']]
             except:
-                print("Failed to find secondary MP positions for sample {}".format(self.name))
+                print("Failed to find secondary MP positions for sample {}"\
+                      .format(self.name))
         else: # If samplefolder contains unused secondary MP data, remove path
             secMPbin = None
             try:
-                rmv = next(s for s in self.channelpaths if str('_'+secMPname+'_') in str(s))
+                rmv = next(s for s in self.channelpaths if str('_'+secMPname+'_')\
+                           in str(s))
                 self.channelpaths.remove(rmv)  
             except: pass
         if useMP:
@@ -312,7 +329,8 @@ class get_sample:
                 MPdata = system.read_data(MPpath)
                 self.MPdata = MPdata.loc[:,['Position X', 'Position Y']]
             except:
-                print("Failed to find MP positions for sample {}".format(self.name))
+                print("Failed to find MP positions for sample {}".format(
+                                                                    self.name))
             finally:
                 MPbin, secMPbin = None, None
                 MPs = pd.DataFrame()
@@ -342,10 +360,12 @@ class get_sample:
         # Find point of projection on the vector.
         Positions["VectPoint"] = [vector.interpolate(vector.project(gm.Point(x))) 
                                   for x in points]
-        Positions["NormDist"] = [vector.project(x, normalized=True) for x in # Find normalized distance (0->1)
+        # Find normalized distance (0->1)
+        Positions["NormDist"] = [vector.project(x, normalized=True) for x in
                  Positions["VectPoint"]]
         # Find the bins that the points fall into
-        Positions["DistBin"]=np.digitize(Positions.loc[:,"NormDist"],settings.projBins, right=True)
+        Positions["DistBin"]=np.digitize(Positions.loc[:,"NormDist"],
+                 settings.projBins, right=True)
         MPbin = pd.Series(Positions.loc[:,"DistBin"], name = self.name)
         # Save the obtained data:
         system.saveToFile(MPbin, datadir, filename)
@@ -355,14 +375,15 @@ class get_sample:
         """For projecting coordinates onto the vector."""
         Positions = channel.data
         XYpos = list(zip(Positions['Position X'],Positions['Position Y']))
-        # The shapely packages reguires transformation into Multipoints for the projection.
+        # The shapely packages reguires transformation into Multipoints for the 
+        # projection.
         points = gm.MultiPoint(XYpos)
         # Find point of projection on the vector.
-        Positions["VectPoint"] = [self.vector.interpolate(self.vector.project(gm.Point(x))) 
-                                  for x in points]
+        Positions["VectPoint"] = [self.vector.interpolate(self.vector.project(
+                                gm.Point(x))) for x in points]
         # Find normalized distance (0->1)
-        Positions["NormDist"] = [self.vector.project(x, normalized=True) for x in
-                 Positions["VectPoint"]]
+        Positions["NormDist"] = [self.vector.project(x, normalized=True) for x
+                                 in Positions["VectPoint"]]
         # Find the bins that the points fall into
         Positions["DistBin"] = np.digitize(Positions.loc[:,"NormDist"],
                                  settings.projBins, right=True)
@@ -372,7 +393,8 @@ class get_sample:
         return Positions
 
     def find_counts(self, channelName, datadir):
-        counts = np.bincount(self.data['DistBin'], minlength=len(settings.projBins))
+        counts = np.bincount(self.data['DistBin'], minlength=len(
+                                                            settings.projBins))
         counts = pd.Series(np.nan_to_num(counts), name=self.name)
         ChString = str('All_{}.csv'.format(channelName))
         system.saveToFile(counts, datadir, ChString)
@@ -469,7 +491,8 @@ class normalize:
                     avgS = pd.Series(np.full(TotalLen, np.nan), name=sample)
                     with warnings.catch_warnings():
                         warnings.simplefilter('ignore', category=RuntimeWarning)
-                        insert = [np.nanmean(sampleData.loc[binnedData == i, col]) for i in bins]
+                        insert = [np.nanmean(sampleData.loc[binnedData==i, 
+                                                        col]) for i in bins]
                         insert = [0 if np.isnan(v) else v for v in insert]
                     strt = int(self.starts.at[sample])
                     end = int(strt + len(settings.projBins))
@@ -477,7 +500,8 @@ class normalize:
                     filename = str('Avg_{}_{}.csv'.format(self.channel, col))
                     system.saveToFile(avgS, PATHS.datadir, filename)
 #            except TypeError:
-#                print("{}: {} not found on {}".format(self.channel, dataType, sample))
+#                print("{}: {} not found on {}".format(self.channel, dataType, 
+#                       sample))
 #            except StopIteration:
 #                pass
 

@@ -5,7 +5,7 @@ Created on Fri Aug 23 14:07:33 2019
 @author: artoviit
 """
 from settings import settings
-import warnings, sys
+import warnings
 import numpy as np, matplotlib.pyplot as plt, seaborn as sns
 with warnings.catch_warnings():
     warnings.simplefilter('ignore', category=FutureWarning)
@@ -28,9 +28,11 @@ class plotter:
         else:
             self.MPbin = 0
 
-    def vector(self, samplename, vectordata, X, Y, binaryArray=None, skeleton=None):
+    def vector(self, samplename, vectordata, X, Y, binaryArray=None, 
+               skeleton=None):
         if skeleton is not None and settings.SkeletonVector:
-            figskel, axes = plt.subplots(nrows=1, ncols=2, figsize=(12, 6), sharex=True,
+            figskel, axes = plt.subplots(nrows=1, ncols=2, figsize=(12, 6), 
+                                         sharex=True,
               sharey=True)
             ax = axes.ravel()
             ax[0].imshow(binaryArray, cmap=(plt.cm.gray))
@@ -41,7 +43,8 @@ class plotter:
             ax[1].set_title('skeleton', fontsize=16)
             figskel.tight_layout()
             name = str('Skeleton_' + samplename + self.ext)
-            figskel.savefig(str(self.savepath.joinpath(name)), format=self.format)
+            figskel.savefig(str(self.savepath.joinpath(name)), 
+                            format=self.format)
         fig, ax = plt.subplots(figsize=(12, 6))
         ax = sns.scatterplot(x=X, y=Y, color='brown')
         ax = plt.plot(*vectordata.xy)
@@ -109,8 +112,8 @@ class plotter:
                 ax2.plot((xmin,xtop), (0,0), linestyle='dashed', color='grey', 
                          linewidth=0.85, **lkws)
                 ax2.set_ylabel('P value\n(-log2)')
-                # Find top of original y-axis and create a buffer for twin to create
-                # prettier plot
+                # Find top of original y-axis and create a buffer for twin to 
+                # create a prettier plot
                 botAdd = 2.75*-settings.ylim
                 ax2.set_ylim(bottom=botAdd, top=settings.ylim)
                 ytick = np.arange(0, settings.ylim, 5)
@@ -121,7 +124,8 @@ class plotter:
                 yaxis = [ybot2, ybot2]
                 # Create centerline
                 ax2.plot((MPbin, MPbin), (ybot2, ytop2), 'r--')
-            else: # Initiation of variables when not using -log2 & make centerline
+            else: 
+                # Initiation of variables when not using -log2 & make centerline
                 yaxis = [tytop, tytop]
                 yheight = ytop*1.1
                 ax.plot((MPbin, MPbin), (0, tytop), 'r--')
@@ -142,13 +146,13 @@ class plotter:
                     if settings.fill:
                         plt.fill_between(xaxis,yaxis, color=color, alpha=0.2)
                     if settings.stars:
-                        plt.text(index, yheight, pStr, fontdict={'fontsize': 14})
+                        plt.text(index, yheight, pStr, fontdict={'fontsize':14})
                 if row[6] == True:# cntrl is lesser
                     pStr, color = __marker(row[4], GRcolors)
                     if settings.fill:
                         plt.fill_between(xaxis,yaxis, color=color, alpha=0.2)
                     if settings.stars:
-                        plt.text(index, yheight, pStr, fontdict={'fontsize': 14})
+                        plt.text(index, yheight, pStr, fontdict={'fontsize':14})
         
         def __add(centerline=True):
             if 'centerline' in kws.keys() and centerline: 
@@ -175,7 +179,7 @@ class plotter:
                 key = plotData.iat[0, 0]
                 g = sns.jointplot(data=plotData, x=plotData.loc[:, kws.get('x')], 
                           y=plotData.loc[:, kws.get('y')], kind='kde',
-                          color=palette.get(key), joint_kws={'shade_lowest': False})
+                          color=palette.get(key), joint_kws={'shade_lowest':False})
             elif plotfunc.__name__ == 'catPlot':
                 g = self.catPlot(self.palette, **kws)
                 __stats()
@@ -183,8 +187,8 @@ class plotter:
             elif plotfunc.__name__ == 'pairPlot':
                 g = self.pairPlot(**kws)
             else:
-                g = sns.FacetGrid(plotData, row=kws.get('row'), hue=kws.get('hue'), 
-                          sharex=True, sharey=True, gridspec_kws=kws.get('gridspec'),
+                g = sns.FacetGrid(plotData, row=kws.get('row'),hue=kws.get('hue'), 
+                          sharex=True,sharey=True,gridspec_kws=kws.get('gridspec'),
                           height=kws.get('height'),aspect=kws.get('aspect'),
                           legend_out=True, dropna=False, palette=self.palette)
                 g = g.map_dataframe(plotfunc, self.palette, **kws).add_legend()
@@ -224,7 +228,7 @@ class plotter:
         dkws = {'linewidth': 2}
         with warnings.catch_warnings():
             warnings.simplefilter('ignore', category=RuntimeWarning)
-            g = sns.pairplot(data=data, hue=kws.get('hue'), kind=kws.get('kind'), 
+            g = sns.pairplot(data=data, hue=kws.get('hue'),kind=kws.get('kind'), 
                          diag_kind=kws.get('diag_kind'), palette=self.palette,
                          plot_kws=pkws, diag_kws=dkws)
         for lh in g._legend.legendHandles: 
@@ -249,9 +253,10 @@ class plotter:
         axes = plt.gca()
         data = kws.pop('data')
         err_kws = {'alpha': 0.4}
-        sns.lineplot(data=data, x=kws.get('xlabel'), y=kws.get('ylabel'), hue=kws.get('hue'), 
-                     alpha=0.5, dashes=False, err_style='band', ci='sd', 
-                     palette=palette, ax=axes, err_kws=err_kws)
+        sns.lineplot(data=data, x=kws.get('xlabel'), y=kws.get('ylabel'), 
+                     hue=kws.get('hue'), alpha=0.5, dashes=False, 
+                     err_style='band', ci='sd', palette=palette, ax=axes, 
+                     err_kws=err_kws)
         return axes
 
     def jointPlot(palette, **kws):
@@ -305,7 +310,8 @@ class plotter:
         plotData = pd.melt(self.data.T, id_vars='Sample Group', 
                            value_name='Total Count', var_name = 'Channel')
         plotData['Total Count'] = plotData['Total Count'].astype('float64')
-        plotData['Ord'] = plotData.loc[:, 'Sample Group'].apply(lambda x: order.index(x))
+        plotData['Ord'] = plotData.loc[:, 'Sample Group'].apply(lambda x: 
+                                                                order.index(x))
         plotData.sort_values(by=['Ord', 'Channel'], axis=0, inplace=True)
         g = sns.catplot('Sample Group', 'Total Count', 
                         data=plotData, col='Channel', palette=self.palette,
@@ -337,7 +343,7 @@ class plotter:
                     x = xmin + offset
                     ax.text(x, y, pStr)
         plt.suptitle('Total Counts', weight='bold', y=1.02)
-        filepath = self.savepath.joinpath('All Channels Total Counts' + self.ext)
+        filepath = self.savepath.joinpath('All Channels Total Counts'+self.ext)
         g.savefig(str(filepath), format=self.format)
         plt.close('all')
         
