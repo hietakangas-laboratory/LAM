@@ -67,11 +67,12 @@ def Get_Counts(PATHS):
             temp = system.read_data(PATHS.datadir.joinpath("All_{}.csv".format(
                                 settings.vectChannel)), test=False, header=0)
             store.totalLength = temp.shape[0]
-        except FileNotFoundError:
-            print("ERROR: {} not found in 'Analysis Data/Data Files'".format(
+        except AttributeError:
+            print("ERROR: Cannot determine length of sample matrix".format(
                                                         settings.vectChannel))
-            print("Must count channels.")
+            print("Must perform 'Count' before continuing.")
             return
+            
         return
     else:
         store.totalLength = int(len(settings.projBins) + MPdiff)
@@ -120,7 +121,9 @@ class get_sample:
                 lenS = pd.Series(self.vectorLength, name=self.name)
                 system.saveToFile(lenS, PATHS.datadir, 'Length.csv')
             except FileNotFoundError:
-                print('Vector.csv NOT found for {}'.format(self.name))
+                print('ERROR: Vector.csv NOT found for {}'.format(self.name))
+            except AttributeError:
+                print('ERROR: Faulty vector for {}'.format(self.name))
 
     def get_vectData(self, channel):
         try:
@@ -146,6 +149,8 @@ class get_sample:
         if Skeletonize:
             vector, binaryArray, skeleton, lineDF = self.SkeletonVector(X, Y, 
                                                     resize, BDiter, SigmaGauss)
+            if vector is None:
+                return
         else:
             vector, lineDF = self.MedianVector(X, Y, creationBins)
             binaryArray, skeleton = None, None
@@ -274,10 +279,11 @@ class get_sample:
         try:
             vector = gm.LineString(line)
             vector = vector.simplify(settings.simplifyTol)
+            linedf = pd.DataFrame(line, columns=['X', 'Y'])
+            return vector, BA, skeleton, linedf
         except ValueError:
             print("WARNING: Faulty vector. Try different settings.")
-        linedf = pd.DataFrame(line, columns=['X', 'Y'])
-        return vector, BA, skeleton, linedf
+            return None, None, None, None
 
     def MedianVector(self, X, Y, creationBins):
         bins = np.linspace(X.min(), X.max(), creationBins)

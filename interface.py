@@ -66,7 +66,7 @@ class base_GUI(tk.Toplevel):
         self.pSample = tk.Checkbutton(self.midf, text="Process",variable=SampleV, 
                                       relief='groove', bd=4, font=('Arial', 8, 'bold'),  
                                       command=self.Process_check, bg='lightgrey')
-        self.pCounts = tk.Checkbutton(self.midf, text="Counts ", variable=CountV, 
+        self.pCounts = tk.Checkbutton(self.midf, text="Count  ", variable=CountV, 
                                       relief='groove', bd=4, font=('Arial', 8, 'bold'), 
                                       bg='lightgrey', command=self.Count_check)
         self.pDists = tk.Checkbutton(self.midf, text="Distance", variable=DistV, 

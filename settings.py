@@ -7,7 +7,7 @@ class settings:
     
     # DEFINE PATH TO ANALYSIS FOLDER:
     # (Use input r'PATH' where PATH is your path)
-    workdir = pl.Path(r'P:\h919\hietakangas\Arto\0.3% Tryptophan analysis\R1_R2')
+    workdir = pl.Path(r'E:\Code_folder\ALLSTATS')
     # Whether to gather raw data and create vectors. If False, expects to find 
     # pre-created datafiles in the Analysis Data directory, i.e. a previous 
     # full run has been made, and there has been no edits to the data files.

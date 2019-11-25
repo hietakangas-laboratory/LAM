@@ -85,7 +85,8 @@ def start():
         settings.workdir = pl.Path(settings.workdir)
     try:
         if True not in [settings.process_samples, settings.process_counts, 
-                    settings.Create_Plots, settings.process_dists]:
+                    settings.Create_Plots, settings.process_dists, 
+                    settings.statistics]:
             sys.exit("\nAll primary settings are set to False. \n\nExiting ...")
         else:
             PATHS = paths(settings.workdir)

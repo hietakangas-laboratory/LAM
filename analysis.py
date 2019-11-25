@@ -385,8 +385,20 @@ class Samplegroups:
                     test += 1
             if test == 0:
                 print("WARNING: control group NOT found in sample groups!\n")
-                print("Statistical analysis passed.")
-                return
+                
+                flag = 1
+                while flag:
+                    print('Found groups:')
+                    for i, grp in enumerate(store.samplegroups):
+                        print('{}: {}'.format(i, grp))
+                    ans = int(input('Select number of control group: '))
+                    if 0 <= ans <= len(store.samplegroups):
+                        settings.cntrlGroup = store.samplegroups[ans]
+                        print("Control group set as '{}'.\n".format(
+                                                        settings.cntrlGroup))
+                        flag = 0
+                    else:
+                        print('Command not understood.')
         # Create stats of control vs. other groups if stat_versus set to True
         if settings.stat_versus:
             print('-Versus-')

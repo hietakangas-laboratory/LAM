@@ -97,7 +97,7 @@ def main():
     # Creation of plots from various data (excluding statistical plots)
     if settings.Create_Plots:
         SampleGroups.create_plots()
-    print('\nANALYSIS COMPLETED')
+    print('\nCOMPLETED')
 
 if __name__ == '__main__':
     if settings.GUI:
