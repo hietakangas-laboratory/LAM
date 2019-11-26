@@ -7,35 +7,35 @@ class settings:
     
     # DEFINE PATH TO ANALYSIS FOLDER:
     # (Use input r'PATH' where PATH is your path)
-    workdir = pl.Path(r'E:\Code_folder\ALLSTATS')
+    workdir = pl.Path(r'P:\h919\hietakangas\Arto\0.3% Tryptophan analysis\R3')
     # Whether to gather raw data and create vectors. If False, expects to find 
     # pre-created datafiles in the Analysis Data directory, i.e. a previous 
     # full run has been made, and there has been no edits to the data files.
-    process_samples = True  # CLEARS DATA FILES-DIRECTORY
+    process_samples = False  # CLEARS DATA FILES-DIRECTORY
     # Whether to project, count and normalize data. If set to False, expect all 
     # data to be in place. Can be used to e.g. create additional plots faster.
-    process_counts = False
+    process_counts = True
     # Whether to compute average distances and clusters.
-    process_dists = False
+    process_dists = True
     # Set True/False to set all plotting functionalities ON/OFF
-    Create_Plots = False     # ON / OFF switch for plots
+    Create_Plots = True     # ON / OFF switch for plots
     ##################################################################
     
     #-#-#-#-#-#-#-#-# VECTOR CREATION & PROJECTION #-#-#-#-#-#-#-#-#-#
     # The channel based on which the vector is created
     vectChannel = "DAPI"
     # Number of bins used for projection unto vector (the second value).
-    projBins = np.linspace(0, 1, 80)
+    projBins = np.linspace(0, 1, 100)
     
     # Make vector by creating binary image and then skeletonizing. If False, 
     # vector is created by finding middle point between smallest and largest 
     # Y-axis position in bin.
     SkeletonVector = True
-    SkeletonResize = 0.2    # Binary image resize. Keep at steps of ten.
+    SkeletonResize = 0.4    # Binary image resize. Keep at steps of ten.
     find_dist = 30      # Find distance of pixels in skeleton vector creation
     BDiter = 0           # Binary dilation iterations (set to 0 if not needed)
     SigmaGauss = 1       # Sigma for gaussian smoothing (set to 0 if not needed)
-    simplifyTol = 50     # Tolerance for vector simplification.
+    simplifyTol = 40     # Tolerance for vector simplification.
     # Number of bins used for vector creation when using the median vector 
     # creation. You should probably keep this smaller than the projBins, 
     # depending on cell density (e.g. <50%).
@@ -99,7 +99,7 @@ class settings:
     
     ## CLUSTERS ##
     # Whether to compute clusters
-    Find_Clusters = True
+    Find_Clusters = False
     Cluster_Channels = ["GFP", "Pros"]
     Cl_maxDist = 20         # Radius around the cell
     Cl_Vol_inclusion = 0    # Set to zero if not wanted.
@@ -118,7 +118,7 @@ class settings:
     ylim = 25               # negative log2 y-limit
     alpha = 0.05            # for rejection of H_0, applies to statistics files
     # Plots
-    stars = True # Make P-value stars to the plot (*:<0.05 **:<0.01 ***:<0.001)
+    stars = False # Make P-value stars to the plot (*:<0.05 **:<0.01 ***:<0.001)
     fill = True
     negLog2 = True # Forces stars to be False
     # The name of the control group that the statistics are run against.
@@ -127,14 +127,14 @@ class settings:
     ### PLOTTING OPTIONS ###  
     Create_Channel_Plots = True
     Create_AddData_Plots = True     # Plots also nearest distance & clusters
-    Create_Channel_PairPlots = True
+    Create_Channel_PairPlots = False
     Create_Heatmaps = True
     Create_Distribution_Plots = True
     Create_Statistics_Plots = True  # requires statistics to be True
     
     # Variable vs. variable plots:
-    Create_ChanVSAdd_Plots = True  # Pairs of channel and additional data
-    Create_AddVSAdd_Plots = True # Pairs of additional data and additional data
+    Create_ChanVSAdd_Plots = False  # Pairs of channel and additional data
+    Create_AddVSAdd_Plots = False # Pairs of additional data and additional data
     # Create plots of all possible pair combinations of the following:
     vs_channels = ['DAPI', 'Pros', 'SuH', 'GFP']
     vs_adds = ['Intensity Mean']
@@ -166,4 +166,4 @@ class settings:
     # Define colors used for sample groups 
     # (xkcd colors: 'https://xkcd.com/color/rgb/')
     palette_colors = ['orange yellow', 'aqua marine', 'tomato', 'dark lime', 
-                      'tan brown'] # !!! Add colors
+                      'tan brown', 'red violet', 'dusty green', 'sandy brown']

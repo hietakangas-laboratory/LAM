@@ -669,7 +669,7 @@ class Sample(Group):
             with warnings.catch_warnings():
                 warnings.simplefilter('ignore', category=RuntimeWarning)
                 means = [np.nanmean(distances[binnedData.values==k]) for k in 
-                         np.arange(0, len(settings.projBins))]
+                         np.arange(0, store.totalLength)]
             return NewData, means, filename
         #--------#
         if volIncl > 0: # Subsetting of data based on cell volume
@@ -719,7 +719,7 @@ class Sample(Group):
             bins = binnedData.sort_values().to_numpy()
             unique, counts = np.unique(bins, return_counts=True)
             bincounts = dict(zip(unique, counts))
-            idx = np.arange(0, len(settings.projBins))
+            idx = np.arange(0, store.totalLength)
             # Create series to store the cell count data
             binnedCounts = pd.Series(np.full(len(idx), np.nan), index=idx, 
                                      name=self.name)

@@ -430,8 +430,9 @@ class base_GUI(tk.Toplevel):
             hidev = 'disable'
         else:
             self.pMP.configure(state = 'normal')
-            self.lblMP.configure(state = 'normal')
-            self.MPIn.configure(state = 'normal')
+            if MPV.get():
+                self.lblMP.configure(state = 'normal')
+                self.MPIn.configure(state = 'normal')
             self.lblHead.configure(state = 'normal')
             self.HeadIn.configure(state = 'normal')
             for widget in self.Up_leftf.winfo_children():
