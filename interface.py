@@ -6,9 +6,12 @@ from settings import settings as Sett
 import numpy as np
 import copy
 import pathlib as pl
+import logger
+LAM_logger = logger.get_logger()
 
 class base_GUI(tk.Toplevel):   
     def __init__(self, master=None):
+        logger.log_print(LAM_logger, 'Initializing GUI.', 'i')
         master.title("LAM-v1.0")
         self.master = master
         self.master.bind('<Escape>', self.func_destroy)
@@ -329,6 +332,7 @@ class base_GUI(tk.Toplevel):
         self.VDbut2.grid(row=8, column=7)
         # Disable / enable widgets
         self.Distance_check()
+        logger.log_print(LAM_logger, 'GUI initialized successfully.', 'i')
         
     def Distance_check(self):
         if not DistV.get():
@@ -462,6 +466,7 @@ class base_GUI(tk.Toplevel):
         self.Detect_Channels()
         
     def RUN_button(self, event=None):
+        logger.log_print(LAM_logger, 'Run initialization.', 'i')
         Sett.process_samples = SampleV.get()
         Sett.process_counts = CountV.get()
         Sett.process_dists = DistV.get()
@@ -528,7 +533,8 @@ class base_GUI(tk.Toplevel):
                 if self.Vselect.get():
                     Sett.Cl_incl_type = "greater"
                 else:
-                    Sett.Cl_incl_type = ""                    
+                    Sett.Cl_incl_type = ""
+        logger.log_print(LAM_logger, 'Run parameters set.', 'i')
         main()
         
     def show_VSett(self, name):

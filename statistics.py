@@ -4,9 +4,9 @@ from plot import plotter
 import system, analysis
 import numpy as np, pandas as pd
 import scipy.stats as ss, statsmodels.stats.multitest as multi
-import copy
-import warnings
-import re
+import copy, warnings, re
+import logger
+LAM_logger = logger.get_logger()
 
 class statistics:
     def __init__(self, control, group2):

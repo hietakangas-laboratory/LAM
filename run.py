@@ -57,12 +57,12 @@ Dependencies: Anaconda-included packages (Python 3.7), Shapely, pycg3d
 
 @author: Arto Viitanen
 """
-import system, analysis, process, interface
-import tkinter as tk
-from system import store
 from settings import settings
 
 def main():
+    import system, analysis, process
+    from system import store
+    
     systemPaths = system.start()
     # If sample processing set to True, create vectors, collect and project 
     # data etc. Otherwise continue to plotting and group-wise operations.
@@ -98,9 +98,14 @@ def main():
     if settings.Create_Plots:
         SampleGroups.create_plots()
     print('\nCOMPLETED')
+    LAM_logger.log_print('Completed', 'i')
 
 if __name__ == '__main__':
+    import logger
+    LAM_logger = logger.setup_logger()
     if settings.GUI:
+        import tkinter as tk
+        import interface
         root = tk.Tk()
         gui = interface.base_GUI(root)
         root.mainloop()

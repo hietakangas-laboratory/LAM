@@ -10,6 +10,8 @@ from pycg3d import utils
 with warnings.catch_warnings():
     warnings.simplefilter('ignore', category=FutureWarning)
     import pandas as pd
+import logger
+LAM_logger = logger.get_logger()
 
 class Samplegroups:
     """Class for holding and handling all sample groups, i.e. every sample of 

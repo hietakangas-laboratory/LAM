@@ -9,9 +9,12 @@ from scipy.ndimage import morphology as mp
 from skimage.morphology import skeletonize
 from skimage.filters import gaussian
 import re
+import logger
+LAM_logger = logger.get_logger()
 
 def Create_Samples(PATHS):
-    # Loop Through samples and collect relevant data
+    logger.log_print(LAM_logger, 'Begin vector creation.', 'i')
+    # Loop Through samples to create vectors
     print("---Processing samples---")
     for path in [p for p in settings.workdir.iterdir() if p.is_dir() and p.stem 
                  != 'Analysis Data']:
@@ -22,9 +25,11 @@ def Create_Samples(PATHS):
         sample.create_vector(settings.medianBins, PATHS.datadir, 
                              settings.SkeletonVector, settings.SkeletonResize, 
                              settings.BDiter, settings.SigmaGauss)
+    logger.log_print(LAM_logger, 'Vectors created.', 'i')
 
 def Project(PATHS):
-    print("\n---Projecting channels---")
+    logger.log_print(LAM_logger, 'Begin channel projection and counting.', 'i')
+    print("\n---Projecting and count channels---")
     for path in [p for p in settings.workdir.iterdir() if p.is_dir() and p.stem 
              != 'Analysis Data']:
         sample = get_sample(path, PATHS, process=False, project=True)
@@ -40,6 +45,7 @@ def Project(PATHS):
             channelName = str(path2.stem)
             if channelName not in ["MPs"]:
                 sample.find_counts(channel.name, PATHS.datadir)
+    logger.log_print(LAM_logger, 'All channels projected and counted.', 'i')
 
 def Get_Counts(PATHS):
     try:
@@ -51,7 +57,8 @@ def Get_Counts(PATHS):
                             columns=store.samples)
             system.saveToFile(MPs, PATHS.datadir, 'MPs.csv', append=False)
         else:
-            print("WARNING: 'MPs.csv' NOT found!")
+            logger.log_print(LAM_logger, 'MPs.csv NOT found!', 'c')
+            print("ERROR: 'MPs.csv' NOT found!")
     # Find the smallest and largest bin-number of the dataset
     MPmax, MPmin = MPs.max(axis=1).values[0], MPs.min(axis=1).values[0]
     # Store the bin number of the row onto which samples are anchored to
@@ -68,16 +75,17 @@ def Get_Counts(PATHS):
                                 settings.vectChannel)), test=False, header=0)
             store.totalLength = temp.shape[0]
         except AttributeError:
-            print("ERROR: Cannot determine length of sample matrix".format(
-                                                        settings.vectChannel))
-            print("-> Must perform 'Count' before continuing.")
-            return
-            
+            msg = "Cannot determine length of sample matrix\
+                    -> Must perform 'Count' before continuing."
+            logger.log_print(LAM_logger, msg, 'c')
+            print("ERROR: {}".format(msg))
+            return            
         return
     else:
         store.totalLength = int(len(settings.projBins) + MPdiff)
     if settings.process_counts:
-        print('\n---Counting and normalizing sample data---')
+        logger.log_print(LAM_logger, 'Begin normalization of channels.', 'i')
+        print('\n---Normalizing sample data---')
         countpaths = PATHS.datadir.glob('All_*')
         for path in countpaths:
             name = str(path.stem).split('_')[1]
@@ -91,6 +99,7 @@ def Get_Counts(PATHS):
                                                              store.totalLength)
             ChCounts.averages(NormCounts)
             ChCounts.Avg_AddData(PATHS, settings.AddData, store.totalLength)
+        logger.log_print(LAM_logger, 'Channels normalized.', 'i')
 
 
 class get_sample:
@@ -121,9 +130,13 @@ class get_sample:
                 lenS = pd.Series(self.vectorLength, name=self.name)
                 system.saveToFile(lenS, PATHS.datadir, 'Length.csv')
             except FileNotFoundError:
-                print('ERROR: Vector.csv NOT found for {}'.format(self.name))
+                msg = 'Vector.csv NOT found for {}'.format(self.name)
+                logger.log_print(LAM_logger, msg, 'e')
+                print('ERROR: {}'.format(msg))
             except AttributeError:
-                print('ERROR: Faulty vector for {}'.format(self.name))
+                msg = 'Faulty vector for {}'.format(self.name)
+                logger.log_print(LAM_logger, msg, 'w')
+                print('ERROR: Faulty vector for {}'.format(msg))
 
     def get_vectData(self, channel):
         try:
@@ -134,7 +147,9 @@ class get_sample:
             vectPath = next(dirPath.glob('*Position.csv'))
             vectData = system.read_data(vectPath)
         except:
-            print('-> No valid file for vector creation'.format(self.name))
+            msg = 'No valid file for vector creation.'
+            logger.log_print(LAM_logger, msg, 'w')
+            print('-> {}'.format(msg))
             vectData = None
         finally:
             return vectData
@@ -188,7 +203,9 @@ class get_sample:
             try:
                 BA = mp.binary_dilation(BA, structure=struct1, iterations=BDiter)
             except TypeError:
-                print("TypeError: BDiter in settings has to be an integer.")
+                msg = 'BDiter in settings has to be an integer.'
+                logger.log_print(LAM_logger, msg, 'e')
+                print("TypeError: {}".format(msg))
         if SigmaGauss > 0:
             BA = gaussian(BA, sigma=SigmaGauss)
             BA[BA > 0] = True
@@ -281,6 +298,8 @@ class get_sample:
             linedf = pd.DataFrame(line, columns=['X', 'Y'])
             return vector, BA, skeleton, linedf
         except ValueError:
+            msg = 'Faulty vector for {}'.format(self.name)
+            logger.log_print(LAM_logger, msg, 'e')
             print("WARNING: Faulty vector. Try different settings.")
             return None, None, None, None
 
@@ -333,6 +352,8 @@ class get_sample:
                 MPdata = system.read_data(MPpath)
                 self.MPdata = MPdata.loc[:,['Position X', 'Position Y']]
             except:
+                msg = 'could not find MP position for {}'.format(self.name)
+                logger.log_print(LAM_logger, msg, 'e')
                 print("-> Failed to find MP positions")
             finally:
                 MPbin, secMPbin = None, None
