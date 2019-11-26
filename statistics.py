@@ -6,7 +6,7 @@ import numpy as np, pandas as pd
 import scipy.stats as ss, statsmodels.stats.multitest as multi
 import copy, warnings, re
 import logger
-LAM_logger = logger.get_logger()
+LAM_logger = logger.get_logger(__name__)
 
 class statistics:
     def __init__(self, control, group2):

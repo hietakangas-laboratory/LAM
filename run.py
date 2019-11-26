@@ -102,7 +102,7 @@ def main():
 
 if __name__ == '__main__':
     import logger
-    LAM_logger = logger.setup_logger()
+    LAM_logger = logger.setup_logger(__name__)
     if settings.GUI:
         import tkinter as tk
         import interface

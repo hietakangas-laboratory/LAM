@@ -7,7 +7,7 @@ import numpy as np
 import copy
 import pathlib as pl
 import logger
-LAM_logger = logger.get_logger()
+LAM_logger = logger.get_logger(__name__)
 
 class base_GUI(tk.Toplevel):   
     def __init__(self, master=None):

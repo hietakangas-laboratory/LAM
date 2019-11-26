@@ -2,19 +2,19 @@
 global LAM_logger
 import logging, time
 
-def setup_logger():
+def setup_logger(name):
     global logFile, ctime
     ctime = time.strftime("%d%b%y_%H%M%S")
     from settings import settings as Sett
     logFile = Sett.workdir.joinpath("log_{}.txt".format(ctime))
-    logger = get_logger()
+    logger = get_logger(name)
     print_settings(logger)
     return logger
     
-def get_logger():
-    logger = logging.getLogger('__name__')           
+def get_logger(name):
+    logger = logging.getLogger(name)           
     logger.addHandler(get_handler())        
-    logger.propagate = True
+    logger.propagate = False
     logger.setLevel(logging.DEBUG)
     return logger
     

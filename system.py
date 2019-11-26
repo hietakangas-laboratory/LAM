@@ -3,7 +3,7 @@ from settings import settings as Sett
 import sys
 import pathlib as pl, shutil, pandas as pd, inspect
 import logger
-LAM_logger = logger.get_logger()
+LAM_logger = logger.get_logger(__name__)
 
 class paths:
     def __init__(self, workdir):

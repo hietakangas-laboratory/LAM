@@ -10,7 +10,7 @@ from skimage.morphology import skeletonize
 from skimage.filters import gaussian
 import re
 import logger
-LAM_logger = logger.get_logger()
+LAM_logger = logger.get_logger(__name__)
 
 def Create_Samples(PATHS):
     logger.log_print(LAM_logger, 'Begin vector creation.', 'i')
@@ -29,7 +29,7 @@ def Create_Samples(PATHS):
 
 def Project(PATHS):
     logger.log_print(LAM_logger, 'Begin channel projection and counting.', 'i')
-    print("\n---Projecting and count channels---")
+    print("\n---Projecting and counting channels---")
     for path in [p for p in settings.workdir.iterdir() if p.is_dir() and p.stem 
              != 'Analysis Data']:
         sample = get_sample(path, PATHS, process=False, project=True)
