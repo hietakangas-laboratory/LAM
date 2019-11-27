@@ -1,17 +1,16 @@
 # -*- coding: utf-8 -*-
 """
-Created on Fri Aug 23 14:07:33 2019
+Created on Wed Mar  6 12:42:28 2019
+@author: Arto I. Viitanen
 
-@author: artoviit
 """
 from settings import settings
-import warnings
-import numpy as np, matplotlib.pyplot as plt, seaborn as sns
+import warnings, numpy as np, matplotlib.pyplot as plt, seaborn as sns
 with warnings.catch_warnings():
     warnings.simplefilter('ignore', category=FutureWarning)
     import pandas as pd
-import logger
-LAM_logger = logger.get_logger(__name__)
+import logger as lg
+LAM_logger = lg.get_logger(__name__)
 
 class plotter:
     plot_error = False
@@ -244,7 +243,7 @@ class plotter:
             except np.linalg.LinAlgError:
                 msg = '-> Confirm that all samples have proper channel data'
                 fullmsg = 'Pairplot singular matrix\n{}'.format(msg)
-                logger.log_print(LAM_logger, fullmsg, 'ex')
+                lg.log_print(LAM_logger, fullmsg, 'ex')
                 print('ERROR: Pairplot singular matrix')
                 print(msg)
                 self.plot_error = True

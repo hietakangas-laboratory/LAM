@@ -1,19 +1,21 @@
 # -*- coding: utf-8 -*-
+"""
+Created on Wed Mar  6 12:42:28 2019
+@author: Arto I. Viitanen
+
+"""
+import system, math, pandas as pd, numpy as np, shapely.geometry as gm
+import pathlib as pl, re, logger as lg, warnings
 from settings import settings
 from plot import plotter
-import system, math
 from system import store
-import pandas as pd, numpy as np, warnings, shapely.geometry as gm
-import pathlib as pl
 from scipy.ndimage import morphology as mp
 from skimage.morphology import skeletonize
 from skimage.filters import gaussian
-import re
-import logger
-LAM_logger = logger.get_logger(__name__)
+LAM_logger = lg.get_logger(__name__)
 
 def Create_Samples(PATHS):
-    logger.log_print(LAM_logger, 'Begin vector creation.', 'i')
+    lg.log_print(LAM_logger, 'Begin vector creation.', 'i')
     # Loop Through samples to create vectors
     print("---Processing samples---")
     for path in [p for p in settings.workdir.iterdir() if p.is_dir() and p.stem 
@@ -25,10 +27,10 @@ def Create_Samples(PATHS):
         sample.create_vector(settings.medianBins, PATHS.datadir, 
                              settings.SkeletonVector, settings.SkeletonResize, 
                              settings.BDiter, settings.SigmaGauss)
-    logger.log_print(LAM_logger, 'Vectors created.', 'i')
+    lg.log_print(LAM_logger, 'Vectors created.', 'i')
 
 def Project(PATHS):
-    logger.log_print(LAM_logger, 'Begin channel projection and counting.', 'i')
+    lg.log_print(LAM_logger, 'Begin channel projection and counting.', 'i')
     print("\n---Projecting and counting channels---")
     for path in [p for p in settings.workdir.iterdir() if p.is_dir() and p.stem 
              != 'Analysis Data']:
@@ -45,7 +47,7 @@ def Project(PATHS):
             channelName = str(path2.stem)
             if channelName not in ["MPs"]:
                 sample.find_counts(channel.name, PATHS.datadir)
-    logger.log_print(LAM_logger, 'All channels projected and counted.', 'i')
+    lg.log_print(LAM_logger, 'All channels projected and counted.', 'i')
 
 def Get_Counts(PATHS):
     try:
@@ -57,7 +59,7 @@ def Get_Counts(PATHS):
                             columns=store.samples)
             system.saveToFile(MPs, PATHS.datadir, 'MPs.csv', append=False)
         else:
-            logger.log_print(LAM_logger, 'MPs.csv NOT found!', 'c')
+            lg.log_print(LAM_logger, 'MPs.csv NOT found!', 'c')
             print("ERROR: 'MPs.csv' NOT found!")
     # Find the smallest and largest bin-number of the dataset
     MPmax, MPmin = MPs.max(axis=1).values[0], MPs.min(axis=1).values[0]
@@ -70,21 +72,25 @@ def Get_Counts(PATHS):
         samples = MPs.columns.tolist()
         Groups = set({s.casefold(): s.split('_')[0] for s in samples}.values())
         store.samplegroups = sorted(Groups)
-        try:
+        try: # If required lengths of matrices haven't been defined because
+            # Process and Count are both False, get the sizes from files.
+            temp = system.read_data(PATHS.datadir.joinpath("Norm_{}.csv".format(
+                                settings.vectChannel)), test=False, header=0)
+            store.totalLength = temp.shape[0] # Length of anchored matrices
             temp = system.read_data(PATHS.datadir.joinpath("All_{}.csv".format(
                                 settings.vectChannel)), test=False, header=0)
-            store.totalLength = temp.shape[0]
+            store.binNum = temp.shape[0] # Length of sample matrix
         except AttributeError:
-            msg = "Cannot determine length of sample matrix\
-                    -> Must perform 'Count' before continuing."
-            logger.log_print(LAM_logger, msg, 'c')
+            msg = "Cannot determine length of sample matrix\n"+\
+                    "-> Must perform 'Count' before continuing."
+            lg.log_print(LAM_logger, msg, 'c')
             print("ERROR: {}".format(msg))
             return            
         return
     else:
         store.totalLength = int(len(settings.projBins) + MPdiff)
     if settings.process_counts:
-        logger.log_print(LAM_logger, 'Begin normalization of channels.', 'i')
+        lg.log_print(LAM_logger, 'Begin normalization of channels.', 'i')
         print('\n---Normalizing sample data---')
         countpaths = PATHS.datadir.glob('All_*')
         for path in countpaths:
@@ -99,7 +105,7 @@ def Get_Counts(PATHS):
                                                              store.totalLength)
             ChCounts.averages(NormCounts)
             ChCounts.Avg_AddData(PATHS, settings.AddData, store.totalLength)
-        logger.log_print(LAM_logger, 'Channels normalized.', 'i')
+        lg.log_print(LAM_logger, 'Channels normalized.', 'i')
 
 
 class get_sample:
@@ -131,11 +137,11 @@ class get_sample:
                 system.saveToFile(lenS, PATHS.datadir, 'Length.csv')
             except FileNotFoundError:
                 msg = 'Vector.csv NOT found for {}'.format(self.name)
-                logger.log_print(LAM_logger, msg, 'e')
+                lg.log_print(LAM_logger, msg, 'e')
                 print('ERROR: {}'.format(msg))
             except AttributeError:
                 msg = 'Faulty vector for {}'.format(self.name)
-                logger.log_print(LAM_logger, msg, 'w')
+                lg.log_print(LAM_logger, msg, 'w')
                 print('ERROR: Faulty vector for {}'.format(msg))
 
     def get_vectData(self, channel):
@@ -148,7 +154,7 @@ class get_sample:
             vectData = system.read_data(vectPath)
         except:
             msg = 'No valid file for vector creation.'
-            logger.log_print(LAM_logger, msg, 'w')
+            lg.log_print(LAM_logger, msg, 'w')
             print('-> {}'.format(msg))
             vectData = None
         finally:
@@ -204,7 +210,7 @@ class get_sample:
                 BA = mp.binary_dilation(BA, structure=struct1, iterations=BDiter)
             except TypeError:
                 msg = 'BDiter in settings has to be an integer.'
-                logger.log_print(LAM_logger, msg, 'e')
+                lg.log_print(LAM_logger, msg, 'e')
                 print("TypeError: {}".format(msg))
         if SigmaGauss > 0:
             BA = gaussian(BA, sigma=SigmaGauss)
@@ -299,7 +305,7 @@ class get_sample:
             return vector, BA, skeleton, linedf
         except ValueError:
             msg = 'Faulty vector for {}'.format(self.name)
-            logger.log_print(LAM_logger, msg, 'e')
+            lg.log_print(LAM_logger, msg, 'e')
             print("WARNING: Faulty vector. Try different settings.")
             return None, None, None, None
 
@@ -353,7 +359,7 @@ class get_sample:
                 self.MPdata = MPdata.loc[:,['Position X', 'Position Y']]
             except:
                 msg = 'could not find MP position for {}'.format(self.name)
-                logger.log_print(LAM_logger, msg, 'e')
+                lg.log_print(LAM_logger, msg, 'e')
                 print("-> Failed to find MP positions")
             finally:
                 MPbin, secMPbin = None, None
@@ -440,7 +446,7 @@ class get_channel:
                 store.channels.append(self.name)
             return data
         except ValueError:
-            logger.log_print(LAM_logger, 'Cannot read channel path: {}'.format(
+            lg.log_print(LAM_logger, 'Cannot read channel path: {}'.format(
                                                                     path), 'ex')
 
     def read_additional(self, dataKeys):
@@ -543,10 +549,10 @@ def relate_data(data, MP=0, center=50, TotalLength=100):
     except:
         length = len(data)
         try:
-            logger.log_print(LAM_logger, 'Data relating failed with {}'\
+            lg.log_print(LAM_logger, 'Data relating failed with {}'\
                              .format(data.name), 'c')
         except:
-            logger.log_print(LAM_logger, 'Data relating failed', 'c')
+            lg.log_print(LAM_logger, 'Data relating failed', 'c')
     insx = int(center - MP)
     end = int(insx + length)
     insert = np.full(TotalLength, np.nan)

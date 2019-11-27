@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 """
 Created on Wed Mar  6 12:42:28 2019
+@author: Arto I. Viitanen
+Dependencies: Anaconda-included packages (Python 3.7), Shapely, pycg3d
 
 Dependencies:
     1. install Anaconda3 distribution (https://www.anaconda.com/distribution/)
@@ -52,22 +54,12 @@ by-bin. The MP-input is done similarly to channel data, i.e. as a separate
 directory that contains position.csv for a single coordinate, the MP.
 
 For more extensive instructions, see user manual. 
-
-Dependencies: Anaconda-included packages (Python 3.7), Shapely, pycg3d
-
-@author: Arto Viitanen
 """
 from settings import settings
 
-def main():
-    import system, analysis, process
+def main(LAM_logger): 
+    import system, analysis, process, logger as lg
     from system import store
-    import logger
-    if logger.log_created:
-        LAM_logger = logger.get_logger(__name__)
-    else:
-        LAM_logger = logger.setup_logger(__name__)
-        logger.print_settings(LAM_logger)
     systemPaths = system.start()
     # If sample processing set to True, create vectors, collect and project 
     # data etc. Otherwise continue to plotting and group-wise operations.
@@ -103,7 +95,24 @@ def main():
     if settings.Create_Plots:
         SampleGroups.create_plots()
     print('\nCOMPLETED')
-    logger.log_print(LAM_logger, 'Completed', 'ex')
+    lg.log_print(LAM_logger, 'Completed', 'i')
+    
+def MAIN_catch_exit():
+    """Run main() while catching system exit and keyboard interrupt for log."""
+    import logger as lg
+    if hasattr(lg, 'log_created'):
+        LAM_logger = lg.get_logger(__name__)
+    else:
+        LAM_logger = lg.setup_logger(__name__)
+        lg.print_settings(LAM_logger)  
+    try:
+        main(LAM_logger)
+    except KeyboardInterrupt:
+        lg.log_print(LAM_logger, 'STOPPED: keyboard interrupt', 'e')
+        print("STOPPED: Keyboard interrupt by user")
+    except SystemExit:
+        lg.log_print(LAM_logger, 'SYSTEM EXIT', 'ex')
+        
 
 if __name__ == '__main__':
     if settings.GUI:
@@ -113,4 +122,4 @@ if __name__ == '__main__':
         gui = interface.base_GUI(root)
         root.mainloop()
     else:
-        main()
+        MAIN_catch_exit()

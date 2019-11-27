@@ -1,9 +1,13 @@
 # -*- coding: utf-8 -*-
+"""
+Created on Wed Mar  6 12:42:28 2019
+@author: Arto I. Viitanen
+
+"""
 from settings import settings as Sett
-import sys
 import pathlib as pl, shutil, pandas as pd, inspect
-import logger
-LAM_logger = logger.get_logger(__name__)
+import logger as lg
+LAM_logger = lg.get_logger(__name__)
 
 class paths:
     def __init__(self, workdir):
@@ -28,9 +32,9 @@ class paths:
             pl.Path.mkdir(self.datadir, exist_ok=True)
             pl.Path.mkdir(self.statsdir, exist_ok=True)
         except:
-            logger.log_print(LAM_logger, 'Problem with directory creation.', 'ex')
+            lg.log_print(LAM_logger, 'Problem with directory creation.', 'ex')
             return
-        logger.log_print(LAM_logger, 'Directories successfully created.', 'i')
+        lg.log_print(LAM_logger, 'Directories successfully created.', 'i')
 
     def save_AnalysisInfo(self, sample, group, channels):
         """For saving information of all analyzed samples."""
@@ -40,7 +44,7 @@ class paths:
                      index=False, header=False)
         pd.DataFrame(channels).to_csv(self.outputdir.joinpath('Channels.csv'), 
                      index=False, header=False)
-        logger.log_print(LAM_logger, 'All metadata successfully saved.', 'i')
+        lg.log_print(LAM_logger, 'All metadata successfully saved.', 'i')
                    
 def read_data(filepath, header=Sett.header_row, test=True, index_col=False):
     """For reading csv-data."""
@@ -53,13 +57,13 @@ def read_data(filepath, header=Sett.header_row, test=True, index_col=False):
             except KeyError:
                 msg = 'Column label test failed: ID not present at {}'.format(
                                                                         filepath)
-                logger.log_print(LAM_logger, msg, 'ex')
+                lg.log_print(LAM_logger, msg, 'ex')
                 print('WARNING: read_data() call from {} line {}'.format(
                                 inspect.stack()[1][1], inspect.stack()[1][2]))
                 print("Key 'ID' not found. Wrong header row?")
                 print("If all correct, set test=False\nPath: {}".format(filepath))
     except FileNotFoundError:
-        logger.log_print(LAM_logger, 'File not found at {}'.format(filepath),'e')
+        lg.log_print(LAM_logger, 'File not found at {}'.format(filepath),'e')
         print('WARNING: read_data() call from {} line {}'.format(
                                 inspect.stack()[1][1], inspect.stack()[1][2]))
         print('File {} not found at {}'.format(filepath.name, 
@@ -73,7 +77,7 @@ def saveToFile(data, directory, filename, append=True, w_index=False):
     a DataFrame to a file. Expects the Series to be of same length as the data
     in the csv"""
     path = directory.joinpath(filename)
-    if append == False:
+    if append == False: # 
         if isinstance(data, pd.DataFrame):
             data.to_csv(str(path), index=w_index)
         else:
@@ -93,23 +97,25 @@ def saveToFile(data, directory, filename, append=True, w_index=False):
             data.to_frame().to_csv(str(path), index=w_index)
 
 def start():
+    """Check that everything is OK when starting a run."""
+    # If workdir variable isn't pathlib.Path, make it so
     if not isinstance(Sett.workdir, pl.Path):
         Sett.workdir = pl.Path(Sett.workdir)
-    try:
-        if True not in [Sett.process_samples, Sett.process_counts, 
-                    Sett.Create_Plots, Sett.process_dists, 
-                    Sett.statistics]:
-            logger.log_print(LAM_logger, 'All primary settings are False', 'e')
-            sys.exit("\nAll primary settings are set to False.\n\nExiting ...")
-        else:
-            PATHS = paths(Sett.workdir)
-            return PATHS
-    except SystemExit:
-        raise
+    # Check that at least one primary setting is True
+    if not any([Sett.process_samples, Sett.process_counts, 
+                Sett.Create_Plots, Sett.process_dists, Sett.statistics]):
+        lg.log_print(LAM_logger, 'All primary settings are False', 'e')
+        print("\nAll primary settings are set to False.\n\nExiting ...")
+        raise SystemExit 
+    else: # Otherwise create paths and directories
+        PATHS = paths(Sett.workdir)
+        return PATHS
         
 class store:
-    samplegroups = []
-    channels = []
-    samples = []
-    totalLength = 0
-    center = 0
+    """Stores important variables for the analysis."""
+    samplegroups = [] # All samplegroup in analysis
+    channels = [] # All channels in analysis
+    samples = [] # All samples in analysis
+    binNum = len(Sett.projBins) # Number of used bins
+    totalLength = 0 # The length of DataFrame after all samples are anchored
+    center = 0 # The index of the anchoring point within the DataFrame

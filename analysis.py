@@ -1,17 +1,22 @@
 # -*- coding: utf-8 -*-
+"""
+Created on Wed Mar  6 12:42:28 2019
+@author: Arto I. Viitanen
+
+"""
+import system, process, numpy as np, pathlib as pl, seaborn as sns, re, warnings
 from settings import settings
 from statistics import statistics, Total_Stats
 from system import store
 from plot import plotter
-import system, process, numpy as np, pathlib as pl, seaborn as sns, re, warnings
 from itertools import product, combinations, chain
 from pycg3d.cg3d_point import CG3dPoint
 from pycg3d import utils
 with warnings.catch_warnings():
     warnings.simplefilter('ignore', category=FutureWarning)
     import pandas as pd
-import logger
-LAM_logger = logger.get_logger(__name__)
+import logger as lg
+LAM_logger = lg.get_logger(__name__)
 
 class Samplegroups:
     """Class for holding and handling all sample groups, i.e. every sample of 
@@ -30,7 +35,7 @@ class Samplegroups:
         # Creation of variables related to all samples, that are later passed 
         # on to child classes.
         if not child:
-            logger.log_print(LAM_logger, 'Establishing sample groups.', 'i')
+#            lg.log_print(LAM_logger, 'Establishing sample groups.', 'i')
             Samplegroups._groups = groups
             Samplegroups._channels = channels
             Samplegroups._chanPaths = list(PATHS.datadir.glob('Norm_*'))
@@ -50,7 +55,7 @@ class Samplegroups:
             groupcolors = sns.xkcd_palette(settings.palette_colors)
             for i, grp in enumerate(groups):
                 Samplegroups._grpPalette.update({grp: groupcolors[i]})
-            logger.log_print(LAM_logger, 'Sample groups established.', 'i')
+            lg.log_print(LAM_logger, 'Sample groups established.', 'i')
 
     def create_plots(self):
         """For handling data for the creation of most plots, excluding stat 
@@ -224,42 +229,42 @@ class Samplegroups:
                 
         #-------#
         # Conditional function calls to create each of the plots.
-        logger.log_print(LAM_logger, 'Begin plotting.', 'i')
+        lg.log_print(LAM_logger, 'Begin plotting.', 'i')
         print("\n---Creating plots---")
         if settings.Create_Channel_Plots:
-            logger.log_print(LAM_logger, 'Plotting channels', 'i')
+            lg.log_print(LAM_logger, 'Plotting channels', 'i')
             print('Plotting channels  ...')
             __base(self._chanPaths, plotter.boxPlot)
         if settings.Create_AddData_Plots:
-            logger.log_print(LAM_logger, 'Plotting additional data', 'i')
+            lg.log_print(LAM_logger, 'Plotting additional data', 'i')
             print('Plotting additional data  ...')
             __base(self._addData, plotter.linePlot, ylabel=None)
         if settings.Create_Channel_PairPlots:
-            logger.log_print(LAM_logger, 'Plotting pairs', 'i')
+            lg.log_print(LAM_logger, 'Plotting pairs', 'i')
             print('Plotting channel pairs  ...')
             __pair()
         if settings.Create_Heatmaps:
-            logger.log_print(LAM_logger, 'Plotting heatmaps', 'i')
+            lg.log_print(LAM_logger, 'Plotting heatmaps', 'i')
             print('Plotting heatmaps  ...')
             HMpaths = self._dataDir.glob("ChanAvg_*")
             __heat(HMpaths)
         if settings.Create_ChanVSAdd_Plots:
-            logger.log_print(LAM_logger, 'Plotting channel VS additional data', 
+            lg.log_print(LAM_logger, 'Plotting channel VS additional data', 
                                                                          'i')
             print('Plotting channel VS additional data  ...')
             paths1 = _select(self._chanPaths, adds=False)
             paths2 = _select(self._addData)
             __versus(paths1, paths2, 'Chan VS AddData')
         if settings.Create_AddVSAdd_Plots:
-            logger.log_print(LAM_logger, 'Plotting add. data vs add. data','i')
+            lg.log_print(LAM_logger, 'Plotting add. data vs add. data','i')
             print('Plotting additional data VS additional data  ...')
             paths = _select(self._addData)
             __versus(paths, folder = 'AddData VS AddData')
         if settings.Create_Distribution_Plots:
-            logger.log_print(LAM_logger, 'Plotting distributions', 'i')
+            lg.log_print(LAM_logger, 'Plotting distributions', 'i')
             print('Plotting distributions  ...')
             __distributions()
-        logger.log_print(LAM_logger, 'Plotting completed..', 'i')
+        lg.log_print(LAM_logger, 'Plotting completed..', 'i')
 #        if settings.Create_NearestDist_Plots:
 #            print('Plotting average distances  ...')
 #            __nearestDist()
@@ -343,7 +348,7 @@ class Samplegroups:
     def subset_data(self, Data, compare, volIncl):
         """Get indexes of cells based on volume."""
         if not isinstance(Data, pd.DataFrame):
-            logger.log_print(LAM_logger, 'Wrong data type for subset_data()', 
+            lg.log_print(LAM_logger, 'Wrong data type for subset_data()', 
                                                                          'e')
             C='Wrong datatype for find_distance(), has to be pandas DataFrame.'
             print(C)
@@ -363,9 +368,9 @@ class Samplegroups:
     def Get_DistanceMean(self):
         """Gathers sample-data and passes it for calculation of average 
         distances between cells."""
-        logger.log_print(LAM_logger, 'Finding cell-to-cell distances', 'i')
+        lg.log_print(LAM_logger, 'Finding cell-to-cell distances', 'i')
         for grp in self._groups: # Get one sample group
-            logger.log_print(LAM_logger, '-> Distances for group {}'.format(
+            lg.log_print(LAM_logger, '-> Distances for group {}'.format(
                                                                     grp), 'i')
             print('\n---Finding nearest cells for group {}---'.format(grp))
             SampleGroup = Group(grp)
@@ -374,13 +379,13 @@ class Samplegroups:
                 print('{}  ...'.format(Smpl.name))
                 # Find distances between nuclei within the sample
                 Smpl.DistanceMean(settings.maxDist) 
-        logger.log_print(LAM_logger, 'Distances calculated', 'i')
+        lg.log_print(LAM_logger, 'Distances calculated', 'i')
     
     def Get_Clusters(self):
         """Gathers sample-data to compute cell clusters."""
-        logger.log_print(LAM_logger, 'Finding clusters', 'i')
+        lg.log_print(LAM_logger, 'Finding clusters', 'i')
         for grp in self._groups: # Get one sample group
-            logger.log_print(LAM_logger, '-> clusters for group {}'.format(
+            lg.log_print(LAM_logger, '-> clusters for group {}'.format(
                                                                     grp), 'i')
             print('\n---Finding clusters for group {}---'.format(grp))
             SampleGroup = Group(grp)
@@ -388,17 +393,17 @@ class Samplegroups:
                 Smpl = Sample(path, SampleGroup.group)
                 print('{}  ...'.format(Smpl.name))
                 Smpl.Clusters(settings.Cl_maxDist) # Find clusters
-        logger.log_print(LAM_logger, 'Clusters calculated', 'i')
+        lg.log_print(LAM_logger, 'Clusters calculated', 'i')
 
     def Get_Statistics(self):
         """Handling of data that is to be passed on to group-wise statistical 
         analysis of cell counts on each channel, and additional data."""
-        logger.log_print(LAM_logger, 'Calculation of statistics', 'i')
+        lg.log_print(LAM_logger, 'Calculation of statistics', 'i')
         if settings.Create_Plots and settings.Create_Statistics_Plots:
             print('\n---Calculating and plotting statistics---')
         else: print('\n---Calculating statistics---')
         if settings.cntrlGroup not in store.samplegroups:
-            logger.log_print(LAM_logger, 'Set control group not found', 'c')
+            lg.log_print(LAM_logger, 'Set control group not found', 'c')
             test = 0
             namer = re.compile(r"{}$".format(re.escape(settings.cntrlGroup)), 
                                re.I)
@@ -408,7 +413,7 @@ class Samplegroups:
                     settings.cntrlGroup = group
                     print("Control group has been changed to '{}'\n".format(
                                                                         group))
-                    logger.log_print(LAM_logger, '-> Changed to group {}'\
+                    lg.log_print(LAM_logger, '-> Changed to group {}'\
                                      .format(group), 'i')
                     test += 1
             if test == 0:
@@ -427,10 +432,10 @@ class Samplegroups:
                     else:
                         print('Command not understood.')
                 msg = "-> Changed to group '{}' by user".format(group)
-                logger.log_print(LAM_logger, msg, 'i')
+                lg.log_print(LAM_logger, msg, 'i')
         # Create stats of control vs. other groups if stat_versus set to True
         if settings.stat_versus:
-            logger.log_print(LAM_logger, 'Calculating versus statistics', 'i')
+            lg.log_print(LAM_logger, 'Calculating versus statistics', 'i')
             print('-Versus-')
             # Finding control and other groups
             control = settings.cntrlGroup
@@ -471,10 +476,10 @@ class Samplegroups:
                         # Create statistical plots
                         Stats.Create_Plots(Stats.statData, ylabel, 
                                            palette=self._grpPalette)
-            logger.log_print(LAM_logger, 'Versus statistics done', 'i')
+            lg.log_print(LAM_logger, 'Versus statistics done', 'i')
         # Create stats of total cell numbers if stat_total set to True
         if settings.stat_total:
-            logger.log_print(LAM_logger, 'Calculating total statistics', 'i')
+            lg.log_print(LAM_logger, 'Calculating total statistics', 'i')
             print('-Totals-')
             # Find the data file, initialize class, and count stats
             datapath = self._dataDir.joinpath('Total Counts.csv')
@@ -484,12 +489,12 @@ class Samplegroups:
             # If wanted, create plots of the stats
             if settings.Create_Plots and settings.Create_Statistics_Plots:
                 TCounts.Create_Plots(TStats)
-            logger.log_print(LAM_logger, 'Total statistics done', 'i')
-        logger.log_print(LAM_logger, 'Statistics done', 'i')
+            lg.log_print(LAM_logger, 'Total statistics done', 'i')
+        lg.log_print(LAM_logger, 'Statistics done', 'i')
                                   
     def Get_Totals(self):
         """Counting of sample & channel -specific cell count totals."""
-        logger.log_print(LAM_logger, 'Summing total channel counts', 'i')
+        lg.log_print(LAM_logger, 'Summing total channel counts', 'i')
         # Get names of samples and create a dataframe with them as columns
         samples = self._AllStarts.columns.tolist()
         Totals = pd.DataFrame(columns=samples)
@@ -502,7 +507,7 @@ class Samplegroups:
         # Save dataframe containing sums of each channel for each sample
         system.saveToFile(Totals, self._dataDir, 'Total Counts.csv', 
                           append=False, w_index=True)
-        logger.log_print(LAM_logger, 'Total channel counts done', 'i')
+        lg.log_print(LAM_logger, 'Total channel counts done', 'i')
         
 
 class Group(Samplegroups):
@@ -561,7 +566,7 @@ class Sample(Group):
                 kws.update({'tData': tData})
             except:
                 msg = "No file for channel {}".format(target)
-                logger.log_print(LAM_logger,"{}: {}".format(self.name,msg),'w')
+                lg.log_print(LAM_logger,"{}: {}".format(self.name,msg),'w')
                 print("-> {}".format(msg))
                 return
         # Loop through the channels, read, and find distances
@@ -570,7 +575,7 @@ class Sample(Group):
                 Data = system.read_data(path, header=0)
             except:
                 msg = "No file for channel {}".format(path.stem)
-                logger.log_print(LAM_logger,"{}: {}".format(self.name,msg),'w')
+                lg.log_print(LAM_logger,"{}: {}".format(self.name,msg),'w')
                 print("-> {}".format(msg))
                 return
             Data = Data.loc[:, ~Data.columns.str.contains('Nearest_')]
@@ -589,7 +594,7 @@ class Sample(Group):
                 Data = system.read_data(path, header=0)
             except:
                 msg = "No file for channel {}".format(path.stem)
-                logger.log_print(LAM_logger,"{}: {}".format(self.name,msg),'w')
+                lg.log_print(LAM_logger,"{}: {}".format(self.name,msg),'w')
                 print("-> {}".format(msg))
                 return
             Data = Data.loc[:, ~Data.columns.str.contains('ClusterID')]
@@ -707,7 +712,7 @@ class Sample(Group):
             with warnings.catch_warnings():
                 warnings.simplefilter('ignore', category=RuntimeWarning)
                 means = [np.nanmean(distances[binnedData.values==k]) for k in 
-                         np.arange(0, store.totalLength)]
+                         np.arange(0, store.binNum)]
             return NewData, means, filename
         #--------#
         if volIncl > 0: # Subsetting of data based on cell volume

@@ -1,12 +1,15 @@
 # -*- coding: utf-8 -*-
+"""
+Created on Wed Mar  6 12:42:28 2019
+@author: Arto I. Viitanen
+
+"""
 from settings import settings
 from plot import plotter
-import system, analysis
-import numpy as np, pandas as pd
+import system, analysis, numpy as np, pandas as pd, copy, warnings, re
 import scipy.stats as ss, statsmodels.stats.multitest as multi
-import copy, warnings, re
-import logger
-LAM_logger = logger.get_logger(__name__)
+import logger as lg
+LAM_logger = lg.get_logger(__name__)
 
 class statistics:
     def __init__(self, control, group2):

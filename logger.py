@@ -1,36 +1,48 @@
 # -*- coding: utf-8 -*-
-global LAM_logger
+"""
+Created on Wed Mar  6 12:42:28 2019
+@author: Arto I. Viitanen
+
+"""
 import logging, time
 
 def setup_logger(name):
+    """Sets up variables for the logger when run starts. 
+        Param. name: the calling module."""
+    # Create variables for the creation of logfile
     global logFile, ctime, log_created
-    ctime = time.strftime("%d%b%y_%H%M%S")
+    ctime = time.strftime("%d%b%y_%H%M%S") # Start time for the run
     from settings import settings as Sett
-    logFile = Sett.workdir.joinpath("log_{}.txt".format(ctime))
-    logger = get_logger(name)
-    log_created = True
+    logFile = Sett.workdir.joinpath("log_{}.txt".format(ctime)) # filepath
+    logger = get_logger(name) # Call for logger-object creation
+    log_created = True # Create variable to indicate log has been created
     return logger
     
 def get_logger(name):
-    logger = logging.getLogger(name)           
-    logger.addHandler(get_handler())        
-    logger.propagate = False
-    logger.setLevel(logging.DEBUG)
+    """Get module-specific logger.
+        Param. name: the calling module."""
+    logger = logging.getLogger(name)# Create logger      
+    logger.addHandler(_get_handler())# Call for handler that passes messages
+    logger.propagate = False # No propagation as modules call individually
+    logger.setLevel(logging.DEBUG) # Set logs of all level to be shown
     return logger
     
-def get_handler():   
+def _get_handler():
+    """Create message handler in conjunction with get_logger()"""
+    # Create format for log messages
     Formatter = logging.Formatter(
             "%(asctime)s — %(name)s — %(levelname)s — %(message)s")
+    # create handler and assign logfile's path
     file_handler = logging.FileHandler(logFile)
-    file_handler.setFormatter(Formatter)
-    file_handler.setLevel(logging.DEBUG)
+    file_handler.setFormatter(Formatter) # Set format of log messages
+    file_handler.setLevel(logging.DEBUG) # Set logs of all level to be shown
     return file_handler
 
-def log_print(self, msg="Message missing!", logtype='e'):
-    """Prints information on the log file.
+def log_print(self, msg="Missing", logtype='e'):
+    """Prints information of different level to the log file.
     Params: 
-        msg = message to log
-        logtype = type of log
+        msg: message to log
+        logtype: type of log
             i = info; w = warning; d = debug; c = critical; e = error; 
             ex = exception
     """
@@ -43,15 +55,14 @@ def log_print(self, msg="Message missing!", logtype='e'):
     elif logtype == 'c':
         self.critical(msg)
     elif logtype == 'ex':
-        self.critical(msg)
+        self.exception(msg)
     else:
-        self.error(msg)
-        
+        self.error(msg)       
 
 def print_settings(self):
     """Write settings into the log file."""
     from settings import settings as Sett
-    with open(logFile, 'w') as file:
+    with open(logFile, 'w') as file: # Write into the logfile
         file.write("Log time: {}\n".format(ctime))
         file.write("Analysis directory: {}\n\n".format(str(Sett.workdir)))
         pnames = ['Process', 'Count', 'Plots', 'Distances', 'Stats']
@@ -61,6 +72,7 @@ def print_settings(self):
         primarymsg = ', '.join([pnames[i] for i, s in enumerate(psets) if 
                              s == True])
         file.write("Primary settings: {}\n".format(primarymsg))
+        # If creating vectors, get and print related settings
         if Sett.process_samples:
             file.write("--- Process Settings ---\n")
             file.write("Vector channel: {}\n".format(Sett.vectChannel))
@@ -78,7 +90,7 @@ def print_settings(self):
             file.write(', '.join(["{}: {}".format(key, vectordict.get(key))\
                                   for key in keys]))
             file.write("\n")
-        if Sett.process_counts:
+        if Sett.process_counts: # Count settings
             file.write("--- Count Settings ---\n")
             if Sett.useMP:
                 MPmsg = "Using MP with label {}.\n".format(Sett.MPname)
@@ -91,7 +103,7 @@ def print_settings(self):
             addtypes = ', '.join(["{}".format(key)for key in sorted(list(
                                                             addD.keys()))])
             file.write("Types: {}\n".format(addtypes))  
-        if Sett.process_dists:
+        if Sett.process_dists: # Distance settings
             file.write("--- Distance Settings ---\n")
             if Sett.Find_Distances:
                 file.write("-Nearest Distance-\n")
@@ -111,7 +123,7 @@ def print_settings(self):
                 file.write(', '.join(["{}: {}".format(key, distD.get(key))\
                                   for key in keys]))
                 file.write("\n")
-            if Sett.Find_Clusters:
+            if Sett.Find_Clusters: # Cluster settings
                 file.write("-Clusters-\n")
                 clustD = {'Channels': Sett.Cluster_Channels,
                         'Maximum distance': Sett.Cl_maxDist,
@@ -129,15 +141,15 @@ def print_settings(self):
                 file.write(', '.join(["{}: {}".format(key, clustD.get(key))\
                                   for key in keys]))
                 file.write("\n")       
-        if Sett.statistics:
+        if Sett.statistics: # Statistics settings
             file.write("--- Statistics Settings ---\n")
             file.write("Control group: {}\n".format(Sett.cntrlGroup))
             file.write("Types: versus={}; total={}\n".format(
                                         Sett.stat_versus, Sett.stat_total))
             if Sett.windowed:
                 file.write("windowed: trail={}; lead={}\n".format(
-                                        Sett.stat_versus, Sett.stat_total))    
-        if Sett.Create_Plots:
+                                        Sett.trail, Sett.lead))    
+        if Sett.Create_Plots: # Plotting settings
             file.write("--- Plot Settings ---\n")
             plotnames = ['Channels', 'Additional', 'Pair', 'Heatmap', 
                          'Distribution', 'Statistics', 'ChanVSAdd', 
@@ -150,7 +162,8 @@ def print_settings(self):
                                  if  s == True])
             file.write("Plot types: {}\n".format(plotmsg))
             file.write("Drop outliers: {}\n".format(Sett.Drop_Outliers))
-        file.write("#" * 75 + "\n")
-        msg= ' - '*3+"Time"+' - '*5+"Module"+' - '*1+"Level"+' - '*2+"Message"
+        # Create header for the messages sent during the analysis
+        file.write("="*75 + "\n")
+        msg= ' '*9 +"Time" + ' '*12+"Module" + ' '*6+"Level" + ' '*9+"Message"
         file.write(msg)
         file.write("\n" + "-" * 75 + "\n")

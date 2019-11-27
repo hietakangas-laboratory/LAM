@@ -1,4 +1,9 @@
 # -*- coding: utf-8 -*-
+"""
+Created on Wed Mar  6 12:42:28 2019
+@author: Arto I. Viitanen
+
+"""
 import numpy as np, pathlib as pl
 
 class settings:
@@ -12,14 +17,16 @@ class settings:
     # Whether to gather raw data and create vectors. If False, expects to find 
     # pre-created datafiles in the Analysis Data directory, i.e. a previous 
     # full run has been made, and there has been no edits to the data files.
-    process_samples = False  # CLEARS DATA FILES-DIRECTORY
+    process_samples = True  # CLEARS DATA FILES-DIRECTORY
     # Whether to project, count and normalize data. If set to False, expect all 
     # data to be in place. Can be used to e.g. create additional plots faster.
     process_counts = True
     # Whether to compute average distances and clusters.
-    process_dists = True
+    process_dists = False
     # Set True/False to set all plotting functionalities ON/OFF
-    Create_Plots = True     # ON / OFF switch for plots
+    Create_Plots = False     # ON / OFF switch for plots
+    # Whether to calculate statistics
+    statistics = False
     ##################################################################
     
     #-#-#-#-#-#-#-#-# VECTOR CREATION & PROJECTION #-#-#-#-#-#-#-#-#-#
@@ -109,8 +116,6 @@ class settings:
     Cl_max = 50
     
     ### STATISTICS OPTIONS ###
-    # Whether to perform group-wise stat analysis.
-    statistics = True
     stat_versus = True
     stat_total = True
     windowed = True

@@ -1,11 +1,13 @@
 # -*- coding: utf-8 -*-
-from run import main
-import tkinter as tk
+"""
+Created on Wed Mar  6 12:42:28 2019
+@author: Arto I. Viitanen
+
+"""
+from run import MAIN_catch_exit
+import tkinter as tk, numpy as np, copy, pathlib as pl
 from tkinter import filedialog
 from settings import settings as Sett
-import numpy as np
-import copy
-import pathlib as pl
 
 class base_GUI(tk.Toplevel):   
     def __init__(self, master=None):
@@ -514,7 +516,6 @@ class base_GUI(tk.Toplevel):
             Sett.maxDist = setDDist.get()    
             Sett.use_target = self.UseTargetV.get()
             if Sett.use_target:
-                flag = 0
                 ChStr = setDTarget.get().split(',')
                 for i, channel in enumerate(ChStr):
                     ChStr[i] = channel.strip()
@@ -543,16 +544,16 @@ class base_GUI(tk.Toplevel):
                     Sett.Cl_incl_type = "greater"
                 else:
                     Sett.Cl_incl_type = ""
-        import logger
-        LAM_logger = logger.setup_logger(__name__)
-        logger.print_settings(LAM_logger)
-        logger.log_print(LAM_logger, 'Run parameters set', 'i')
-        logger.log_print(LAM_logger, 'Begin run', 'i')
-        if flag:
+        import logger as lg 
+        LAM_logger = lg.setup_logger(__name__)
+        lg.print_settings(LAM_logger)
+        lg.log_print(LAM_logger, 'Run parameters set', 'i')
+        lg.log_print(LAM_logger, 'Begin run', 'i')
+        if 'flag' in locals():
             msg = "'Use Target' accepts only one channel. Using '{}'".format(
                                                                     ChStr[0])
-            logger.log_print(LAM_logger, msg, 'w')
-        main()
+            lg.log_print(LAM_logger, msg, 'w')
+        MAIN_catch_exit()
         
     def show_VSett(self, name):
         for frame in self.frames.values():
