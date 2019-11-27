@@ -62,7 +62,12 @@ from settings import settings
 def main():
     import system, analysis, process
     from system import store
-    
+    import logger
+    if logger.log_created:
+        LAM_logger = logger.get_logger(__name__)
+    else:
+        LAM_logger = logger.setup_logger(__name__)
+        logger.print_settings(LAM_logger)
     systemPaths = system.start()
     # If sample processing set to True, create vectors, collect and project 
     # data etc. Otherwise continue to plotting and group-wise operations.
@@ -98,11 +103,9 @@ def main():
     if settings.Create_Plots:
         SampleGroups.create_plots()
     print('\nCOMPLETED')
-    LAM_logger.log_print('Completed', 'i')
+    logger.log_print(LAM_logger, 'Completed', 'ex')
 
 if __name__ == '__main__':
-    import logger
-    LAM_logger = logger.setup_logger(__name__)
     if settings.GUI:
         import tkinter as tk
         import interface

@@ -6,12 +6,9 @@ from settings import settings as Sett
 import numpy as np
 import copy
 import pathlib as pl
-import logger
-LAM_logger = logger.get_logger(__name__)
 
 class base_GUI(tk.Toplevel):   
     def __init__(self, master=None):
-        logger.log_print(LAM_logger, 'Initializing GUI.', 'i')
         master.title("LAM-v1.0")
         self.master = master
         self.master.bind('<Escape>', self.func_destroy)
@@ -101,7 +98,7 @@ class base_GUI(tk.Toplevel):
         self.lblHead = tk.Label(self.midf, text=lbltext, bd=1, 
                               font=('Arial', 8))
         self.lblHead.grid(row=2, column=0, columnspan=3)
-        setHead = tk.StringVar(value=Sett.header_row)
+        setHead = tk.IntVar(value=Sett.header_row)
         self.HeadIn = tk.Entry(self.midf, text=setHead.get(), bg='white', 
                              textvariable=setHead, bd=2, relief='sunken')
         self.HeadIn.grid(row=2, column=2, columnspan=3)
@@ -332,7 +329,6 @@ class base_GUI(tk.Toplevel):
         self.VDbut2.grid(row=8, column=7)
         # Disable / enable widgets
         self.Distance_check()
-        logger.log_print(LAM_logger, 'GUI initialized successfully.', 'i')
         
     def Distance_check(self):
         if not DistV.get():
@@ -422,23 +418,12 @@ class base_GUI(tk.Toplevel):
                 widget.configure(state='normal')
                 
     def Process_check(self):
-        if SampleV.get() == False:
-            self.pMP.configure(state = 'disable')
-            self.lblMP.configure(state = 'disable')
-            self.MPIn.configure(state = 'disable')
-            self.lblHead.configure(state = 'disable')
-            self.HeadIn.configure(state = 'disable')
+        if not SampleV.get():
             for widget in self.Up_leftf.winfo_children():
                 if widget not in [self.binIn, self.lbl5]:
                     widget.configure(state = 'disable')
             hidev = 'disable'
         else:
-            self.pMP.configure(state = 'normal')
-            if MPV.get():
-                self.lblMP.configure(state = 'normal')
-                self.MPIn.configure(state = 'normal')
-            self.lblHead.configure(state = 'normal')
-            self.HeadIn.configure(state = 'normal')
             for widget in self.Up_leftf.winfo_children():
                 if widget not in [self.binIn, self.lbl5]:
                     widget.configure(state = 'normal')
@@ -451,13 +436,24 @@ class base_GUI(tk.Toplevel):
             for widget in self.frames[Skel_settings].winfo_children():
                 widget.configure(state = hidev)
                 
+                
     def Count_check(self):
         if not CountV.get():
             self.binIn.configure(state = 'disable')
             self.lbl5.configure(state = 'disable')
+            self.pMP.configure(state = 'disable')
+            self.lblMP.configure(state = 'disable')
+            self.MPIn.configure(state = 'disable')
+            self.lblHead.configure(state = 'disable')
+            self.HeadIn.configure(state = 'disable')
         else:
             self.binIn.configure(state = 'normal')
             self.lbl5.configure(state = 'normal')
+            self.pMP.configure(state = 'normal')
+            self.lblMP.configure(state = 'normal')
+            self.MPIn.configure(state = 'normal')
+            self.lblHead.configure(state = 'normal')
+            self.HeadIn.configure(state = 'normal')
         
     def browse_button(self):
         filename = filedialog.askdirectory()
@@ -466,7 +462,7 @@ class base_GUI(tk.Toplevel):
         self.Detect_Channels()
         
     def RUN_button(self, event=None):
-        logger.log_print(LAM_logger, 'Run initialization.', 'i')
+        Sett.workdir = pl.Path(self.folder_path.get())
         Sett.process_samples = SampleV.get()
         Sett.process_counts = CountV.get()
         Sett.process_dists = DistV.get()
@@ -507,12 +503,14 @@ class base_GUI(tk.Toplevel):
             Sett.maxDist = setDDist.get()    
             Sett.use_target = self.UseTargetV.get()
             if Sett.use_target:
+                flag = 0
                 ChStr = setDTarget.get().split(',')
                 for i, channel in enumerate(ChStr):
                     ChStr[i] = channel.strip()
                 if len(ChStr) > 1:
                     print("USERWARNING: 'Use Target' accepts only one channel.")
-                    print("The first input channel will be used as target.")             
+                    print("Using '{}' as target".format(ChStr[0]))
+                    flag = 1
                 Sett.target_chan = ChStr[0]
             if self.FdistV.get():
                 Sett.Vol_inclusion = setDSiz.get()
@@ -521,10 +519,10 @@ class base_GUI(tk.Toplevel):
                 else:
                     Sett.incl_type = ""            
         if Sett.Find_Clusters:
-            ChStr = setClCh.get().split(',')
-            for i, channel in enumerate(ChStr):
-                ChStr[i] = channel.strip()
-            Sett.Cluster_Channels = ChStr
+            ChStr2 = setClCh.get().split(',')
+            for i, channel in enumerate(ChStr2):
+                ChStr2[i] = channel.strip()
+            Sett.Cluster_Channels = ChStr2
             Sett.Cl_maxDist = setClDist.get()
             Sett.Cl_min = setClMin.get()
             Sett.Cl_max = setClMax.get()
@@ -534,7 +532,15 @@ class base_GUI(tk.Toplevel):
                     Sett.Cl_incl_type = "greater"
                 else:
                     Sett.Cl_incl_type = ""
-        logger.log_print(LAM_logger, 'Run parameters set.', 'i')
+        import logger
+        LAM_logger = logger.setup_logger(__name__)
+        logger.print_settings(LAM_logger)
+        logger.log_print(LAM_logger, 'Run parameters set', 'i')
+        logger.log_print(LAM_logger, 'Begin run', 'i')
+        if flag:
+            msg = "'Use Target' accepts only one channel. Using '{}'".format(
+                                                                    ChStr[0])
+            logger.log_print(LAM_logger, msg, 'w')
         main()
         
     def show_VSett(self, name):

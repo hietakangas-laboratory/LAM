@@ -14,6 +14,8 @@ import logger
 LAM_logger = logger.get_logger(__name__)
 
 class plotter:
+    plot_error = False
+    
     def __init__(self, plotData, savepath, center=0, title=None, 
                  palette=None, color='b'):
         sns.set_style(settings.seaborn_style)
@@ -188,6 +190,9 @@ class plotter:
                 __add(centerline=False)
             elif plotfunc.__name__ == 'pairPlot':
                 g = self.pairPlot(**kws)
+                if self.plot_error:
+                    print('STOPPING PAIRPLOT')
+                    return
             else:
                 g = sns.FacetGrid(plotData, row=kws.get('row'),hue=kws.get('hue'), 
                           sharex=True,sharey=True,gridspec_kws=kws.get('gridspec'),
@@ -230,9 +235,19 @@ class plotter:
         dkws = {'linewidth': 2}
         with warnings.catch_warnings():
             warnings.simplefilter('ignore', category=RuntimeWarning)
-            g = sns.pairplot(data=data, hue=kws.get('hue'),kind=kws.get('kind'), 
-                         diag_kind=kws.get('diag_kind'), palette=self.palette,
-                         plot_kws=pkws, diag_kws=dkws)
+            try:
+                g = sns.pairplot(data=data, hue=kws.get('hue'),
+                                 kind=kws.get('kind'), diag_kind=kws.get(
+                                 'diag_kind'), palette=self.palette,
+                                 plot_kws=pkws, diag_kws=dkws)
+            except np.linalg.LinAlgError:
+                msg = '-> Confirm that all samples have proper channel data'
+                fullmsg = 'Pairplot singular matrix\n{}'.format(msg)
+                logger.log_print(LAM_logger, fullmsg, 'ex')
+                print('ERROR: Pairplot singular matrix')
+                print(msg)
+                self.plot_error = True
+                return None
         for lh in g._legend.legendHandles: 
             lh.set_alpha(1)
             lh._sizes = [30]

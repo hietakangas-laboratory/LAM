@@ -48,16 +48,18 @@ def read_data(filepath, header=Sett.header_row, test=True, index_col=False):
         data = pd.read_csv(filepath, header=header, index_col=index_col)
         data = data.loc[:, ~data.columns.str.contains('^Unnamed')]
         if test:
-            data.loc[:, 'ID']
-    except KeyError:
-        logger.log_print(LAM_logger, 'Column label test failed: ID not present at {}'\
-                             .format(filepath), 'w')
-        print('WARNING: read_data() call from {} line {}'.format(
+            try:
+                data.loc[:, 'ID']
+            except KeyError:
+                msg = 'Column label test failed: ID not present at {}'.format(
+                                                                        filepath)
+                logger.log_print(LAM_logger, msg, 'ex')
+                print('WARNING: read_data() call from {} line {}'.format(
                                 inspect.stack()[1][1], inspect.stack()[1][2]))
-        print("Key 'ID' not found. Wrong header row?")
-        print("If all correct, set test=False\nPath: {}".format(filepath))
+                print("Key 'ID' not found. Wrong header row?")
+                print("If all correct, set test=False\nPath: {}".format(filepath))
     except FileNotFoundError:
-        logger.log_print(LAM_logger, 'File not found at {}'.format(filepath), 'e')
+        logger.log_print(LAM_logger, 'File not found at {}'.format(filepath),'e')
         print('WARNING: read_data() call from {} line {}'.format(
                                 inspect.stack()[1][1], inspect.stack()[1][2]))
         print('File {} not found at {}'.format(filepath.name, 

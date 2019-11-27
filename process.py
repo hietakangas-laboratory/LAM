@@ -433,11 +433,15 @@ class get_channel:
         self.data = self.read_additional(dataKeys)
 
     def read_channel(self, path):
-        data = system.read_data(str(path))
-        channel = self.name
-        if channel.lower() not in [c.lower() for c in store.channels]:
-            store.channels.append(self.name)
-        return data
+        try:
+            data = system.read_data(str(path))
+            channel = self.name
+            if channel.lower() not in [c.lower() for c in store.channels]:
+                store.channels.append(self.name)
+            return data
+        except ValueError:
+            logger.log_print(LAM_logger, 'Cannot read channel path: {}'.format(
+                                                                    path), 'ex')
 
     def read_additional(self, dataKeys):
         newData = self.data
@@ -455,7 +459,8 @@ class get_channel:
                     if settings.replaceID:
                         try:
                             temp = settings.channelID.get(IDstring)
-                            IDstring = temp
+                            if temp != None:
+                                IDstring = temp
                         except: pass
                     rename = str(key + '-' + IDstring)
                     addData.rename(columns={key: rename}, inplace=True)
@@ -537,6 +542,11 @@ def relate_data(data, MP=0, center=50, TotalLength=100):
         length = data.shape[0]
     except:
         length = len(data)
+        try:
+            logger.log_print(LAM_logger, 'Data relating failed with {}'\
+                             .format(data.name), 'c')
+        except:
+            logger.log_print(LAM_logger, 'Data relating failed', 'c')
     insx = int(center - MP)
     end = int(insx + length)
     insert = np.full(TotalLength, np.nan)

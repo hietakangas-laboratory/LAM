@@ -4,7 +4,7 @@ import numpy as np, pathlib as pl
 class settings:
     """ A class for holding all user-end settings for the analysis."""
     ######################## PRIMARY SETTINGS ########################
-    GUI = False  # Use graphical user interface (True / False)
+    GUI = True  # Use graphical user interface (True / False)
     
     # DEFINE PATH TO ANALYSIS FOLDER:
     # (Use input r'PATH' where PATH is your path)
@@ -12,7 +12,7 @@ class settings:
     # Whether to gather raw data and create vectors. If False, expects to find 
     # pre-created datafiles in the Analysis Data directory, i.e. a previous 
     # full run has been made, and there has been no edits to the data files.
-    process_samples = True  # CLEARS DATA FILES-DIRECTORY
+    process_samples = False  # CLEARS DATA FILES-DIRECTORY
     # Whether to project, count and normalize data. If set to False, expect all 
     # data to be in place. Can be used to e.g. create additional plots faster.
     process_counts = True

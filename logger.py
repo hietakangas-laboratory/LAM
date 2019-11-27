@@ -3,12 +3,12 @@ global LAM_logger
 import logging, time
 
 def setup_logger(name):
-    global logFile, ctime
+    global logFile, ctime, log_created
     ctime = time.strftime("%d%b%y_%H%M%S")
     from settings import settings as Sett
     logFile = Sett.workdir.joinpath("log_{}.txt".format(ctime))
     logger = get_logger(name)
-    print_settings(logger)
+    log_created = True
     return logger
     
 def get_logger(name):
@@ -31,7 +31,8 @@ def log_print(self, msg="Message missing!", logtype='e'):
     Params: 
         msg = message to log
         logtype = type of log
-            i = info; w = warning; d = debug; c = critical; e = error
+            i = info; w = warning; d = debug; c = critical; e = error; 
+            ex = exception
     """
     if logtype == 'i':
         self.info(msg)
@@ -40,6 +41,8 @@ def log_print(self, msg="Message missing!", logtype='e'):
     elif logtype == 'd':
         self.debug(msg)
     elif logtype == 'c':
+        self.critical(msg)
+    elif logtype == 'ex':
         self.critical(msg)
     else:
         self.error(msg)
@@ -148,3 +151,5 @@ def print_settings(self):
             file.write("Plot types: {}\n".format(plotmsg))
             file.write("Drop outliers: {}\n".format(Sett.Drop_Outliers))
         file.write("#" * 50 + "\n")
+        file.write(' - '*3+"Time"+' - '*5+"Module"+' - '*2+"Level"+' - '*3+"Message")
+        file.write("\n" + "-" * 50 + "\n")
