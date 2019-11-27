@@ -28,7 +28,7 @@ class paths:
             pl.Path.mkdir(self.datadir, exist_ok=True)
             pl.Path.mkdir(self.statsdir, exist_ok=True)
         except:
-            logger.log_print(LAM_logger, 'Problem with directory creation.', 'e')
+            logger.log_print(LAM_logger, 'Problem with directory creation.', 'ex')
             return
         logger.log_print(LAM_logger, 'Directories successfully created.', 'i')
 
@@ -99,7 +99,7 @@ def start():
         if True not in [Sett.process_samples, Sett.process_counts, 
                     Sett.Create_Plots, Sett.process_dists, 
                     Sett.statistics]:
-            logger.log_print(LAM_logger, 'All primary settings are False', 'w')
+            logger.log_print(LAM_logger, 'All primary settings are False', 'e')
             sys.exit("\nAll primary settings are set to False.\n\nExiting ...")
         else:
             PATHS = paths(Sett.workdir)

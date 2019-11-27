@@ -150,6 +150,7 @@ def print_settings(self):
                                  if  s == True])
             file.write("Plot types: {}\n".format(plotmsg))
             file.write("Drop outliers: {}\n".format(Sett.Drop_Outliers))
-        file.write("#" * 50 + "\n")
-        file.write(' - '*3+"Time"+' - '*5+"Module"+' - '*2+"Level"+' - '*3+"Message")
-        file.write("\n" + "-" * 50 + "\n")
+        file.write("#" * 75 + "\n")
+        msg= ' - '*3+"Time"+' - '*5+"Module"+' - '*1+"Level"+' - '*2+"Message"
+        file.write(msg)
+        file.write("\n" + "-" * 75 + "\n")

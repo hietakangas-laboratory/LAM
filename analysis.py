@@ -343,11 +343,11 @@ class Samplegroups:
     def subset_data(self, Data, compare, volIncl):
         """Get indexes of cells based on volume."""
         if not isinstance(Data, pd.DataFrame):
-            logger.log_print(LAM_logger, 'Wrong data typee for subset_data()', 
-                                                                         'w')
+            logger.log_print(LAM_logger, 'Wrong data type for subset_data()', 
+                                                                         'e')
             C='Wrong datatype for find_distance(), has to be pandas DataFrame.'
             print(C)
-            return
+            return None
         ErrorM = "Volume not found in {}_{}'s {}".format(self.group, 
                                                   self.name, Data.name)
         if compare.lower() == 'greater':
@@ -456,8 +456,6 @@ class Samplegroups:
                     # If plotting set to True, make plots of current stats
                     if settings.Create_Statistics_Plots and \
                                                         settings.Create_Plots:
-                        msg = 'Plotting versus statistics'
-                        logger.log_print(LAM_logger, msg, 'i')
                         # Find name of data and make title and y-label
                         addChan_name = str(path.stem).split('_')[1:]
                         Stats.plottitle = "{} = {}".format(Stats.title, 
@@ -485,13 +483,13 @@ class Samplegroups:
             TStats = TCounts.stats()
             # If wanted, create plots of the stats
             if settings.Create_Plots and settings.Create_Statistics_Plots:
-                logger.log_print(LAM_logger, 'Plotting total statistics', 'i')
                 TCounts.Create_Plots(TStats)
             logger.log_print(LAM_logger, 'Total statistics done', 'i')
         logger.log_print(LAM_logger, 'Statistics done', 'i')
                                   
     def Get_Totals(self):
         """Counting of sample & channel -specific cell count totals."""
+        logger.log_print(LAM_logger, 'Summing total channel counts', 'i')
         # Get names of samples and create a dataframe with them as columns
         samples = self._AllStarts.columns.tolist()
         Totals = pd.DataFrame(columns=samples)
@@ -504,6 +502,7 @@ class Samplegroups:
         # Save dataframe containing sums of each channel for each sample
         system.saveToFile(Totals, self._dataDir, 'Total Counts.csv', 
                           append=False, w_index=True)
+        logger.log_print(LAM_logger, 'Total channel counts done', 'i')
         
 
 class Group(Samplegroups):
@@ -561,15 +560,18 @@ class Sample(Group):
                 tData = system.read_data(targetPath[0], header=0)
                 kws.update({'tData': tData})
             except:
-                print("-> Sample doesn't have file for channel {}".format(
-                                                                    target))
+                msg = "No file for channel {}".format(target)
+                logger.log_print(LAM_logger,"{}: {}".format(self.name,msg),'w')
+                print("-> {}".format(msg))
                 return
         # Loop through the channels, read, and find distances
         for path in distChans: 
             try:
                 Data = system.read_data(path, header=0)
             except:
-                print("-> No file for channel {}".format(path.stem))
+                msg = "No file for channel {}".format(path.stem)
+                logger.log_print(LAM_logger,"{}: {}".format(self.name,msg),'w')
+                print("-> {}".format(msg))
                 return
             Data = Data.loc[:, ~Data.columns.str.contains('Nearest_')]
             Data.name = path.stem
@@ -586,7 +588,9 @@ class Sample(Group):
             try:
                 Data = system.read_data(path, header=0)
             except:
-                print("-> No file for channel {}".format(path.stem))
+                msg = "No file for channel {}".format(path.stem)
+                logger.log_print(LAM_logger,"{}: {}".format(self.name,msg),'w')
+                print("-> {}".format(msg))
                 return
             Data = Data.loc[:, ~Data.columns.str.contains('ClusterID')]
             Data.name = path.stem # The name of the clustering channel

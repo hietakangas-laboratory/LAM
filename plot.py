@@ -169,6 +169,7 @@ class plotter:
             return g
         
         #---------#
+        self.plot_error = False
         if 'id_str' in kws and kws.get('id_str') is not None:
             plotData, varname, valname = __melt_data(self.data, **kws)
             kws.update({'xlabel':varname,  'ylabel':valname, 'data':plotData})

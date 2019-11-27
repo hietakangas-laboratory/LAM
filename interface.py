@@ -341,6 +341,7 @@ class base_GUI(tk.Toplevel):
             self.Cluster_check()
             self.Dist_check()
             self.Filter_check()
+        self.run_check()
                 
     def Cluster_check(self):
         if not self.clustV.get():
@@ -406,6 +407,7 @@ class base_GUI(tk.Toplevel):
             self.statsbutton.configure(state='normal')
             if PlotV.get():
                 self.statC.configure(state='normal')
+        self.run_check()
         
     def Plot_check(self):
         if PlotV.get() == False:
@@ -416,6 +418,7 @@ class base_GUI(tk.Toplevel):
             self.plotbutton.configure(state='normal')
             for widget in self.rightf.winfo_children():
                 widget.configure(state='normal')
+        self.run_check()
                 
     def Process_check(self):
         if not SampleV.get():
@@ -435,7 +438,14 @@ class base_GUI(tk.Toplevel):
         else:
             for widget in self.frames[Skel_settings].winfo_children():
                 widget.configure(state = hidev)
+        self.run_check()
                 
+    def run_check(self):
+        Ps = [SampleV.get(),CountV.get(),DistV.get(),PlotV.get(),StatsV.get()]
+        if not any(Ps):
+            self.Run_b.configure(state = 'disable', bg='lightgrey')
+        else:
+            self.Run_b.configure(state = 'normal', bg='lightgreen')
                 
     def Count_check(self):
         if not CountV.get():
@@ -454,6 +464,7 @@ class base_GUI(tk.Toplevel):
             self.MPIn.configure(state = 'normal')
             self.lblHead.configure(state = 'normal')
             self.HeadIn.configure(state = 'normal')
+        self.run_check()
         
     def browse_button(self):
         filename = filedialog.askdirectory()
