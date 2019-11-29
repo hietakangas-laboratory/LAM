@@ -94,19 +94,20 @@ def main(LAM_logger):
     # Creation of plots from various data (excluding statistical plots)
     if settings.Create_Plots:
         SampleGroups.create_plots()
-    print('\nCOMPLETED')
+    print('\nCOMPLETED\n')
     lg.log_print(LAM_logger, 'Completed', 'i')
     
 def MAIN_catch_exit():
     """Run main() while catching system exit and keyboard interrupt for log."""
     import logger as lg
-    if hasattr(lg, 'log_created'):
+    if hasattr(lg, 'log_created'): # If logger has already been set up, get
         LAM_logger = lg.get_logger(__name__)
-    else:
+    else: # otherwise set it up
         LAM_logger = lg.setup_logger(__name__)
-        lg.print_settings(LAM_logger)  
+        lg.print_settings(LAM_logger) # print settings of analysis to log
     try:
-        main(LAM_logger)
+        main(LAM_logger) # run analysis
+    # Catch and log exits from the analysis
     except KeyboardInterrupt:
         lg.log_print(LAM_logger, 'STOPPED: keyboard interrupt', 'e')
         print("STOPPED: Keyboard interrupt by user")

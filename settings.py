@@ -45,9 +45,9 @@ class settings:
     SigmaGauss = 1       # Sigma for gaussian smoothing (set to 0 if not needed)
     simplifyTol = 40     # Tolerance for vector simplification.
     # Number of bins used for vector creation when using the median vector 
-    # creation. You should probably keep this smaller than the projBins, 
-    # depending on cell density (e.g. <50%).
-    medianBins = 25
+    # creation. Increasing bin number too much may lead to stair-like vector; 
+    # increasing 'simplifyTol' can correct the steps.
+    medianBins = 70
     #-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#
 
     ## MEASUREMENT POINTS ##

@@ -5,7 +5,7 @@ Created on Wed Mar  6 12:42:28 2019
 
 """
 import system, math, pandas as pd, numpy as np, shapely.geometry as gm
-import pathlib as pl, re, logger as lg, warnings
+import pathlib as pl, re, logger as lg, warnings, decimal as dl
 from settings import settings
 from plot import plotter
 from system import store
@@ -16,6 +16,16 @@ LAM_logger = lg.get_logger(__name__)
 
 def Create_Samples(PATHS):
     lg.log_print(LAM_logger, 'Begin vector creation.', 'i')
+    resize = settings.SkeletonResize
+    if settings.SkeletonVector and dl.Decimal(str(resize)) \
+                                % dl.Decimal(str(0.10)) != dl.Decimal('0.0'):
+        msg = 'Resizing not in step of 0.1'
+        print("WARNING: {}".format(msg))
+        settings.SkeletonResize = math.floor(resize*10) / 10
+        msg2 = 'SkeletonResize changed to {}'.format(settings.SkeletonResize)
+        print("-> {}".format(msg2))
+        lg.log_print(LAM_logger, msg, 'w')
+        lg.log_print(LAM_logger, msg2, 'i') 
     # Loop Through samples to create vectors
     print("---Processing samples---")
     for path in [p for p in settings.workdir.iterdir() if p.is_dir() and p.stem 
@@ -186,8 +196,8 @@ class get_sample:
             rminv = math.floor(minv * resize / 10) * 10
             rmaxv = math.ceil(maxv * resize / 10) * 10
             return rminv, rmaxv
-
-        buffer = 200 * resize
+        
+        buffer = 500 * resize
         coords = list(zip(X, Y))
         miny, maxy = Y.min(), Y.max()
         minx, maxx = X.min(), X.max()
