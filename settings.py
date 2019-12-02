@@ -32,7 +32,7 @@ class settings:
     #-#-#-#-#-#-#-#-# VECTOR CREATION & PROJECTION #-#-#-#-#-#-#-#-#-#
     # The channel based on which the vector is created
     vectChannel = "DAPI"
-    # Number of bins used for projection unto vector (the second value).
+    # Number of bins used for projection unto vector (the third value).
     projBins = np.linspace(0, 1, 100)
     
     # Make vector by creating binary image and then skeletonizing. If False, 

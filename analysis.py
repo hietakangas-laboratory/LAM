@@ -6,7 +6,7 @@ Created on Wed Mar  6 12:42:28 2019
 """
 import system, process, numpy as np, pathlib as pl, seaborn as sns, re, warnings
 from settings import settings
-from statistics import statistics, Total_Stats
+from statsMWW import statistics, Total_Stats
 from system import store
 from plot import plotter
 from itertools import product, combinations, chain
@@ -22,7 +22,7 @@ class Samplegroups:
     """Class for holding and handling all sample groups, i.e. every sample of 
     analysis."""
     # Initiation of variables shared by all samples.
-    _groups, _chanPaths, _samplePaths, _addData, _channels = ([], [], [], [], [])
+    _groups, _chanPaths, _samplePaths, _addData, _channels = [], [], [], [], []
     _plotDir, _dataDir, _statsDir = pl.Path('./'), pl.Path('./'), pl.Path('./')
     _grpPalette = {}
     _AllMPs = None
@@ -249,8 +249,7 @@ class Samplegroups:
             HMpaths = self._dataDir.glob("ChanAvg_*")
             __heat(HMpaths)
         if settings.Create_ChanVSAdd_Plots:
-            lg.log_print(LAM_logger, 'Plotting channel VS additional data', 
-                                                                         'i')
+            lg.log_print(LAM_logger, 'Plotting channel VS additional data','i')
             print('Plotting channel VS additional data  ...')
             paths1 = _select(self._chanPaths, adds=False)
             paths2 = _select(self._addData)

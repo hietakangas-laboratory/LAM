@@ -428,12 +428,17 @@ class base_GUI(tk.Toplevel):
                 if widget not in [self.binIn, self.lbl5]:
                     widget.configure(state = 'disable')
             hidev = 'disable'
+            if not CountV.get():
+                self.lblHead.configure(state = 'disable')
+                self.HeadIn.configure(state = 'disable')
         else:
             for widget in self.Up_leftf.winfo_children():
                 if widget not in [self.binIn, self.lbl5]:
                     widget.configure(state = 'normal')
             self.switch_pages()
-            hidev = 'normal'                
+            hidev = 'normal'
+            self.lblHead.configure(state = 'normal')
+            self.HeadIn.configure(state = 'normal')             
         if not VType.get():
             for widget in self.frames[Median_settings].winfo_children():
                 widget.configure(state = hidev)
@@ -456,8 +461,9 @@ class base_GUI(tk.Toplevel):
             self.pMP.configure(state = 'disable')
             self.lblMP.configure(state = 'disable')
             self.MPIn.configure(state = 'disable')
-            self.lblHead.configure(state = 'disable')
-            self.HeadIn.configure(state = 'disable')
+            if not SampleV.get():
+                self.lblHead.configure(state = 'disable')
+                self.HeadIn.configure(state = 'disable')
         else:
             self.binIn.configure(state = 'normal')
             self.lbl5.configure(state = 'normal')
