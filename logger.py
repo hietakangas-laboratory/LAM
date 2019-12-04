@@ -38,7 +38,7 @@ def _get_handler():
     file_handler.setLevel(logging.DEBUG) # Set logs of all level to be shown
     return file_handler
 
-def log_print(self, msg="Missing", logtype='e'):
+def print(self, msg="Missing", logtype='e'):
     """Prints information of different level to the log file.
     Params: 
         msg: message to log
@@ -164,6 +164,6 @@ def print_settings(self):
             file.write("Drop outliers: {}\n".format(Sett.Drop_Outliers))
         # Create header for the messages sent during the analysis
         file.write("="*75 + "\n")
-        msg= ' '*9 +"Time" + ' '*12+"Module" + ' '*6+"Level" + ' '*9+"Message"
+        msg= ' '*9+"-Time-"+' '*12+"-Module-"+' '*6+"-Level-"+' '*9+"-Message-"
         file.write(msg)
         file.write("\n" + "-" * 75 + "\n")

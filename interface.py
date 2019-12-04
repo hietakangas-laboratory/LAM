@@ -26,13 +26,13 @@ class base_GUI(tk.Toplevel):
         
         ## LAYOUT:
         self.topf.grid(row=0, rowspan=2, columnspan=6, pady=(3,0), sticky="new")
-        self.midf.grid(row=2, rowspan=3, columnspan=6, pady=(1,1), sticky="new")
-        self.Up_leftf.grid(row=5, column=0, columnspan=3, rowspan=4, pady=(1,0), 
+        self.midf.grid(row=2, rowspan=3, columnspan=6, pady=(1,0), sticky="new")
+        self.Up_leftf.grid(row=5, column=0, columnspan=3, rowspan=4, pady=(0,0), 
                            sticky="new")
-        self.rightf.grid(row=5, column=3, columnspan=3, rowspan=10, pady=(1,0), 
+        self.rightf.grid(row=5, column=3, columnspan=3, rowspan=11, pady=(0,0), 
                          sticky="new")
-        self.distf.grid(row=12, rowspan=8, columnspan=6, sticky="new", pady=(3,0))
-        self.bottomf.grid(row=19, columnspan=6, sticky="sew", pady=(0,2))
+        self.distf.grid(row=13, rowspan=8, columnspan=6, sticky="new", pady=(0,0))
+        self.bottomf.grid(row=20, columnspan=6, sticky="sew", pady=(0,2))
         col_count, row_count = self.master.grid_size()
         for col in range(col_count):
             self.master.grid_columnconfigure(col, minsize=45)        
@@ -52,10 +52,10 @@ class base_GUI(tk.Toplevel):
         self.Detect_Channels()
         self.lblGroups = tk.Label(self.topf, text=self.DetGroups.get(), 
                                   textvariable=self.DetGroups)
-        self.lblGroups.grid(row=1, column=0, columnspan=8, pady=(0,1))
+        self.lblGroups.grid(row=1, column=0, columnspan=8, pady=(0,0))
         self.lblChannels = tk.Label(self.topf, text=self.DetChans.get(), 
                                     textvariable=self.DetChans)
-        self.lblChannels.grid(row=2, column=0, columnspan=8, pady=(0,2))
+        self.lblChannels.grid(row=2, column=0, columnspan=8, pady=(0,0))
         
         ## MIDDLE FRAME / PRIMARY SETTINGS BOX
         global SampleV, CountV, DistV, PlotV, StatsV, MPV, setMP, setHead
@@ -138,13 +138,15 @@ class base_GUI(tk.Toplevel):
         self.lbl2 = tk.Label(self.rightf, text='Plotting:', bd=2, font=('Arial', 9, 'bold'))
         self.lbl2.grid(row=0, column=0)
         # checkbox variables
-        global Pchans, Padds, Ppairs, Pheats, Pdists, Pstats, PVSchan, PVSadd
+        global Pchans, Padds, Ppairs, Pheats, Pdists, Pstats, Pclusts
+        global PVSchan, PVSadd             
         Pchans = tk.BooleanVar(value=Sett.Create_Channel_Plots)
         Padds = tk.BooleanVar(value=Sett.Create_AddData_Plots)
         Ppairs = tk.BooleanVar(value=Sett.Create_Channel_PairPlots)
         Pheats = tk.BooleanVar(value=Sett.Create_Heatmaps)
         Pdists = tk.BooleanVar(value=Sett.Create_Distribution_Plots)
         Pstats = tk.BooleanVar(value=Sett.Create_Statistics_Plots)
+        Pclusts = tk.BooleanVar(value=Sett.Create_Cluster_Plots)
         PVSchan = tk.BooleanVar(value=Sett.Create_ChanVSAdd_Plots)
         PVSadd = tk.BooleanVar(value=Sett.Create_AddVSAdd_Plots)
         # create checkboxes
@@ -160,6 +162,8 @@ class base_GUI(tk.Toplevel):
                                     variable=Pdists)
         self.statC = tk.Checkbutton(self.rightf, text="Statistics", 
                                     variable=Pstats)
+        self.clustC = tk.Checkbutton(self.rightf, text="Clusters", 
+                                    variable=Pclusts)
         self.chanVSC = tk.Checkbutton(self.rightf, text="Channel VS. Add.", 
                                       variable=PVSchan)
         self.addVSC = tk.Checkbutton(self.rightf, text="Add. VS. Add.", 
@@ -170,8 +174,9 @@ class base_GUI(tk.Toplevel):
         self.heatC.grid(row=4, column=0, sticky='w')
         self.distC.grid(row=5, column=0, sticky='w')
         self.statC.grid(row=6, column=0, sticky='w')
-        self.chanVSC.grid(row=7, column=0, sticky='w', pady=(7,0))
-        self.addVSC.grid(row=8, column=0, sticky='w', pady=(0,0))
+        self.clustC.grid(row=7, column=0, sticky='w')
+        self.chanVSC.grid(row=8, column=0, sticky='w')
+        self.addVSC.grid(row=9, column=0, sticky='w')
         if PlotV.get() == False:
             for child in self.rightf.winfo_children():
                 child.configure(state = 'disable')
@@ -215,8 +220,6 @@ class base_GUI(tk.Toplevel):
             self.show_VSett(Skel_settings)
         else:
             self.show_VSett(Median_settings)
-        self.Process_check()
-        self.Count_check()
         
         # UPPER BOTTOM / DISTANCES
         global clustV, FdistV
@@ -330,16 +333,26 @@ class base_GUI(tk.Toplevel):
         self.VDbut1.grid(row=8, column=5)
         self.VDbut2.grid(row=8, column=7)
         # Disable / enable widgets
+        self.Process_check()
+        self.Count_check()
         self.Distance_check()
         
     def Distance_check(self):
         if not DistV.get():
+            if not CountV.get():
+                self.pMP.configure(state = 'disable')
             for widget in self.distf.winfo_children():
                 widget.configure(state = 'disable')
+            if not any([CountV.get(), SampleV.get()]):
+                self.lblHead.configure(state = 'disable')
+                self.HeadIn.configure(state = 'disable')
         else:
+            self.pMP.configure(state = 'normal')
             for widget in self.distf.winfo_children():
                 if int(widget.grid_info()["row"]) in [0, 1, 2]:
                     widget.configure(state = 'normal')
+            self.lblHead.configure(state = 'normal')
+            self.HeadIn.configure(state = 'normal')
             self.Cluster_check()
             self.Dist_check()
             self.Filter_check()
@@ -428,7 +441,7 @@ class base_GUI(tk.Toplevel):
                 if widget not in [self.binIn, self.lbl5]:
                     widget.configure(state = 'disable')
             hidev = 'disable'
-            if not CountV.get():
+            if not DistV.get():
                 self.lblHead.configure(state = 'disable')
                 self.HeadIn.configure(state = 'disable')
         else:
@@ -458,10 +471,11 @@ class base_GUI(tk.Toplevel):
         if not CountV.get():
             self.binIn.configure(state = 'disable')
             self.lbl5.configure(state = 'disable')
-            self.pMP.configure(state = 'disable')
             self.lblMP.configure(state = 'disable')
             self.MPIn.configure(state = 'disable')
-            if not SampleV.get():
+            if not DistV.get():
+                self.pMP.configure(state = 'disable')
+            if not any([SampleV.get(), DistV.get()]):
                 self.lblHead.configure(state = 'disable')
                 self.HeadIn.configure(state = 'disable')
         else:
@@ -496,6 +510,7 @@ class base_GUI(tk.Toplevel):
         Sett.Create_Heatmaps = Pheats.get()
         Sett.Create_Distribution_Plots = Pdists.get()
         Sett.Create_Statistics_Plots = Pstats.get()
+        Sett.Create_Cluster_Plots = Pclusts.get()
         Sett.Create_ChanVSAdd_Plots = PVSchan.get()
         Sett.Create_AddVSAdd_Plots = PVSadd.get()
         Sett.vectChannel = setCh.get()        
@@ -535,7 +550,9 @@ class base_GUI(tk.Toplevel):
                 if self.VDselect.get():
                     Sett.incl_type = "greater"
                 else:
-                    Sett.incl_type = ""            
+                    Sett.incl_type = ""
+        else:
+            Sett.Vol_inclusion = 0
         if Sett.Find_Clusters:
             ChStr2 = setClCh.get().split(',')
             for i, channel in enumerate(ChStr2):
@@ -550,15 +567,17 @@ class base_GUI(tk.Toplevel):
                     Sett.Cl_incl_type = "greater"
                 else:
                     Sett.Cl_incl_type = ""
+        else:
+            Sett.Cl_Vol_inclusion = 0
         import logger as lg 
         LAM_logger = lg.setup_logger(__name__)
         lg.print_settings(LAM_logger)
-        lg.log_print(LAM_logger, 'Run parameters set', 'i')
-        lg.log_print(LAM_logger, 'Begin run', 'i')
+        lg.print(LAM_logger, 'Run parameters set', 'i')
+        lg.print(LAM_logger, 'Begin run', 'i')
         if 'flag' in locals():
             msg = "'Use Target' accepts only one channel. Using '{}'".format(
                                                                     ChStr[0])
-            lg.log_print(LAM_logger, msg, 'w')
+            lg.print(LAM_logger, msg, 'w')
         MAIN_catch_exit()
         
     def show_VSett(self, name):
@@ -622,7 +641,7 @@ class Skel_settings(tk.Frame):
         tk.Frame.__init__(self,parent, bd=2, relief='groove')
         self.lblSetS = tk.Label(self, text='Vector Parameters:', bd=1, 
                                 font=('Arial', 10))
-        self.lblSetS.grid(row=0, column=0, columnspan=3, pady=(0,4))
+        self.lblSetS.grid(row=0, column=0, columnspan=3, pady=(0,3))
         
         global SimpTol, reSz, fDist, dilI, SSmooth
         self.lbl6 = tk.Label(self, text='Simplify tol.', bd=1, 
@@ -659,11 +678,11 @@ class Skel_settings(tk.Frame):
         
         self.lbl10 = tk.Label(self, text='Smoothing', bd=1, 
                               font=('Arial', 9))
-        self.lbl10.grid(row=5, column=0, columnspan=1)
+        self.lbl10.grid(row=5, column=0, columnspan=1, pady=(0,22))
         SSmooth = tk.DoubleVar(value=Sett.SigmaGauss)
         self.smoothIn = tk.Entry(self, text=SSmooth.get(), bg='white', 
                              textvariable=SSmooth, bd=2, relief='sunken')
-        self.smoothIn.grid(row=5, column=1)
+        self.smoothIn.grid(row=5, column=1, pady=(0,22))
             
 class Median_settings(tk.Frame):
     def __init__(self, parent, master):
@@ -684,11 +703,11 @@ class Median_settings(tk.Frame):
         
         self.lbl7 = tk.Label(self, text='Median bins  ', bd=1, 
                              font=('Arial', 9))
-        self.lbl7.grid(row=2, column=0, columnspan=1, pady=(0,64))
+        self.lbl7.grid(row=2, column=0, columnspan=1, pady=(0,85))
         medBins = tk.IntVar(value=Sett.medianBins)
         self.mbinIn = tk.Entry(self, text=medBins.get(), bg='white', 
                              textvariable=medBins, bd=2, relief='sunken')
-        self.mbinIn.grid(row=2, column=1, pady=(0,64))
+        self.mbinIn.grid(row=2, column=1, pady=(0,85))
         
 class Additional_data(tk.Toplevel):
     def __init__(self, master):

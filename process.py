@@ -5,8 +5,9 @@ Created on Wed Mar  6 12:42:28 2019
 
 """
 import system, math, pandas as pd, numpy as np, shapely.geometry as gm
-import pathlib as pl, re, logger as lg, warnings, decimal as dl
-from settings import settings
+import pathlib as pl, re, warnings, decimal as dl, inspect
+import logger as lg
+from settings import settings as Sett
 from plot import plotter
 from system import store
 from scipy.ndimage import morphology as mp
@@ -15,69 +16,90 @@ from skimage.filters import gaussian
 LAM_logger = lg.get_logger(__name__)
 
 def Create_Samples(PATHS):
-    lg.log_print(LAM_logger, 'Begin vector creation.', 'i')
-    resize = settings.SkeletonResize
-    if settings.SkeletonVector and dl.Decimal(str(resize)) \
+    lg.print(LAM_logger, 'Begin vector creation.', 'i')
+    resize = Sett.SkeletonResize
+    if Sett.SkeletonVector and dl.Decimal(str(resize)) \
                                 % dl.Decimal(str(0.10)) != dl.Decimal('0.0'):
         msg = 'Resizing not in step of 0.1'
         print("WARNING: {}".format(msg))
-        settings.SkeletonResize = math.floor(resize*10) / 10
-        msg2 = 'SkeletonResize changed to {}'.format(settings.SkeletonResize)
+        Sett.SkeletonResize = math.floor(resize*10) / 10
+        msg2 = 'SkeletonResize changed to {}'.format(Sett.SkeletonResize)
         print("-> {}".format(msg2))
-        lg.log_print(LAM_logger, msg, 'w')
-        lg.log_print(LAM_logger, msg2, 'i') 
+        lg.print(LAM_logger, msg, 'w')
+        lg.print(LAM_logger, msg2, 'i') 
     # Loop Through samples to create vectors
     print("---Processing samples---")
-    for path in [p for p in settings.workdir.iterdir() if p.is_dir() and p.stem 
+    for path in [p for p in Sett.workdir.iterdir() if p.is_dir() and p.stem 
                  != 'Analysis Data']:
         sample = get_sample(path, PATHS)
         print("{}  ...".format(sample.name))
-        sample.vectData = sample.get_vectData(settings.vectChannel)
+        sample.vectData = sample.get_vectData(Sett.vectChannel)
         # Creation of vector for projection
-        sample.create_vector(settings.medianBins, PATHS.datadir, 
-                             settings.SkeletonVector, settings.SkeletonResize, 
-                             settings.BDiter, settings.SigmaGauss)
-    lg.log_print(LAM_logger, 'Vectors created.', 'i')
+        sample.create_vector(Sett.medianBins, PATHS.datadir, 
+                             Sett.SkeletonVector, Sett.SkeletonResize, 
+                             Sett.BDiter, Sett.SigmaGauss)
+    lg.print(LAM_logger, 'Vectors created.', 'i')
 
 def Project(PATHS):
-    lg.log_print(LAM_logger, 'Begin channel projection and counting.', 'i')
+    lg.print(LAM_logger, 'Begin channel projection and counting.', 'i')
     print("\n---Projecting and counting channels---")
-    for path in [p for p in settings.workdir.iterdir() if p.is_dir() and p.stem 
+    for path in [p for p in Sett.workdir.iterdir() if p.is_dir() and p.stem 
              != 'Analysis Data']:
         sample = get_sample(path, PATHS, process=False, project=True)
         print("{}  ...".format(sample.name))
-        sample.MP, sample.secMP = sample.get_MPs(settings.MPname, settings.useMP, 
-                                                 settings.useSecMP, 
-                                                 settings.secMP, PATHS.datadir)
+        sample.MP, sample.secMP = sample.get_MPs(Sett.MPname, Sett.useMP, 
+                                                 Sett.useSecMP, 
+                                                 Sett.secMP, PATHS.datadir)
         # Collection of data for each channel
-        for path2 in [p for p in sample.channelpaths if settings.MPname \
+        for path2 in [p for p in sample.channelpaths if Sett.MPname \
                       != str(p).split('_')[-2]]:
-            channel = get_channel(path2, sample, settings.AddData)
+            channel = get_channel(path2, sample, Sett.AddData)
             sample.data = sample.project_channel(channel, PATHS.datadir)
             channelName = str(path2.stem)
             if channelName not in ["MPs"]:
                 sample.find_counts(channel.name, PATHS.datadir)
-    lg.log_print(LAM_logger, 'All channels projected and counted.', 'i')
+    lg.print(LAM_logger, 'All channels projected and counted.', 'i')
+    print(store.clusterPaths)
 
 def Get_Counts(PATHS):
-    try:
-        MPs = system.read_data(next(PATHS.datadir.glob('MPs.csv')), header=0, 
-                               test=False)
-    except:
-        if not settings.useMP:
-            MPs = pd.DataFrame(np.zeros((1, len(store.samples))), 
+    if not Sett.useMP:
+        MPs = pd.DataFrame(np.zeros((1, len(store.samples))), 
                             columns=store.samples)
-            system.saveToFile(MPs, PATHS.datadir, 'MPs.csv', append=False)
+        path = next(PATHS.datadir.glob('MPs.csv'))
+        fMPs = system.read_data(path, header=0, test=False)
+        if not MPs.equals(fMPs):
+            print("Not using MPs. MPs.csv will be overwritten.")
+            ans = input('Proceed with overwrite (or exit)? [y/(n)] ')
+            if ans == 'y' or ans == 'Y':
+                system.saveToFile(MPs,PATHS.datadir,'MPs.csv',append=False)
+                msg = "MPs.csv overwritten. No MPs in use."
+                lg.print(LAM_logger, msg, 'i')
+            else:
+                msg = "MPs.csv not overwritten by user."
+                print(msg)
+                lg.print(LAM_logger, msg, 'w')
+                raise SystemExit
         else:
-            lg.log_print(LAM_logger, 'MPs.csv NOT found!', 'c')
-            print("ERROR: 'MPs.csv' NOT found!")
+            system.saveToFile(MPs,PATHS.datadir,'MPs.csv',append=False)
+    else:
+        try:
+            MPs = system.read_data(next(PATHS.datadir.glob('MPs.csv')), 
+                                   header=0, test=False)      
+        except FileNotFoundError:
+            msg = "MPs.csv NOT found!"
+            print("ERROR: {}".format(msg))
+            lg.print(LAM_logger, msg, 'c')
+            msg = "-> Perform 'Count' before continuing.\n"
+            print("{}".format(msg))
+            lg.print(LAM_logger, msg, 'i')
+            raise SystemExit
     # Find the smallest and largest bin-number of the dataset
     MPmax, MPmin = MPs.max(axis=1).values[0], MPs.min(axis=1).values[0]
     # Store the bin number of the row onto which samples are anchored to
     store.center = MPmax
     # Find the size of needed dataframe, i.e. so that all anchored samples fit
     MPdiff = MPmax - MPmin
-    if settings.process_counts == False and settings.process_samples == False:
+    if not any([Sett.process_counts, Sett.process_samples]):
         # Find all sample groups in the analysis from the found MPs.
         samples = MPs.columns.tolist()
         Groups = set({s.casefold(): s.split('_')[0] for s in samples}.values())
@@ -85,22 +107,21 @@ def Get_Counts(PATHS):
         try: # If required lengths of matrices haven't been defined because
             # Process and Count are both False, get the sizes from files.
             temp = system.read_data(PATHS.datadir.joinpath("Norm_{}.csv".format(
-                                settings.vectChannel)), test=False, header=0)
+                                Sett.vectChannel)), test=False, header=0)
             store.totalLength = temp.shape[0] # Length of anchored matrices
             temp = system.read_data(PATHS.datadir.joinpath("All_{}.csv".format(
-                                settings.vectChannel)), test=False, header=0)
+                                Sett.vectChannel)), test=False, header=0)
             store.binNum = temp.shape[0] # Length of sample matrix
         except AttributeError:
             msg = "Cannot determine length of sample matrix\n"+\
                     "-> Must perform 'Count' before continuing."
-            lg.log_print(LAM_logger, msg, 'c')
-            print("ERROR: {}".format(msg))
-            return            
+            lg.print(LAM_logger, msg, 'c')
+            print("ERROR: {}".format(msg))         
         return
     else:
-        store.totalLength = int(len(settings.projBins) + MPdiff)
-    if settings.process_counts:
-        lg.log_print(LAM_logger, 'Begin normalization of channels.', 'i')
+        store.totalLength = int(len(Sett.projBins) + MPdiff)
+    if Sett.process_counts:
+        lg.print(LAM_logger, 'Begin normalization of channels.', 'i')
         print('\n---Normalizing sample data---')
         countpaths = PATHS.datadir.glob('All_*')
         for path in countpaths:
@@ -114,8 +135,8 @@ def Get_Counts(PATHS):
             ChCounts.starts, NormCounts = ChCounts.normalize_samples(MPs, 
                                                              store.totalLength)
             ChCounts.averages(NormCounts)
-            ChCounts.Avg_AddData(PATHS, settings.AddData, store.totalLength)
-        lg.log_print(LAM_logger, 'Channels normalized.', 'i')
+            ChCounts.Avg_AddData(PATHS, Sett.AddData, store.totalLength)
+        lg.print(LAM_logger, 'Channels normalized.', 'i')
 
 
 class get_sample:
@@ -147,11 +168,11 @@ class get_sample:
                 system.saveToFile(lenS, PATHS.datadir, 'Length.csv')
             except FileNotFoundError:
                 msg = 'Vector.csv NOT found for {}'.format(self.name)
-                lg.log_print(LAM_logger, msg, 'e')
+                lg.print(LAM_logger, msg, 'e')
                 print('ERROR: {}'.format(msg))
             except AttributeError:
                 msg = 'Faulty vector for {}'.format(self.name)
-                lg.log_print(LAM_logger, msg, 'w')
+                lg.print(LAM_logger, msg, 'w')
                 print('ERROR: Faulty vector for {}'.format(msg))
 
     def get_vectData(self, channel):
@@ -164,7 +185,7 @@ class get_sample:
             vectData = system.read_data(vectPath)
         except:
             msg = 'No valid file for vector creation.'
-            lg.log_print(LAM_logger, msg, 'w')
+            lg.print(LAM_logger, msg, 'w')
             print('-> {}'.format(msg))
             vectData = None
         finally:
@@ -184,7 +205,7 @@ class get_sample:
         else:
             vector, lineDF = self.MedianVector(X, Y, creationBins)
             binaryArray, skeleton = None, None
-        vector = vector.simplify(settings.simplifyTol)
+        vector = vector.simplify(Sett.simplifyTol)
         length = pd.Series(vector.length, name=self.name)
         system.saveToFile(length, datadir, 'Length.csv')
         system.saveToFile(lineDF, self.sampledir, 'Vector.csv', append=False)
@@ -220,7 +241,7 @@ class get_sample:
                 BA = mp.binary_dilation(BA, structure=struct1, iterations=BDiter)
             except TypeError:
                 msg = 'BDiter in settings has to be an integer.'
-                lg.log_print(LAM_logger, msg, 'e')
+                lg.print(LAM_logger, msg, 'e')
                 print("TypeError: {}".format(msg))
         if SigmaGauss > 0:
             BA = gaussian(BA, sigma=SigmaGauss)
@@ -233,7 +254,7 @@ class get_sample:
         coordDF = pd.DataFrame(np.zeros((len(skelValues),2)),columns=['X', 'Y'])
         for i, coord in enumerate(skelValues):
             coordDF.loc[i, ['X', 'Y']] = [coord[1], coord[0]]
-        finder = settings.find_dist
+        finder = Sett.find_dist
         line = []
         start = coordDF.loc[:, 'X'].idxmin()
         sx, sy = coordDF.loc[start, 'X'], coordDF.loc[start, 'Y']
@@ -252,19 +273,6 @@ class get_sample:
                 nearest = coordDF[(abs(coordDF.loc[:, 'X'] - sx) <= finder) & 
                                  (abs(coordDF.loc[:, 'Y'] - sy) <= finder)
                                  ].index
-#            points = pd.Series(np.zeros(nearpixels.size), index=nearpixels)
-#            for i, row in coordDF.loc[nearpixels, :].iterrows():
-#                coord = row.loc['X':'Y'].tolist()
-#                point2 = gm.Point(coord[0], coord[1])
-#                dist = point.distance(point2)
-#                points.at[i] = dist
-#            minv = points.min()
-#            nearest = points.where(points <= 2 * minv).dropna().index
-#            if nearest.size == 1:
-#                x2, y2 = coordDF.loc[nearest, 'X'], coordDF.loc[nearest, 'Y']
-#                line.append((x2 / resize, y2 / resize))
-#                sx, sy = x2, y2
-#                coordDF.drop(nearest, inplace=True)
             if nearest.size > 0:
                 try:
                     point1, point2 = line[-3], line[-1]
@@ -293,30 +301,21 @@ class get_sample:
                 dropdist = distances.loc[nearest, 'distOG']
                 dropdist2 = distances.loc[nearest, 'dist']
                 # TODO alter dropping. Nearby, but only with smaller x than point?
-#                huh = distances.at[nearest, "dist"]
-#                print(distances)
-#                print(huh, drop_dist * huh)
                 forfeit = distances[(distances.dist >= dropdist) & 
                               (distances.distOG <= dropdist2)].dropna().index
-#                print(type(nearest))
                 forfeit.union([nearest])
                 coordDF.drop(forfeit, inplace=True)
-                sx, sy = x2, y2
-#                print(coordDF)
             else:
                 flag = True
-            
-#            print(sx, sy)
-#            print(type(sy))
         try:
             vector = gm.LineString(line)
-            vector = vector.simplify(settings.simplifyTol)
+            vector = vector.simplify(Sett.simplifyTol)
             linedf = pd.DataFrame(line, columns=['X', 'Y'])
             return vector, BA, skeleton, linedf
         except ValueError:
             msg = 'Faulty vector for {}'.format(self.name)
-            lg.log_print(LAM_logger, msg, 'e')
-            print("WARNING: Faulty vector. Try different settings.")
+            lg.print(LAM_logger, msg, 'e')
+            print("WARNING: Faulty vector. Try different Sett.")
             return None, None, None, None
 
     def MedianVector(self, X, Y, creationBins):
@@ -356,8 +355,8 @@ class get_sample:
         else: # If samplefolder contains unused secondary MP data, remove path
             secMPbin = None
             try:
-                rmv = next(s for s in self.channelpaths if str('_'+secMPname+'_')\
-                           in str(s))
+                rmv = next(s for s in self.channelpaths if \
+                           str('_'+secMPname+'_') in str(s))
                 self.channelpaths.remove(rmv)  
             except: pass
         if useMP:
@@ -369,7 +368,7 @@ class get_sample:
                 self.MPdata = MPdata.loc[:,['Position X', 'Position Y']]
             except:
                 msg = 'could not find MP position for {}'.format(self.name)
-                lg.log_print(LAM_logger, msg, 'e')
+                lg.print(LAM_logger, msg, 'e')
                 print("-> Failed to find MP positions")
             finally:
                 MPbin, secMPbin = None, None
@@ -405,7 +404,7 @@ class get_sample:
                  Positions["VectPoint"]]
         # Find the bins that the points fall into
         Positions["DistBin"]=np.digitize(Positions.loc[:,"NormDist"],
-                 settings.projBins, right=True)
+                 Sett.projBins, right=True)
         MPbin = pd.Series(Positions.loc[:,"DistBin"], name = self.name)
         # Save the obtained data:
         system.saveToFile(MPbin, datadir, filename)
@@ -426,15 +425,14 @@ class get_sample:
                                  in Positions["VectPoint"]]
         # Find the bins that the points fall into
         Positions["DistBin"] = np.digitize(Positions.loc[:,"NormDist"],
-                                 settings.projBins, right=True)
+                                 Sett.projBins, right=True)
         # Save the obtained data:
         ChString = str('{}.csv'.format(channel.name))
         system.saveToFile(Positions, self.sampledir, ChString, append=False)
         return Positions
 
     def find_counts(self, channelName, datadir):
-        counts = np.bincount(self.data['DistBin'], minlength=len(
-                                                            settings.projBins))
+        counts = np.bincount(self.data['DistBin'], minlength=len(Sett.projBins))
         counts = pd.Series(np.nan_to_num(counts), name=self.name)
         ChString = str('All_{}.csv'.format(channelName))
         system.saveToFile(counts, datadir, ChString)
@@ -447,6 +445,8 @@ class get_channel:
         pospath = next(self.path.glob("*Position.csv"))
         self.data = self.read_channel(pospath)
         self.data = self.read_additional(dataKeys)
+        if 'ClusterID' in self.data.columns:
+            store.clusterPaths.append(self.path)
 
     def read_channel(self, path):
         try:
@@ -456,8 +456,7 @@ class get_channel:
                 store.channels.append(self.name)
             return data
         except ValueError:
-            lg.log_print(LAM_logger, 'Cannot read channel path: {}'.format(
-                                                                    path), 'ex')
+            lg.print(LAM_logger,'Cannot read channel path {}'.format(path),'ex')
 
     def read_additional(self, dataKeys):
         newData = self.data
@@ -472,9 +471,9 @@ class get_channel:
                     # If multiple files found, search identifier from filename
                     strings = str(path.stem).split(fstring)
                     IDstring = strings[1].split('_')[1]
-                    if settings.replaceID:
+                    if Sett.replaceID:
                         try:
-                            temp = settings.channelID.get(IDstring)
+                            temp = Sett.channelID.get(IDstring)
                             if temp != None:
                                 IDstring = temp
                         except: pass
@@ -520,18 +519,16 @@ class normalize:
         
 
     def Avg_AddData(self, PATHS, dataNames, TotalLen):
-        # TODO Add try / exceptions
-        # TODO Make area and volume plots only for some channels + datafile naming !!!
+    # TODO Make area and volume plots only for some channels + datafile naming !!!
         samples = self.starts.index
         for sample in samples:
             sampleDir = PATHS.samplesdir.joinpath(sample)
             dataFile = sampleDir.glob(str(self.channel + '.csv'))
-#            try:
             data = system.read_data(next(dataFile), header=0)
             for dataType in dataNames.keys():
-                sampleData = data.loc[:, data.columns.str.contains(str(dataType))]
+                sampleData = data.loc[:,data.columns.str.contains(str(dataType))]
                 binnedData = data.loc[:, 'DistBin']
-                bins = np.arange(1, len(settings.projBins) + 1)
+                bins = np.arange(1, len(Sett.projBins) + 1)
                 for col in sampleData:
                     avgS = pd.Series(np.full(TotalLen, np.nan), name=sample)
                     with warnings.catch_warnings():
@@ -540,15 +537,10 @@ class normalize:
                                                         col]) for i in bins]
                         insert = [0 if np.isnan(v) else v for v in insert]
                     strt = int(self.starts.at[sample])
-                    end = int(strt + len(settings.projBins))
+                    end = int(strt + len(Sett.projBins))
                     avgS[strt:end] = insert
                     filename = str('Avg_{}_{}.csv'.format(self.channel, col))
                     system.saveToFile(avgS, PATHS.datadir, filename)
-#            except TypeError:
-#                print("{}: {} not found on {}".format(self.channel, dataType, 
-#                       sample))
-#            except StopIteration:
-#                pass
 
 def relate_data(data, MP=0, center=50, TotalLength=100):
     """Sets the passed data into the context of all samples, i.e. places the
@@ -558,14 +550,19 @@ def relate_data(data, MP=0, center=50, TotalLength=100):
         length = data.shape[0]
     except:
         length = len(data)
-        try:
-            lg.log_print(LAM_logger, 'Data relating failed with {}'\
-                             .format(data.name), 'c')
-        except:
-            lg.log_print(LAM_logger, 'Data relating failed', 'c')
     insx = int(center - MP)
     end = int(insx + length)
-    insert = np.full(TotalLength, np.nan)
+    insert = np.full(TotalLength, np.nan)            
     data = np.where(data==np.nan, 0, data)
-    insert[insx:end] = data
+    try:
+        insert[insx:end] = data
+    except ValueError:
+        msg = "relate_data() call from {} line {}".format(inspect.stack()[1][1], 
+                                                       inspect.stack()[1][2])
+        print('ERROR: {}'.format(msg))
+        lg.print(LAM_logger, 'Failed {}\n'.format(msg), 'ex')
+        msg="If not using MPs, remove MPs.csv from'./Analysis Data/Data Files/'"
+        if insert[insx:end].size - length == MP:
+            lg.print(LAM_logger, msg, 'i')
+        raise SystemExit
     return insert, insx

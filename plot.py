@@ -243,7 +243,7 @@ class plotter:
             except np.linalg.LinAlgError:
                 msg = '-> Confirm that all samples have proper channel data'
                 fullmsg = 'Pairplot singular matrix\n{}'.format(msg)
-                lg.log_print(LAM_logger, fullmsg, 'ex')
+                lg.print(LAM_logger, fullmsg, 'ex')
                 print('ERROR: Pairplot singular matrix')
                 print(msg)
                 self.plot_error = True
@@ -364,3 +364,23 @@ class plotter:
         g.savefig(str(filepath), format=self.format)
         plt.close('all')
         
+    def clustPlot(self):
+        fData = self.data.dropna(subset=["ClusterID"])
+        plotData = fData.loc[:, ["Position X", "Position Y", "ClusterID"]]
+        figure, ax = plt.subplots(figsize=(13, 4.75))
+        IDs = pd.unique(plotData.loc[:,"ClusterID"])
+        colors = sns.color_palette("hls", len(IDs))
+        palette = {}
+        for ind, ID in enumerate(IDs):
+            palette.update({ID: colors[ind]})
+        kws=dict(linewidth=0)
+        baseData = self.data[self.data["ClusterID"].isnull()]
+        ax.scatter(baseData.loc[:,"Position X"], baseData.loc[:,"Position Y"], 
+                    s=1.5, c='xkcd:tan')
+        sns.scatterplot(data=plotData, x="Position X", y="Position Y", 
+                        hue="ClusterID", palette=palette, ax=ax, s=5, 
+                        legend=False, **kws)
+        plt.title(self.title)
+        filepath = self.savepath.joinpath(self.title+self.ext)
+        figure.savefig(str(filepath), format=self.format)
+        plt.close()

@@ -66,7 +66,7 @@ def main(LAM_logger):
     if settings.process_samples:
         process.Create_Samples(systemPaths)
     if settings.process_counts:
-        process.Project(systemPaths)                   
+        process.Project(systemPaths)                 
     # After all samples have been collected/created, find their respective MP 
     # bins and normalize (anchor) cell count data. If MP's are not used, the 
     # samples are anchored at bin == 0.
@@ -82,6 +82,9 @@ def main(LAM_logger):
     # Computing total cell numbers from each sample's each bin
     if settings.process_counts:
         SampleGroups.Get_Totals()
+        # TODO add cluster counting (maybe save channel paths to csv when finding clusters)
+#        if store.clusterPaths: # Collect clustering data from existing files
+#            SampleGroups.Read_Clusters()
     # Finding of nearest cells and distances
     if settings.Find_Distances and settings.process_dists:
         SampleGroups.Get_DistanceMean()
@@ -95,32 +98,34 @@ def main(LAM_logger):
     if settings.Create_Plots:
         SampleGroups.create_plots()
     print('\nCOMPLETED\n')
-    lg.log_print(LAM_logger, 'Completed', 'i')
+    lg.print(LAM_logger, 'Completed', 'i')
     
 def MAIN_catch_exit():
     """Run main() while catching system exit and keyboard interrupt for log."""
     import logger as lg
-    if hasattr(lg, 'log_created'): # If logger has already been set up, get
+    # If logger has already been set up, get logger
+    if hasattr(lg, 'log_created'):
         LAM_logger = lg.get_logger(__name__)
-    else: # otherwise set it up
+    else: # otherwise set the logger up
         LAM_logger = lg.setup_logger(__name__)
         lg.print_settings(LAM_logger) # print settings of analysis to log
     try:
         main(LAM_logger) # run analysis
-    # Catch and log exits from the analysis
+    # Catch and log possible exits from the analysis
     except KeyboardInterrupt:
-        lg.log_print(LAM_logger, 'STOPPED: keyboard interrupt', 'e')
+        lg.print(LAM_logger, 'STOPPED: keyboard interrupt', 'e')
         print("STOPPED: Keyboard interrupt by user")
     except SystemExit:
-        lg.log_print(LAM_logger, 'SYSTEM EXIT', 'ex')
+        lg.print(LAM_logger, 'SYSTEM EXIT\n', 'ex')
+        print("System Exit")
         
 
 if __name__ == '__main__':
-    if settings.GUI:
+    if settings.GUI: # Create GUI if using it
         import tkinter as tk
         import interface
         root = tk.Tk()
         gui = interface.base_GUI(root)
         root.mainloop()
-    else:
+    else: # Otherwise start the analysis
         MAIN_catch_exit()

@@ -33,6 +33,7 @@ class statistics:
         self.plotDir.mkdir(exist_ok=True)
         self.chanPaths = self.dataDir.glob('Norm_*')
         self.avgPaths = self.dataDir.glob('Avg_*')
+        self.clPaths = self.dataDir.glob('ClNorm_*')
         self.palette = {control: control.color, group2.group: group2.color}
         # Statistics and data
         self.statData = None
