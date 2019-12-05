@@ -5,8 +5,9 @@ Created on Wed Mar  6 12:42:28 2019
 
 """
 import logging, time
+loggers = []
 
-def setup_logger(name):
+def setup_logger(name=None, new=True):
     """Sets up variables for the logger when run starts. 
         Param. name: the calling module."""
     # Create variables for the creation of logfile
@@ -14,9 +15,10 @@ def setup_logger(name):
     ctime = time.strftime("%d%b%y_%H%M%S") # Start time for the run
     from settings import settings as Sett
     logFile = Sett.workdir.joinpath("log_{}.txt".format(ctime)) # filepath
-    logger = get_logger(name) # Call for logger-object creation
-    log_created = True # Create variable to indicate log has been created
-    return logger
+    if new == True:
+        logger = get_logger(name) # Call for logger-object creation    
+        log_created = True # Create variable to indicate log has been created
+        return logger
     
 def get_logger(name):
     """Get module-specific logger.
@@ -25,6 +27,8 @@ def get_logger(name):
     logger.addHandler(_get_handler())# Call for handler that passes messages
     logger.propagate = False # No propagation as modules call individually
     logger.setLevel(logging.DEBUG) # Set logs of all level to be shown
+    if name not in loggers:
+        loggers.append(name)
     return logger
     
 def _get_handler():
@@ -38,7 +42,23 @@ def _get_handler():
     file_handler.setLevel(logging.DEBUG) # Set logs of all level to be shown
     return file_handler
 
-def print(self, msg="Missing", logtype='e'):
+def Close():
+    for lgr in loggers:
+        logger = logging.getLogger(lgr)
+        for handler in logger.handlers:
+            handler.close()
+        logger.handlers = []
+    
+def Update():
+    setup_logger(new=False)
+    for lgr in loggers:
+        logger = logging.getLogger(lgr)
+        logger.addHandler(_get_handler())
+
+def log_Shutdown():
+    logging.shutdown()
+
+def logprint(self, msg="Missing", logtype='e'):
     """Prints information of different level to the log file.
     Params: 
         msg: message to log
@@ -72,6 +92,11 @@ def print_settings(self):
         primarymsg = ', '.join([pnames[i] for i, s in enumerate(psets) if 
                              s == True])
         file.write("Primary settings: {}\n".format(primarymsg))
+        if any([Sett.process_samples, Sett.process_counts, Sett.process_dists]):
+            if Sett.useMP:
+                    MPmsg = "Using MP with label {}.\n".format(Sett.MPname)
+            else:
+                MPmsg = "Not using MP.\n" 
         # If creating vectors, get and print related settings
         if Sett.process_samples:
             file.write("--- Process Settings ---\n")
@@ -91,11 +116,7 @@ def print_settings(self):
                                   for key in keys]))
             file.write("\n")
         if Sett.process_counts: # Count settings
-            file.write("--- Count Settings ---\n")
-            if Sett.useMP:
-                MPmsg = "Using MP with label {}.\n".format(Sett.MPname)
-            else:
-                MPmsg = "Not using MP.\n"            
+            file.write("--- Count Settings ---\n")         
             file.write(MPmsg)
             file.write("Number of bins: {}\n".format(len(Sett.projBins)))
             file.write("-Additional data-\n")

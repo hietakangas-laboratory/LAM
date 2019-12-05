@@ -32,9 +32,9 @@ class paths:
             pl.Path.mkdir(self.datadir, exist_ok=True)
             pl.Path.mkdir(self.statsdir, exist_ok=True)
         except:
-            lg.print(LAM_logger, 'Problem with directory creation.', 'ex')
+            lg.logprint(LAM_logger, 'Problem with directory creation.', 'ex')
             return
-        lg.print(LAM_logger, 'Directories successfully created.', 'i')
+        lg.logprint(LAM_logger, 'Directories successfully created.', 'i')
 
     def save_AnalysisInfo(self, sample, group, channels):
         """For saving information of all analyzed samples."""
@@ -44,7 +44,7 @@ class paths:
                      index=False, header=False)
         pd.DataFrame(channels).to_csv(self.outputdir.joinpath('Channels.csv'), 
                      index=False, header=False)
-        lg.print(LAM_logger, 'All metadata successfully saved.', 'i')
+        lg.logprint(LAM_logger, 'All metadata successfully saved.', 'i')
                    
 def read_data(filepath, header=Sett.header_row, test=True, index_col=False):
     """For reading csv-data."""
@@ -57,13 +57,13 @@ def read_data(filepath, header=Sett.header_row, test=True, index_col=False):
             except KeyError:
                 msg = 'Column label test failed: ID not present at {}'.format(
                                                                         filepath)
-                lg.print(LAM_logger, msg, 'ex')
+                lg.logprint(LAM_logger, msg, 'ex')
                 print('WARNING: read_data() call from {} line {}'.format(
                                 inspect.stack()[1][1], inspect.stack()[1][2]))
                 print("Key 'ID' not found. Wrong header row?")
                 print("If all correct, set test=False\nPath: {}".format(filepath))
     except FileNotFoundError:
-        lg.print(LAM_logger, 'File not found at {}'.format(filepath),'e')
+        lg.logprint(LAM_logger, 'File not found at {}'.format(filepath),'e')
         print('WARNING: read_data() call from {} line {}'.format(
                                 inspect.stack()[1][1], inspect.stack()[1][2]))
         print('File {} not found at {}'.format(filepath.name, 
@@ -104,7 +104,7 @@ def start():
     # Check that at least one primary setting is True
     if not any([Sett.process_samples, Sett.process_counts, 
                 Sett.Create_Plots, Sett.process_dists, Sett.statistics]):
-        lg.print(LAM_logger, 'All primary settings are False', 'e')
+        lg.logprint(LAM_logger, 'All primary settings are False', 'e')
         print("\nAll primary settings are set to False.\n\nExiting ...")
         raise SystemExit
     else: # Otherwise create paths and directories

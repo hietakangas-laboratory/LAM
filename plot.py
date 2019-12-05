@@ -243,7 +243,7 @@ class plotter:
             except np.linalg.LinAlgError:
                 msg = '-> Confirm that all samples have proper channel data'
                 fullmsg = 'Pairplot singular matrix\n{}'.format(msg)
-                lg.print(LAM_logger, fullmsg, 'ex')
+                lg.logprint(LAM_logger, fullmsg, 'ex')
                 print('ERROR: Pairplot singular matrix')
                 print(msg)
                 self.plot_error = True

@@ -58,7 +58,7 @@ For more extensive instructions, see user manual.
 from settings import settings
 
 def main(LAM_logger): 
-    import system, analysis, process, logger as lg
+    import system, analysis, process
     from system import store
     systemPaths = system.start()
     # If sample processing set to True, create vectors, collect and project 
@@ -82,7 +82,7 @@ def main(LAM_logger):
     # Computing total cell numbers from each sample's each bin
     if settings.process_counts:
         SampleGroups.Get_Totals()
-        # TODO add cluster counting (maybe save channel paths to csv when finding clusters)
+        # TODO add cluster counting (maybe save channel paths to csv when finding clusters) ???
 #        if store.clusterPaths: # Collect clustering data from existing files
 #            SampleGroups.Read_Clusters()
     # Finding of nearest cells and distances
@@ -97,27 +97,29 @@ def main(LAM_logger):
     # Creation of plots from various data (excluding statistical plots)
     if settings.Create_Plots:
         SampleGroups.create_plots()
-    print('\nCOMPLETED\n')
-    lg.print(LAM_logger, 'Completed', 'i')
     
 def MAIN_catch_exit():
     """Run main() while catching system exit and keyboard interrupt for log."""
-    import logger as lg
-    # If logger has already been set up, get logger
-    if hasattr(lg, 'log_created'):
+    import logger as lg, logging
+    # If logger has not been set up, create logger
+    if __name__ not in lg.loggers and hasattr(lg,'log_created'):
         LAM_logger = lg.get_logger(__name__)
-    else: # otherwise set the logger up
-        LAM_logger = lg.setup_logger(__name__)
-        lg.print_settings(LAM_logger) # print settings of analysis to log
+    else: # else get logger
+        LAM_logger = logging.getLogger(__name__)
     try:
         main(LAM_logger) # run analysis
+        print('\nCOMPLETED\n')
+        lg.logprint(LAM_logger, 'Completed', 'i')
+        lg.Close()
     # Catch and log possible exits from the analysis
     except KeyboardInterrupt:
-        lg.print(LAM_logger, 'STOPPED: keyboard interrupt', 'e')
+        lg.logprint(LAM_logger, 'STOPPED: keyboard interrupt', 'e')
         print("STOPPED: Keyboard interrupt by user")
     except SystemExit:
-        lg.print(LAM_logger, 'SYSTEM EXIT\n', 'ex')
+        lg.logprint(LAM_logger, 'SYSTEM EXIT\n', 'ex')
         print("System Exit")
+    finally:
+        lg.Close() 
         
 
 if __name__ == '__main__':
@@ -128,4 +130,7 @@ if __name__ == '__main__':
         gui = interface.base_GUI(root)
         root.mainloop()
     else: # Otherwise start the analysis
+        import logger as lg
+        LAM_logger = lg.setup_logger(__name__)
+        lg.print_settings(LAM_logger) # print settings of analysis to log
         MAIN_catch_exit()

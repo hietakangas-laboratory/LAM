@@ -16,7 +16,7 @@ from skimage.filters import gaussian
 LAM_logger = lg.get_logger(__name__)
 
 def Create_Samples(PATHS):
-    lg.print(LAM_logger, 'Begin vector creation.', 'i')
+    lg.logprint(LAM_logger, 'Begin vector creation.', 'i')
     resize = Sett.SkeletonResize
     if Sett.SkeletonVector and dl.Decimal(str(resize)) \
                                 % dl.Decimal(str(0.10)) != dl.Decimal('0.0'):
@@ -25,8 +25,8 @@ def Create_Samples(PATHS):
         Sett.SkeletonResize = math.floor(resize*10) / 10
         msg2 = 'SkeletonResize changed to {}'.format(Sett.SkeletonResize)
         print("-> {}".format(msg2))
-        lg.print(LAM_logger, msg, 'w')
-        lg.print(LAM_logger, msg2, 'i') 
+        lg.logprint(LAM_logger, msg, 'w')
+        lg.logprint(LAM_logger, msg2, 'i') 
     # Loop Through samples to create vectors
     print("---Processing samples---")
     for path in [p for p in Sett.workdir.iterdir() if p.is_dir() and p.stem 
@@ -38,10 +38,10 @@ def Create_Samples(PATHS):
         sample.create_vector(Sett.medianBins, PATHS.datadir, 
                              Sett.SkeletonVector, Sett.SkeletonResize, 
                              Sett.BDiter, Sett.SigmaGauss)
-    lg.print(LAM_logger, 'Vectors created.', 'i')
+    lg.logprint(LAM_logger, 'Vectors created.', 'i')
 
 def Project(PATHS):
-    lg.print(LAM_logger, 'Begin channel projection and counting.', 'i')
+    lg.logprint(LAM_logger, 'Begin channel projection and counting.', 'i')
     print("\n---Projecting and counting channels---")
     for path in [p for p in Sett.workdir.iterdir() if p.is_dir() and p.stem 
              != 'Analysis Data']:
@@ -58,8 +58,7 @@ def Project(PATHS):
             channelName = str(path2.stem)
             if channelName not in ["MPs"]:
                 sample.find_counts(channel.name, PATHS.datadir)
-    lg.print(LAM_logger, 'All channels projected and counted.', 'i')
-    print(store.clusterPaths)
+    lg.logprint(LAM_logger, 'All channels projected and counted.', 'i')
 
 def Get_Counts(PATHS):
     if not Sett.useMP:
@@ -73,11 +72,11 @@ def Get_Counts(PATHS):
             if ans == 'y' or ans == 'Y':
                 system.saveToFile(MPs,PATHS.datadir,'MPs.csv',append=False)
                 msg = "MPs.csv overwritten. No MPs in use."
-                lg.print(LAM_logger, msg, 'i')
+                lg.logprint(LAM_logger, msg, 'i')
             else:
                 msg = "MPs.csv not overwritten by user."
                 print(msg)
-                lg.print(LAM_logger, msg, 'w')
+                lg.logprint(LAM_logger, msg, 'w')
                 raise SystemExit
         else:
             system.saveToFile(MPs,PATHS.datadir,'MPs.csv',append=False)
@@ -88,10 +87,10 @@ def Get_Counts(PATHS):
         except FileNotFoundError:
             msg = "MPs.csv NOT found!"
             print("ERROR: {}".format(msg))
-            lg.print(LAM_logger, msg, 'c')
+            lg.logprint(LAM_logger, msg, 'c')
             msg = "-> Perform 'Count' before continuing.\n"
             print("{}".format(msg))
-            lg.print(LAM_logger, msg, 'i')
+            lg.logprint(LAM_logger, msg, 'i')
             raise SystemExit
     # Find the smallest and largest bin-number of the dataset
     MPmax, MPmin = MPs.max(axis=1).values[0], MPs.min(axis=1).values[0]
@@ -101,7 +100,12 @@ def Get_Counts(PATHS):
     MPdiff = MPmax - MPmin
     if not any([Sett.process_counts, Sett.process_samples]):
         # Find all sample groups in the analysis from the found MPs.
+        FSamples = [p for p in PATHS.samplesdir.iterdir() if p.is_dir()]
         samples = MPs.columns.tolist()
+        if len(FSamples) != len(samples): # Test whether sample numbers match
+            msg = "Mismatch of sample N between MPs.csv and sample folders"
+            print('WARNING: {}'.format(msg))
+            lg.logprint(LAM_logger, msg, 'w')
         Groups = set({s.casefold(): s.split('_')[0] for s in samples}.values())
         store.samplegroups = sorted(Groups)
         try: # If required lengths of matrices haven't been defined because
@@ -115,13 +119,13 @@ def Get_Counts(PATHS):
         except AttributeError:
             msg = "Cannot determine length of sample matrix\n"+\
                     "-> Must perform 'Count' before continuing."
-            lg.print(LAM_logger, msg, 'c')
+            lg.logprint(LAM_logger, msg, 'c')
             print("ERROR: {}".format(msg))         
         return
     else:
         store.totalLength = int(len(Sett.projBins) + MPdiff)
     if Sett.process_counts:
-        lg.print(LAM_logger, 'Begin normalization of channels.', 'i')
+        lg.logprint(LAM_logger, 'Begin normalization of channels.', 'i')
         print('\n---Normalizing sample data---')
         countpaths = PATHS.datadir.glob('All_*')
         for path in countpaths:
@@ -136,7 +140,7 @@ def Get_Counts(PATHS):
                                                              store.totalLength)
             ChCounts.averages(NormCounts)
             ChCounts.Avg_AddData(PATHS, Sett.AddData, store.totalLength)
-        lg.print(LAM_logger, 'Channels normalized.', 'i')
+        lg.logprint(LAM_logger, 'Channels normalized.', 'i')
 
 
 class get_sample:
@@ -168,11 +172,11 @@ class get_sample:
                 system.saveToFile(lenS, PATHS.datadir, 'Length.csv')
             except FileNotFoundError:
                 msg = 'Vector.csv NOT found for {}'.format(self.name)
-                lg.print(LAM_logger, msg, 'e')
+                lg.logprint(LAM_logger, msg, 'e')
                 print('ERROR: {}'.format(msg))
             except AttributeError:
                 msg = 'Faulty vector for {}'.format(self.name)
-                lg.print(LAM_logger, msg, 'w')
+                lg.logprint(LAM_logger, msg, 'w')
                 print('ERROR: Faulty vector for {}'.format(msg))
 
     def get_vectData(self, channel):
@@ -185,7 +189,7 @@ class get_sample:
             vectData = system.read_data(vectPath)
         except:
             msg = 'No valid file for vector creation.'
-            lg.print(LAM_logger, msg, 'w')
+            lg.logprint(LAM_logger, msg, 'w')
             print('-> {}'.format(msg))
             vectData = None
         finally:
@@ -241,7 +245,7 @@ class get_sample:
                 BA = mp.binary_dilation(BA, structure=struct1, iterations=BDiter)
             except TypeError:
                 msg = 'BDiter in settings has to be an integer.'
-                lg.print(LAM_logger, msg, 'e')
+                lg.logprint(LAM_logger, msg, 'e')
                 print("TypeError: {}".format(msg))
         if SigmaGauss > 0:
             BA = gaussian(BA, sigma=SigmaGauss)
@@ -314,7 +318,7 @@ class get_sample:
             return vector, BA, skeleton, linedf
         except ValueError:
             msg = 'Faulty vector for {}'.format(self.name)
-            lg.print(LAM_logger, msg, 'e')
+            lg.logprint(LAM_logger, msg, 'e')
             print("WARNING: Faulty vector. Try different Sett.")
             return None, None, None, None
 
@@ -368,7 +372,7 @@ class get_sample:
                 self.MPdata = MPdata.loc[:,['Position X', 'Position Y']]
             except:
                 msg = 'could not find MP position for {}'.format(self.name)
-                lg.print(LAM_logger, msg, 'e')
+                lg.logprint(LAM_logger, msg, 'e')
                 print("-> Failed to find MP positions")
             finally:
                 MPbin, secMPbin = None, None
@@ -456,7 +460,7 @@ class get_channel:
                 store.channels.append(self.name)
             return data
         except ValueError:
-            lg.print(LAM_logger,'Cannot read channel path {}'.format(path),'ex')
+            lg.logprint(LAM_logger,'Cannot read channel path {}'.format(path),'ex')
 
     def read_additional(self, dataKeys):
         newData = self.data
@@ -560,9 +564,9 @@ def relate_data(data, MP=0, center=50, TotalLength=100):
         msg = "relate_data() call from {} line {}".format(inspect.stack()[1][1], 
                                                        inspect.stack()[1][2])
         print('ERROR: {}'.format(msg))
-        lg.print(LAM_logger, 'Failed {}\n'.format(msg), 'ex')
+        lg.logprint(LAM_logger, 'Failed {}\n'.format(msg), 'ex')
         msg="If not using MPs, remove MPs.csv from'./Analysis Data/Data Files/'"
         if insert[insx:end].size - length == MP:
-            lg.print(LAM_logger, msg, 'i')
+            lg.logprint(LAM_logger, msg, 'i')
         raise SystemExit
     return insert, insx

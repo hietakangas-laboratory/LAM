@@ -25,8 +25,8 @@ class base_GUI(tk.Toplevel):
         self.bottomf = tk.Frame(self.master)
         
         ## LAYOUT:
-        self.topf.grid(row=0, rowspan=2, columnspan=6, pady=(3,0), sticky="new")
-        self.midf.grid(row=2, rowspan=3, columnspan=6, pady=(1,0), sticky="new")
+        self.topf.grid(row=0, rowspan=2, columnspan=6, pady=(1,0), sticky="new")
+        self.midf.grid(row=2, rowspan=3, columnspan=6, pady=(0,0), sticky="new")
         self.Up_leftf.grid(row=5, column=0, columnspan=3, rowspan=4, pady=(0,0), 
                            sticky="new")
         self.rightf.grid(row=5, column=3, columnspan=3, rowspan=11, pady=(0,0), 
@@ -113,7 +113,7 @@ class base_GUI(tk.Toplevel):
         self.Run_b.grid(row=0, column=4, columnspan=1, padx=(75,25), sticky='es')
         self.quitbutton = tk.Button(self.bottomf, text="Quit", 
                                     font=('Arial', 9, 'bold'), 
-                                    command=master.destroy)
+                                    command=self.func_destroy)
         self.quitbutton.configure(height=1, width=5, fg="red")
         self.quitbutton.grid(row=0, column=5, sticky='es')
         
@@ -569,15 +569,19 @@ class base_GUI(tk.Toplevel):
                     Sett.Cl_incl_type = ""
         else:
             Sett.Cl_Vol_inclusion = 0
-        import logger as lg 
-        LAM_logger = lg.setup_logger(__name__)
+        import logger as lg, logging
+        if hasattr(lg, 'log_created'):
+            lg.Update()
+            LAM_logger = logging.getLogger(__name__)
+        else:
+            LAM_logger = lg.setup_logger(__name__)
         lg.print_settings(LAM_logger)
-        lg.print(LAM_logger, 'Run parameters set', 'i')
-        lg.print(LAM_logger, 'Begin run', 'i')
+        lg.logprint(LAM_logger, 'Run parameters set', 'i')
+        lg.logprint(LAM_logger, 'Begin run', 'i')
         if 'flag' in locals():
             msg = "'Use Target' accepts only one channel. Using '{}'".format(
                                                                     ChStr[0])
-            lg.print(LAM_logger, msg, 'w')
+            lg.logprint(LAM_logger, msg, 'w')
         MAIN_catch_exit()
         
     def show_VSett(self, name):
@@ -593,6 +597,8 @@ class base_GUI(tk.Toplevel):
             self.show_VSett(Skel_settings)
     
     def func_destroy(self, event=None):
+        import logger as lg
+        lg.log_Shutdown()
         self.master.destroy()
         
     def Open_AddSettings(self):
