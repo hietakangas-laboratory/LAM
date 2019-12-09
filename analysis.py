@@ -264,7 +264,7 @@ class Samplegroups:
             plot_maker = plotter(fullData, self._plotDir, center=cntr,
                          title=name, palette=self._grpPalette)
             kws = {'height':3, 'aspect':5, 'gridspec':{'hspace': 0.5}, 
-                   'row':'Channel', 'title_y':1,'center': plot_maker.MPbin}
+                   'row':'Channel', 'title_y':1.05,'center': plot_maker.MPbin}
             plot_maker.plot_Data(plotter.Heatmap, savepath.parent, **kws)
                                
         #-------#
@@ -442,6 +442,9 @@ class Samplegroups:
                 print('{}  ...'.format(Smpl.name))
                 paths = Smpl.Clusters(Sett.Cl_maxDist) # Find clusters
                 allpaths.append(paths)
+        paths = pd.DataFrame(allpaths)
+        paths.to_csv(self._plotDir.parent.joinpath("ClusterPaths.csv"), 
+                     index=False)
         lg.logprint(LAM_logger, 'Clusters calculated', 'i')
         
     def Read_Clusters(self):
@@ -657,7 +660,7 @@ class Sample(Group):
                 lg.logprint(LAM_logger,"{}: {}".format(self.name,msg),'w')
                 print("-> {}".format(msg))
                 return
-#            Data = Data.loc[:, ~Data.columns.str.contains('ClusterID')]
+            Data = Data.loc[:, ~Data.columns.str.contains('ClusterID')]
             Data.name = path.stem # The name of the clustering channel
             self.find_distances(Data, volIncl=Sett.Cl_Vol_inclusion, 
                    compare=Sett.Cl_incl_type, clusters=True, **kws)            
@@ -806,18 +809,15 @@ class Sample(Group):
             system.saveToFile(SMeans, self._dataDir, filename)
         else: # Finding clusters
             Clusters = __find_clusters()
-            collabel = 'ClusterID_{}'.format(Data.name)
             # Create dataframe for storing the obtained data
-            clustData = pd.DataFrame(index=Data.index, columns=['ID', collabel])
+            clustData = pd.DataFrame(index=Data.index, columns=['ID', 'ClusterID'])
             clustData = clustData.assign(ID = Data.ID) # Copy ID column from Data
             # Gives a name from a continuous range to each of the found clusters 
             # and adds it to cell-specific data (for each belonging cell).
             if Clusters:
                 for i, vals in enumerate(Clusters):
-                    clustData.loc[clustData.ID.isin(
-                            [int(v) for v in vals]), collabel] = i
-            if collabel in Data.columns:
-                Data.drop(collabel, axis=1)
+                    vals = [int(v) for v in vals]
+                    clustData.loc[clustData.ID.isin(vals),'ClusterID'] = i
             # Merge obtained data with the original data
             NewData = Data.merge(clustData, how='outer', copy=False, on=['ID'])
             self.Count_clusters(NewData, Data.name)
@@ -826,10 +826,9 @@ class Sample(Group):
         system.saveToFile(NewData, self.path, OW_name, append=False)    
         
     def Count_clusters(self, Data, name):
-        lbl = 'ClusterID_{}'.format(name)
         # Find bins of the clustered cells to find counts per bin
-        idx = Data.loc[:,lbl].notna().index
-        binnedData = Data.loc[Data.loc[:,lbl].notna(),'DistBin']
+        idx = Data.loc[:,'ClusterID'].notna().index
+        binnedData = Data.loc[Data.dropna(subset=['ClusterID']).index,'DistBin']
         # Sort values and then get counts
         bins = binnedData.sort_values().to_numpy()
         unique, counts = np.unique(bins, return_counts=True)
@@ -837,7 +836,7 @@ class Sample(Group):
         # Create series to store the cell count data
         binnedCounts = pd.Series(np.full(len(idx), np.nan), index=idx, 
                                  name=self.name)
-        binnedCounts[unique] = counts
+        binnedCounts.loc[unique] = counts
         filename = 'Clusters-{}.csv'.format(name)
         system.saveToFile(binnedCounts, self._dataDir, filename)
         # Relate the counts to context, i.e. anchor them at the MP
