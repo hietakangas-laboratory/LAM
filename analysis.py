@@ -271,6 +271,8 @@ class Samplegroups:
         # Conditional function calls to create each of the plots.
         lg.logprint(LAM_logger, 'Begin plotting.', 'i')
         print("\n---Creating plots---")
+        # Update addData variable to contain newly created average-files
+        self._addData = list(self._dataDir.glob('Avg_*'))
         if Sett.Create_Channel_Plots:
             lg.logprint(LAM_logger, 'Plotting channels', 'i')
             print('Plotting channels  ...')
@@ -304,8 +306,7 @@ class Samplegroups:
             print('Plotting additional data VS additional data  ...')
             paths = _select(self._addData)
             __versus(paths, folder = 'AddData VS AddData')
-            lg.logprint(LAM_logger, 'additional data VS additional data done.',
-                                                                         'i')
+            lg.logprint(LAM_logger, 'additional data VS additional data done.',                                                                         'i')
         if Sett.Create_Distribution_Plots:
             lg.logprint(LAM_logger, 'Plotting distributions', 'i')
             print('Plotting distributions  ...')
@@ -749,14 +750,14 @@ class Sample(Group):
             if 'targetXY' in locals(): 
                 target = targetXY
                 comment = Sett.target_chan
-                filename = 'Avg_{}VS{}_DistanceMeans.csv'.format(Data.name, 
+                filename = 'Avg_{} VS {}_Distance Means.csv'.format(Data.name, 
                                                                   comment)
                 rmv = False
             else: # If using the same channel:
                 target = XYpos
                 rmv = True
                 comment = Data.name
-                filename = 'Avg_{}_DistanceMeans.csv'.format(Data.name)
+                filename = 'Avg_{}_Distance Means.csv'.format(Data.name)
             cols = ['Nearest_XYZ_{}'.format(comment),'Nearest_Dist_{}'.format(
                     comment), 'Nearest_ID_{}'.format(comment)]
             pointData = pd.DataFrame(columns=cols, index=XYpos.index)

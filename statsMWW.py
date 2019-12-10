@@ -8,8 +8,6 @@ from settings import settings
 from plot import plotter
 import system, analysis, numpy as np, pandas as pd, copy, warnings, re
 import scipy.stats as ss, statsmodels.stats.multitest as multi
-import logger as lg
-LAM_logger = lg.get_logger(__name__)
 
 class statistics:
     def __init__(self, control, group2):

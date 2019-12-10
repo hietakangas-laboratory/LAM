@@ -5,7 +5,8 @@ Created on Wed Mar  6 12:42:28 2019
 
 """
 import logging, time
-loggers = []
+# A list of logger names used by the modules. Used for clearing of handlers.
+loggers = ['run', 'process', 'analysis', 'interface', 'plot', 'system']
 
 def setup_logger(name=None, new=True):
     """Sets up variables for the logger when run starts. 

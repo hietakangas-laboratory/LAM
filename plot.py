@@ -282,7 +282,7 @@ class plotter:
         key = data.iat[(0, 0)]
         sns.jointplot(data=data, x=data.loc[:, kws.get('X')], y=data.loc[:,
                       kws.get('Y')],kind='kde',color=palette.get(key), 
-                        ax=axes, joint_kws={'shade_lowest': False})
+                        ax=axes, space=0, joint_kws={'shade_lowest': False})
     
     def catPlot(self, palette, **kws):        
         data = kws.pop('data')
