@@ -24,8 +24,9 @@ def setup_logger(name=None, new=True):
 def get_logger(name):
     """Get module-specific logger.
         Param. name: the calling module."""
-    logger = logging.getLogger(name)# Create logger      
-    logger.addHandler(_get_handler())# Call for handler that passes messages
+    logger = logging.getLogger(name)# Create logger
+    if not logger.handlers:    
+        logger.addHandler(_get_handler())# Call for handler that passes messages
     logger.propagate = False # No propagation as modules call individually
     logger.setLevel(logging.DEBUG) # Set logs of all level to be shown
     if name not in loggers:
@@ -61,6 +62,7 @@ def Update():
     for lgr in loggers:
         logger = logging.getLogger(lgr)
         logger.addHandler(_get_handler())
+            
 
 def log_Shutdown():
     logging.shutdown()

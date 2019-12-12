@@ -203,7 +203,7 @@ class plotter:
                     g._legend.remove()
                 for ax in g.axes.flat:
                     ax.xaxis.set_tick_params(labelbottom=True)
-                __add()
+                    __add()
         # Giving a title and then saving the plot
         plt.suptitle(self.title, weight='bold', y=kws.get('title_y'))
         filepath = savepath.joinpath(self.title + self.ext)
@@ -307,7 +307,7 @@ class plotter:
 #        g.set_yticklabels(g.get_xticklabels(), rotation=45)
         MPbin = kws.get('center')
         ybot, ytop = plt.ylim()
-        axes.plot((MPbin, MPbin), (0.5, data.shape[0]-0.5), 'r--')
+        axes.plot((MPbin, MPbin), (0, data.shape[0]), 'r--')
         return axes
     
     def total_plot(self, stats, order):

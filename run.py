@@ -100,6 +100,7 @@ def main(LAM_logger):
     
 def MAIN_catch_exit():
     """Run main() while catching system exit and keyboard interrupt for log."""
+    # Get premade logger
     import logger as lg
     LAM_logger = lg.get_logger(__name__)
     try:

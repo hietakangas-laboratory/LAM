@@ -141,11 +141,12 @@ class Samplegroups:
             # Initialize plotting-class, create kws, and plot all channel data.
             plot_maker = plotter(fullData, self._plotDir, center=cntr,
                          title=name, palette=None)
-            kws = {'height':3, 'aspect':5, 'gridspec':{'hspace': 0.5}, 
-                   'row':'Channel', 'title_y':0.95,'center': plot_maker.MPbin}
+            kws = {'height':3, 'aspect':5, 'sharey': False, 'row': 'Channel',
+                   'title_y':0.93, 'center': plot_maker.MPbin, 
+                   'xlen':self._length, 'gridspec':{'hspace': 0.5}}
             if samples:
                 val = fullData.index.unique().size / 2
-                kws.update({'height': val, 'sharey': False})
+                kws.update({'height': val})
             plot_maker.plot_Data(plotter.Heatmap, savepath, **kws)
             
         def __versus(paths1, paths2=None, folder=None):

@@ -9,11 +9,11 @@ import numpy as np, pathlib as pl
 class settings:
     """ A class for holding all user-end settings for the analysis."""
     ######################## PRIMARY SETTINGS ########################
-    GUI = True  # Use graphical user interface (True / False)
+    GUI = False  # Use graphical user interface (True / False)
     
     # DEFINE PATH TO ANALYSIS FOLDER:
     # (Use input r'PATH' where PATH is your path)
-    workdir = pl.Path(r'\\ad.helsinki.fi\home\a\artoviit\Desktop\test')
+    workdir = pl.Path(r'E:\Code_folder\ALLSTATS')
     # Whether to gather raw data and create vectors. If False, expects to find 
     # pre-created datafiles in the Analysis Data directory, i.e. a previous 
     # full run has been made, and there has been no edits to the data files.
@@ -131,13 +131,13 @@ class settings:
     cntrlGroup = "starv"
     
     ### PLOTTING OPTIONS ###  
-    Create_Channel_Plots = False
-    Create_AddData_Plots = False     # Plots also nearest distance & clusters
+    Create_Channel_Plots = True
+    Create_AddData_Plots = True     # Plots also nearest distance & clusters
     Create_Channel_PairPlots = True
-    Create_Heatmaps = False
-    Create_Distribution_Plots = False
+    Create_Heatmaps = True
+    Create_Distribution_Plots = True
     Create_Statistics_Plots = False  # requires statistics to be True
-    Create_Cluster_Plots = True
+    Create_Cluster_Plots = False
     
     # Variable vs. variable plots:
     Create_ChanVSAdd_Plots = False  # Pairs of channel and additional data
