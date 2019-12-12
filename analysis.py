@@ -157,23 +157,23 @@ class Samplegroups:
             each other to show relations in counts."""
             allData = pd.DataFrame()
             # Loop through all channels.
-            for path in Samplegroups._chanPaths:
+            for path in self._dataDir.glob('ChanAvg_*'):
                 # Find whether to drop outliers and then read data
                 dropB = Sett.Drop_Outliers
                 plotData, __, cntr = self.read_channel(path, self._groups, 
                                                            drop=dropB)
                 # get channel name from path, and add identification ('Sample')
                 channel = str(path.stem).split('_')[1]
-                plotData['Sample'] = plotData.index 
+#                plotData['Sample'] = plotData.index 
                 # Change data into long form (one observation per row):
-                plotData = pd.melt(plotData, id_vars=['Sample','Sample Group'],
+                plotData = pd.melt(plotData, id_vars=['Sample Group'],
                                    var_name='Longitudinal Position',
                                    value_name=channel)
                 if allData.empty: allData = plotData
                 else: # Merge data so that each row contains all channel counts 
                     # from one bin of one sample
                     allData = allData.merge(plotData, how='outer', copy=False,
-                                            on=['Sample', 'Sample Group', 
+                                            on=['Sample Group', 
                                                 'Longitudinal Position'])
             name = 'All Channels Pairplots'
             # Initialize plotter, create plot keywords, and then create plots
@@ -433,7 +433,7 @@ class Samplegroups:
     def Get_Clusters(self):
         """Gathers sample-data to compute cell clusters."""
         lg.logprint(LAM_logger, 'Finding clusters', 'i')
-        allpaths = []
+#        allpaths = [] ???
         for grp in self._groups: # Get one sample group
             lg.logprint(LAM_logger,'-> clusters for group {}'.format(grp),'i')
             print('\n---Finding clusters for group {}---'.format(grp))
@@ -442,10 +442,11 @@ class Samplegroups:
                 Smpl = Sample(path, SampleGroup.group)
                 print('{}  ...'.format(Smpl.name))
                 paths = Smpl.Clusters(Sett.Cl_maxDist) # Find clusters
-                allpaths.append(paths)
-        paths = pd.DataFrame(allpaths)
-        paths.to_csv(self._plotDir.parent.joinpath("ClusterPaths.csv"), 
-                     index=False)
+                del paths
+#                allpaths.append(paths)
+#        paths = pd.DataFrame(allpaths)
+#        paths.to_csv(self._plotDir.parent.joinpath("ClusterPaths.csv"), 
+#                     index=False)
         lg.logprint(LAM_logger, 'Clusters calculated', 'i')
         
     def Read_Clusters(self):

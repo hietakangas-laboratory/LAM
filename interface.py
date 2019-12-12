@@ -571,6 +571,7 @@ class base_GUI(tk.Toplevel):
             Sett.Cl_Vol_inclusion = 0
         import logger as lg, logging
         if hasattr(lg, 'log_created'):
+            lg.Close() 
             lg.Update()
             LAM_logger = logging.getLogger(__name__)
         else:

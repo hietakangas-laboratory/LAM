@@ -9,7 +9,7 @@ import warnings, numpy as np, matplotlib.pyplot as plt, seaborn as sns
 with warnings.catch_warnings():
     warnings.simplefilter('ignore', category=FutureWarning)
     import pandas as pd
-import logger as lg
+import logging, logger as lg
 LAM_logger = lg.get_logger(__name__)
 
 class plotter:
@@ -229,7 +229,7 @@ class plotter:
             edgeC.append(tuple([0.7 * v for v in color]))
         pkws = {'x_ci': None, 'order': 4, 'truncate': True, 'x_jitter': 0.49, 
                 'y_jitter': 0.49, 
-                'scatter_kws': {'linewidth': 0.2, 's': 10, 'alpha':0.3, 
+                'scatter_kws': {'linewidth': 0.05, 's': 25, 'alpha':0.4, 
                                 'edgecolors': edgeC},
                 'line_kws': {'alpha':0.7, 'linewidth': 1.5}}
         dkws = {'linewidth': 2}
@@ -251,9 +251,9 @@ class plotter:
         for lh in g._legend.legendHandles: 
             lh.set_alpha(1)
             lh._sizes = [30]
-        filepath = self.savepath.joinpath("{}.jpg".format(self.title))
-        g.savefig(str(filepath), format='jpg', optimize=True)
-            
+        for ax in g.axes.flat:
+            ax.set_ylim(bottom=0)
+            ax.set_xlim(left=0)
         return g
 
     def distPlot(palette, **kws):

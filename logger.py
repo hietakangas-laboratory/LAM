@@ -17,7 +17,7 @@ def setup_logger(name=None, new=True):
     from settings import settings as Sett
     logFile = Sett.workdir.joinpath("log_{}.txt".format(ctime)) # filepath
     if new == True:
-        logger = get_logger(name) # Call for logger-object creation    
+        logger = get_logger(name) # Call for logger-object creation
         log_created = True # Create variable to indicate log has been created
         return logger
     
@@ -49,6 +49,12 @@ def Close():
         for handler in logger.handlers:
             handler.close()
         logger.handlers = []
+        
+def print_lgrs():
+    for lgr in loggers:
+        print(lgr)
+        logger = logging.getLogger(lgr)
+        print(logger.handlers)
     
 def Update():
     setup_logger(new=False)
@@ -186,6 +192,6 @@ def print_settings(self):
             file.write("Drop outliers: {}\n".format(Sett.Drop_Outliers))
         # Create header for the messages sent during the analysis
         file.write("="*75 + "\n")
-        msg= ' '*9+"-Time-"+' '*12+"-Module-"+' '*6+"-Level-"+' '*9+"-Message-"
+        msg= ' '*8+"-Time-"+' '*12+"-Module-"+' '*4+"-Level-"+' '*9+"-Message-"
         file.write(msg)
         file.write("\n" + "-" * 75 + "\n")
