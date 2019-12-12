@@ -9,7 +9,7 @@ import warnings, numpy as np, matplotlib.pyplot as plt, seaborn as sns
 with warnings.catch_warnings():
     warnings.simplefilter('ignore', category=FutureWarning)
     import pandas as pd
-import logging, logger as lg
+import logger as lg
 LAM_logger = lg.get_logger(__name__)
 
 class plotter:
@@ -195,7 +195,7 @@ class plotter:
                     return
             else:
                 g = sns.FacetGrid(plotData, row=kws.get('row'),hue=kws.get('hue'), 
-                          sharex=True,sharey=True,gridspec_kws=kws.get('gridspec'),
+                          sharex=True,sharey=kws.get('sharey'),gridspec_kws=kws.get('gridspec'),
                           height=kws.get('height'),aspect=kws.get('aspect'),
                           legend_out=True, dropna=False, palette=self.palette)
                 g = g.map_dataframe(plotfunc, self.palette, **kws).add_legend()
@@ -301,11 +301,13 @@ class plotter:
     def Heatmap(palette, **kws):
         axes = plt.gca()
         data = kws.pop('data')
-        sns.heatmap(data=data.iloc[:,:-2], cmap='coolwarm', ax=axes)
-        axes.set_yticklabels(labels=data.index.to_list(), rotation=0)
+        sns.heatmap(data=data.iloc[:,:-2], cmap='coolwarm', robust=True, 
+                        ax=axes)
+        plt.yticks(rotation=45)
+#        g.set_yticklabels(g.get_xticklabels(), rotation=45)
         MPbin = kws.get('center')
         ybot, ytop = plt.ylim()
-        axes.plot((MPbin, MPbin), (ybot+0.5, ytop-0.5), 'r--')
+        axes.plot((MPbin, MPbin), (0.5, data.shape[0]-0.5), 'r--')
         return axes
     
     def total_plot(self, stats, order):

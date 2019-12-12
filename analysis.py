@@ -64,7 +64,7 @@ class Samplegroups:
         basekws = {'id_str':'Sample Group',  'hue':'Sample Group',  
                    'row':'Sample Group', 'height':5, 'aspect':3,  
                    'var_str':'Longitudinal Position', 'flierS': 2,
-                   'title_y':0.95, 'gridspec':{'hspace': 0.3}}
+                   'title_y':0.95, 'sharey': True, 'gridspec':{'hspace': 0.3}}
         
         def _select(paths, adds=True):
             """Selects varying data for the versus plots, e.g. a channel and
@@ -115,7 +115,7 @@ class Samplegroups:
                 kws2.update(kws) # Update with kws passed to this function
                 plot_maker.plot_Data(func, savepath, **kws2) # Plotting
                 
-        def __heat(paths):
+        def __heat(paths, samples=False):
             """Creation of heatmaps of cell counts on each channel for each
             sample group."""
             savepath = self._plotDir
@@ -126,21 +126,28 @@ class Samplegroups:
                 plotData, name, cntr = self.read_channel(path, self._groups)
                 # change each sample's group to be contained in its index 
                 # within the dataframe.
-                plotData.index = plotData.loc[:,'Sample Group']
+                if not samples:
+                    plotData.index = plotData.loc[:,'Sample Group']
                 plotData.drop(labels='Sample Group', axis=1, inplace=True)
                 # Channel-variable is added for identification
                 plotData.loc[:, 'Channel'] = name 
                 fullData = pd.concat([fullData, plotData], axis=0, copy=False)
             # The plotting can't handle NaN's, so they are changed to zero.
             fullData = fullData.replace(np.nan, 0)
-            name = "All Channels Heatmaps"
-            # Initialize plotting-class and plot all channel data.
+            if not samples:
+                name = "All Channels Heatmaps"
+            else:
+                name = "All Samples Heatmaps"
+            # Initialize plotting-class, create kws, and plot all channel data.
             plot_maker = plotter(fullData, self._plotDir, center=cntr,
-                         title=name, palette=self._grpPalette)
+                         title=name, palette=None)
             kws = {'height':3, 'aspect':5, 'gridspec':{'hspace': 0.5}, 
                    'row':'Channel', 'title_y':0.95,'center': plot_maker.MPbin}
+            if samples:
+                val = fullData.index.unique().size / 2
+                kws.update({'height': val, 'sharey': False})
             plot_maker.plot_Data(plotter.Heatmap, savepath, **kws)
-
+            
         def __versus(paths1, paths2=None, folder=None):
             """Creation of bivariant jointplots."""
             # Can create a lot ofplots, so when given a folder-input, the 
@@ -205,7 +212,7 @@ class Samplegroups:
             chanPaths = self._dataDir.glob('All_*')
             savepath = self._plotDir.joinpath('Distributions')
             savepath.mkdir(exist_ok=True)
-            kws = {'id_str':'Sample Group',  'hue':'Sample Group',  
+            kws = {'id_str':'Sample Group','sharey': True, 'hue':'Sample Group',  
                    'row':'Sample Group', 'height':5, 'aspect':1,  
                    'title_y':0.95, 'gridspec':{'hspace': 0.4}}
             ylabel = 'Density'
@@ -232,40 +239,53 @@ class Samplegroups:
             chanpaths = [c for p in Samplegroups._samplePaths for c in p.glob('*.csv') ]
             clchans = [str(p.stem).split('-')[1] for p in 
                        self._dataDir.glob('Clusters-*.csv')]
-            clpaths = [p for c in clchans for p in chanpaths if 
-                       p.name == "{}.csv".format(c)]
-            # Create directory for cluster plots
-            savepath = self._plotDir.joinpath('Clusters')
-            savepath.mkdir(exist_ok=True)
-            # Create sample-specific position plots:
-            for path in clpaths:
-                data = system.read_data(path, header=0, test=False)
-                if 'ClusterID' in data.columns:
-                    name = "{} clusters {}".format(path.parts[-2], path.stem)
-                    plot_maker = plotter(data, savepath, title=name)
-                    plot_maker.clustPlot()
+            if clchans:
+                clpaths = [p for c in clchans for p in chanpaths if 
+                           p.name == "{}.csv".format(c)]
+                # Create directory for cluster plots
+                savepath = self._plotDir.joinpath('Clusters')
+                savepath.mkdir(exist_ok=True)
+                # Create sample-specific position plots:
+                for path in clpaths:
+                    data = system.read_data(path, header=0, test=False)
+                    if 'ClusterID' in data.columns:
+                        name = "{} clusters {}".format(path.parts[-2], path.stem)
+                        plot_maker = plotter(data, savepath, title=name)
+                        plot_maker.clustPlot()
+            else:
+                msg='No cluster count files found (Clusters_*)'
+                print('WARNING: {}'.format(msg))
+                lg.logprint(LAM_logger, msg, 'w')
             fullData = pd.DataFrame()
-            for path in self._dataDir.glob('ClNorm_*.csv'):
-                channel = str(path.stem).split('_')[1]
-                data = system.read_data(path, header=0, test=False).T
-                data.index = data.index.map(lambda x: str(x).split('_')[0])
-                groups = data.index.unique()
-                for grp in groups:
-                    temp = data.loc[data.index==grp,:]
-                    avgs = temp.mean(axis=0, skipna=True, numeric_only=True)
-                    avgs['Channel'] = channel
-                    avgs.rename(grp, inplace=True)
-                    fullData = fullData.append(avgs.to_frame().T)#, ignore_index=True)
-            # The plotting can't handle NaN's, so they are changed to zero.
-            fullData = fullData.replace(np.nan, 0)
-            # Initialize plotting-class and plot all channel data.
-            name = "All Cluster Heatmaps"
-            cntr = Samplegroups._center
-            plot_maker = plotter(fullData, self._plotDir, center=cntr,
-                         title=name, palette=self._grpPalette)
-            kws = {'height':3, 'aspect':5, 'gridspec':{'hspace': 0.5}, 
-                   'row':'Channel', 'title_y':1.05,'center': plot_maker.MPbin}
-            plot_maker.plot_Data(plotter.Heatmap, savepath.parent, **kws)
+            paths = list(self._dataDir.glob('ClNorm_*.csv'))
+            if paths:
+                for path in paths:
+                    channel = str(path.stem).split('_')[1]
+                    data = system.read_data(path, header=0, test=False).T
+                    data.index = data.index.map(lambda x: str(x).split('_')[0])
+                    groups = data.index.unique()
+                    for grp in groups:
+                        temp = data.loc[data.index==grp,:]
+                        avgs = temp.mean(axis=0, skipna=True, numeric_only=True)
+                        avgs['Channel'] = channel
+                        avgs.rename(grp, inplace=True)
+                        fullData = fullData.append(avgs.to_frame().T)#, ignore_index=True)
+                
+                # The plotting can't handle NaN's, so they are changed to zero.
+                fullData = fullData.replace(np.nan, 0)
+                # Initialize plotting-class and plot all channel data.
+                name = "All Cluster Heatmaps"
+                cntr = Samplegroups._center
+                plot_maker = plotter(fullData, self._plotDir, center=cntr,
+                             title=name, palette=None)
+                kws = {'height':3, 'aspect':5, 'gridspec':{'hspace': 0.5}, 
+                       'row':'Channel', 'title_y':1.05, 'sharey': False,
+                       'center': plot_maker.MPbin}
+                plot_maker.plot_Data(plotter.Heatmap, savepath.parent, **kws)
+            else:
+                msg='No normalized cluster count files found (ClNorm_*)'
+                print('WARNING: {}'.format(msg))
+                lg.logprint(LAM_logger, msg, 'w')
                                
         #-------#
         # Conditional function calls to create each of the plots.
@@ -293,6 +313,8 @@ class Samplegroups:
             print('Plotting heatmaps  ...')
             HMpaths = self._dataDir.glob("ChanAvg_*")
             __heat(HMpaths)
+            HMpaths = self._dataDir.glob("Norm_*")
+            __heat(HMpaths, samples=True)
             lg.logprint(LAM_logger, 'Heatmaps done.', 'i')
         if Sett.Create_ChanVSAdd_Plots:
             lg.logprint(LAM_logger, 'Plotting channel VS additional data','i')
@@ -321,9 +343,11 @@ class Samplegroups:
             print('Plotting clusters  ...')
             __clusters()
             kws = {'ylabel': 'Clustered Cells'}
-            lg.logprint(LAM_logger, 'Plotting cluster counts', 'i')
-            __base(self._dataDir.glob('ClNorm_*'), plotter.boxPlot, **kws)
-            lg.logprint(LAM_logger, 'Clusters done', 'i')
+            paths = list(self._dataDir.glob('ClNorm_*'))
+            if paths:
+                lg.logprint(LAM_logger, 'Plotting cluster counts', 'i')
+                __base(paths, plotter.boxPlot, **kws)
+                lg.logprint(LAM_logger, 'Clusters done', 'i')
         lg.logprint(LAM_logger, 'Plotting completed', 'i')
 
     def read_channel(self, path, groups, drop=False, name_sep=1):
