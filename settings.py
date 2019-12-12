@@ -9,7 +9,7 @@ import numpy as np, pathlib as pl
 class settings:
     """ A class for holding all user-end settings for the analysis."""
     ######################## PRIMARY SETTINGS ########################
-    GUI = False  # Use graphical user interface (True / False)
+    GUI = True  # Use graphical user interface (True / False)
     
     # DEFINE PATH TO ANALYSIS FOLDER:
     # (Use input r'PATH' where PATH is your path)
@@ -125,14 +125,14 @@ class settings:
     alpha = 0.05            # for rejection of H_0, applies to statistics files
     # Plots
     stars = False # Make P-value stars to the plot (*:<0.05 **:<0.01 ***:<0.001)
-    fill = True
+    fill = True # fill significant bins with marker color
     negLog2 = True # Forces stars to be False
     # The name of the control group that the statistics are run against.
     cntrlGroup = "starv"
     
     ### PLOTTING OPTIONS ###  
     Create_Channel_Plots = True
-    Create_AddData_Plots = True     # Plots also nearest distance & clusters
+    Create_AddData_Plots = False     # Plots also nearest distance & clusters
     Create_Channel_PairPlots = True
     Create_Heatmaps = True
     Create_Distribution_Plots = True
