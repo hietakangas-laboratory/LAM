@@ -20,7 +20,7 @@ Dependencies:
             pip install pycg3d
     
 Script for longitudinal analysis of Drosophila midgut images. To run the script,
-change the work directory in either settings.py or the GUI to the directory 
+change the work directory in either Sett.py or the GUI to the directory 
 containing the directories for each individual sample. 
 The sample directories should be named as "<samplegroup>_xyz_<samplename>", 
 where xyz can be anything, e.g. "starv_2018-11-06_Ctrl starved 1". Within the 
@@ -55,7 +55,7 @@ directory that contains position.csv for a single coordinate, the MP.
 
 For more extensive instructions, see user manual. 
 """
-from settings import settings
+from settings import settings as Sett
 
 def main(LAM_logger): 
     import system, analysis, process
@@ -63,10 +63,14 @@ def main(LAM_logger):
     systemPaths = system.start()
     # If sample processing set to True, create vectors, collect and project 
     # data etc. Otherwise continue to plotting and group-wise operations.
-    if settings.process_samples:
+    if Sett.process_samples:
         process.Create_Samples(systemPaths)
-    if settings.process_counts:
-        process.Project(systemPaths)                 
+        # If only creating vectors, return from main()
+        if not any([Sett.process_counts,Sett.process_dists,Sett.Create_Plots,
+            Sett.statistics]):  
+            return
+    if Sett.process_counts:
+        process.Project(systemPaths)
     # After all samples have been collected/created, find their respective MP 
     # bins and normalize (anchor) cell count data. If MP's are not used, the 
     # samples are anchored at bin == 0.
@@ -74,28 +78,27 @@ def main(LAM_logger):
     # Storing of descriptive data of analysis, i.e. channels/samples/groups
     systemPaths.save_AnalysisInfo(store.samples, store.samplegroups, 
                                   store.channels)
-    
     # After samples have been counted and normalized
     SampleGroups = analysis.Samplegroups(store.samplegroups, store.channels,
                                         store.totalLength, store.center, 
                                         systemPaths)
     # Computing total cell numbers from each sample's each bin
-    if settings.process_counts:
+    if Sett.process_counts:
         SampleGroups.Get_Totals()
         # TODO add cluster counting (maybe save channel paths to csv when finding clusters) ???
 #        if store.clusterPaths: # Collect clustering data from existing files
 #            SampleGroups.Read_Clusters()
     # Finding of nearest cells and distances
-    if settings.Find_Distances and settings.process_dists:
+    if Sett.Find_Distances and Sett.process_dists:
         SampleGroups.Get_DistanceMean()
     # Finding clustered cells
-    if settings.Find_Clusters and settings.process_dists:
+    if Sett.Find_Clusters and Sett.process_dists:
         SampleGroups.Get_Clusters()  
     # Calculation of MWW-statistics for cell counts and other data
-    if settings.statistics:
+    if Sett.statistics:
         SampleGroups.Get_Statistics()
     # Creation of plots from various data (excluding statistical plots)
-    if settings.Create_Plots:
+    if Sett.Create_Plots:
         SampleGroups.create_plots()
     
 def MAIN_catch_exit():
@@ -121,7 +124,7 @@ def MAIN_catch_exit():
         
 
 if __name__ == '__main__':
-    if settings.GUI: # Create GUI if using it
+    if Sett.GUI: # Create GUI if using it
         import tkinter as tk
         import interface
         root = tk.Tk()

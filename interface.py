@@ -339,20 +339,12 @@ class base_GUI(tk.Toplevel):
         
     def Distance_check(self):
         if not DistV.get():
-            if not CountV.get():
-                self.pMP.configure(state = 'disable')
             for widget in self.distf.winfo_children():
                 widget.configure(state = 'disable')
-            if not any([CountV.get(), SampleV.get()]):
-                self.lblHead.configure(state = 'disable')
-                self.HeadIn.configure(state = 'disable')
         else:
-            self.pMP.configure(state = 'normal')
             for widget in self.distf.winfo_children():
                 if int(widget.grid_info()["row"]) in [0, 1, 2]:
                     widget.configure(state = 'normal')
-            self.lblHead.configure(state = 'normal')
-            self.HeadIn.configure(state = 'normal')
             self.Cluster_check()
             self.Dist_check()
             self.Filter_check()
@@ -441,17 +433,12 @@ class base_GUI(tk.Toplevel):
                 if widget not in [self.binIn, self.lbl5]:
                     widget.configure(state = 'disable')
             hidev = 'disable'
-            if not DistV.get():
-                self.lblHead.configure(state = 'disable')
-                self.HeadIn.configure(state = 'disable')
         else:
             for widget in self.Up_leftf.winfo_children():
                 if widget not in [self.binIn, self.lbl5]:
                     widget.configure(state = 'normal')
             self.switch_pages()
-            hidev = 'normal'
-            self.lblHead.configure(state = 'normal')
-            self.HeadIn.configure(state = 'normal')             
+            hidev = 'normal'         
         if not VType.get():
             for widget in self.frames[Median_settings].winfo_children():
                 widget.configure(state = hidev)
@@ -473,11 +460,7 @@ class base_GUI(tk.Toplevel):
             self.lbl5.configure(state = 'disable')
             self.lblMP.configure(state = 'disable')
             self.MPIn.configure(state = 'disable')
-            if not DistV.get():
-                self.pMP.configure(state = 'disable')
-            if not any([SampleV.get(), DistV.get()]):
-                self.lblHead.configure(state = 'disable')
-                self.HeadIn.configure(state = 'disable')
+            self.pMP.configure(state = 'disable')
         else:
             self.binIn.configure(state = 'normal')
             self.lbl5.configure(state = 'normal')
@@ -501,7 +484,10 @@ class base_GUI(tk.Toplevel):
         Sett.process_dists = DistV.get()
         Sett.Create_Plots = PlotV.get()
         Sett.statistics = StatsV.get()
-        Sett.useMP = MPV.get()
+        if not Sett.process_counts:
+            Sett.useMP = False
+        else:
+            Sett.useMP = MPV.get()
         Sett.MPname = setMP.get()
         Sett.header_row = setHead.get()
         Sett.Create_Channel_Plots = Pchans.get()

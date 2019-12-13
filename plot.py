@@ -34,7 +34,7 @@ class plotter:
     def vector(self, samplename, vectordata, X, Y, binaryArray=None, 
                skeleton=None):
         if skeleton is not None and settings.SkeletonVector:
-            figskel, axes = plt.subplots(nrows=1, ncols=2, figsize=(12, 6), 
+            figskel, axes = plt.subplots(nrows=1, ncols=2, figsize=(15, 6), 
                                          sharex=True,
               sharey=True)
             ax = axes.ravel()
@@ -49,8 +49,9 @@ class plotter:
             figskel.savefig(str(self.savepath.joinpath(name)), 
                             format=self.format)
         fig, ax = plt.subplots(figsize=(12, 6))
-        ax = sns.scatterplot(x=X, y=Y, color='brown')
+        ax = sns.scatterplot(x=X, y=Y, color='xkcd:tan', linewidth=0)
         ax = plt.plot(*vectordata.xy)
+        plt.axis('equal')
         name = str('Vector_' + samplename + self.ext)
         fig.savefig(str(self.savepath.parent.joinpath(name)), format=self.format)
         plt.close('all')
@@ -383,6 +384,7 @@ class plotter:
                         hue="ClusterID", palette=palette, ax=ax, s=5, 
                         legend=False, **kws)
         plt.title(self.title)
+        plt.axis('equal')
         filepath = self.savepath.joinpath(self.title+self.ext)
         figure.savefig(str(filepath), format=self.format)
         plt.close()

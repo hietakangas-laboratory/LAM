@@ -13,18 +13,18 @@ class settings:
     
     # DEFINE PATH TO ANALYSIS FOLDER:
     # (Use input r'PATH' where PATH is your path)
-    workdir = pl.Path(r'E:\Code_folder\ALLSTATS')
+    workdir = pl.Path(r'C:\Users\artoviit\exp')
     # Whether to gather raw data and create vectors. If False, expects to find 
     # pre-created datafiles in the Analysis Data directory, i.e. a previous 
     # full run has been made, and there has been no edits to the data files.
-    process_samples = False  # CLEARS DATA FILES-DIRECTORY
+    process_samples = True  # CLEARS DATA FILES-DIRECTORY
     # Whether to project, count and normalize data. If set to False, expect all 
     # data to be in place. Can be used to e.g. create additional plots faster.
     process_counts = False
     # Whether to compute average distances and clusters.
     process_dists = False
     # Set True/False to set all plotting functionalities ON/OFF
-    Create_Plots = True     # ON / OFF switch for plots
+    Create_Plots = False     # ON / OFF switch for plots
     # Whether to calculate statistics
     statistics = False
     ##################################################################
@@ -39,11 +39,11 @@ class settings:
     # vector is created by finding middle point between smallest and largest 
     # Y-axis position in bin.
     SkeletonVector = True
-    SkeletonResize = 0.4    # Binary image resize. Keep at steps of ten.
-    find_dist = 30      # Find distance of pixels in skeleton vector creation
+    SkeletonResize = 0.8    # Binary image resize. Keep at steps of ten.
+    find_dist = 275      # Find distance (XY-coord system) in skeleton vector creation
     BDiter = 0           # Binary dilation iterations (set to 0 if not needed)
-    SigmaGauss = 1       # Sigma for gaussian smoothing (set to 0 if not needed)
-    simplifyTol = 40     # Tolerance for vector simplification.
+    SigmaGauss = 0.2       # Sigma for gaussian smoothing (set to 0 if not needed)
+    simplifyTol = 25     # Tolerance for vector simplification.
     # Number of bins used for vector creation when using the median vector 
     # creation. Increasing bin number too much may lead to stair-like vector; 
     # increasing 'simplifyTol' can correct the steps.

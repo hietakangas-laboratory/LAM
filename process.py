@@ -61,37 +61,18 @@ def Project(PATHS):
     lg.logprint(LAM_logger, 'All channels projected and counted.', 'i')
 
 def Get_Counts(PATHS):
-    if not Sett.useMP:
-        MPs = pd.DataFrame(np.zeros((1, len(store.samples))), 
-                            columns=store.samples)
-        path = next(PATHS.datadir.glob('MPs.csv'))
-        fMPs = system.read_data(path, header=0, test=False)
-        if not MPs.equals(fMPs):
-            print("Not using MPs. MPs.csv will be overwritten.")
-            ans = input('Proceed with overwrite (or exit)? [y/(n)] ')
-            if ans == 'y' or ans == 'Y':
-                system.saveToFile(MPs,PATHS.datadir,'MPs.csv',append=False)
-                msg = "MPs.csv overwritten. No MPs in use."
-                lg.logprint(LAM_logger, msg, 'i')
-            else:
-                msg = "MPs.csv not overwritten by user."
-                print(msg)
-                lg.logprint(LAM_logger, msg, 'w')
-                raise SystemExit
-        else:
-            system.saveToFile(MPs,PATHS.datadir,'MPs.csv',append=False)
-    else:
-        try:
-            MPs = system.read_data(next(PATHS.datadir.glob('MPs.csv')), 
-                                   header=0, test=False)      
-        except FileNotFoundError:
-            msg = "MPs.csv NOT found!"
-            print("ERROR: {}".format(msg))
-            lg.logprint(LAM_logger, msg, 'c')
-            msg = "-> Perform 'Count' before continuing.\n"
-            print("{}".format(msg))
-            lg.logprint(LAM_logger, msg, 'i')
-            raise SystemExit
+#    if not Sett.process_counts:
+    try:
+        MPs = system.read_data(next(PATHS.datadir.glob('MPs.csv')), 
+                               header=0, test=False)      
+    except FileNotFoundError:
+        msg = "MPs.csv NOT found!"
+        print("ERROR: {}".format(msg))
+        lg.logprint(LAM_logger, msg, 'c')
+        msg = "-> Perform 'Count' before continuing.\n"
+        print("{}".format(msg))
+        lg.logprint(LAM_logger, msg, 'i')
+        raise SystemExit
     # Find the smallest and largest bin-number of the dataset
     MPmax, MPmin = MPs.max(axis=1).values[0], MPs.min(axis=1).values[0]
     # Store the bin number of the row onto which samples are anchored to
@@ -222,100 +203,94 @@ class get_sample:
             rmaxv = math.ceil(maxv * resize / 10) * 10
             return rminv, rmaxv
         
-        buffer = 500 * resize
-        coords = list(zip(X, Y))
-        miny, maxy = Y.min(), Y.max()
-        minx, maxx = X.min(), X.max()
-        rminy, rmaxy = resize_minmax(miny, maxy, 'y', resize)
-        rminx, rmaxx = resize_minmax(minx, maxx, 'x', resize)
-        ylabels = np.arange(int(rminy) - buffer, int(rmaxy + (buffer + 1)), 10)
-        xlabels = np.arange(int(rminx) - buffer, int(rmaxx + (buffer + 1)), 10)
-        ylen, xlen = len(ylabels), len(xlabels)
-        BA = pd.DataFrame(np.zeros((ylen, xlen)), index=np.flip(ylabels, 0), 
-                          columns=xlabels)
-        BAind, BAcol = BA.index, BA.columns
-        for coord in coords:
-            y = round(coord[1] * resize / 10) * 10
-            x = round(coord[0] * resize / 10) * 10
-            BA.at[(y, x)] = 1
-
-        if BDiter > 0:
-            struct1 = mp.generate_binary_structure(2, 2)
-            try:
-                BA = mp.binary_dilation(BA, structure=struct1, iterations=BDiter)
-            except TypeError:
-                msg = 'BDiter in settings has to be an integer.'
-                lg.logprint(LAM_logger, msg, 'e')
-                print("TypeError: {}".format(msg))
-        if SigmaGauss > 0:
-            BA = gaussian(BA, sigma=SigmaGauss)
-            BA[BA > 0] = True
-        BA = mp.binary_fill_holes(BA)
-        skeleton = skeletonize(BA)
-        skelDF = pd.DataFrame(skeleton, index=BAind, columns=BAcol)
-        skelValues = [(skelDF.index[y], skelDF.columns[x]) for y, x in zip(
-                *np.where(skelDF.values == True))]
-        coordDF = pd.DataFrame(np.zeros((len(skelValues),2)),columns=['X', 'Y'])
-        for i, coord in enumerate(skelValues):
-            coordDF.loc[i, ['X', 'Y']] = [coord[1], coord[0]]
-        finder = Sett.find_dist
-        line = []
-        start = coordDF.loc[:, 'X'].idxmin()
+        def _binarize():
+            """Transformation of coordinates into binary image and subsequent
+            dilation and smoothing."""
+            buffer = 500 * resize
+            ylbl = np.arange(int(rminy) - buffer, int(rmaxy + (buffer + 1)),10)
+            xlbl = np.arange(int(rminx) - buffer, int(rmaxx + (buffer + 1)),10)
+            BA = pd.DataFrame(np.zeros((len(ylbl), len(xlbl))), 
+                          index=np.flip(ylbl, 0), columns=xlbl)
+            BAind, BAcol = BA.index, BA.columns
+            coords = list(zip(X, Y))
+            for coord in coords: # Transform coords into binary array
+                BA.at[(round(coord[1] * resize / 10) * 10, 
+                       round(coord[0] * resize / 10) * 10)] = 1
+            if BDiter > 0: # binary dilations
+                struct1 = mp.generate_binary_structure(2, 2)
+                try:
+                    BA = mp.binary_dilation(BA, structure=struct1, 
+                                            iterations=BDiter)
+                except TypeError:
+                    msg = 'BDiter in settings has to be an integer.'
+                    lg.logprint(LAM_logger, msg, 'e')
+                    print("TypeError: {}".format(msg))
+            if SigmaGauss > 0: # Smoothing
+                BA = gaussian(BA, sigma=SigmaGauss)
+                BA[BA > 0] = True
+            BA = mp.binary_fill_holes(BA)
+            return BA, BAind, BAcol
+        
+        rminy, rmaxy = resize_minmax(Y.min(), Y.max(), 'y', resize)
+        rminx, rmaxx = resize_minmax(X.min(), X.max(), 'x', resize)
+        # Transform to binary
+        binaryArray, BAindex, BAcols = _binarize()
+        # Make skeleton and get coordinates of skeleton pixels
+        skeleton = skeletonize(binaryArray)
+        skelValues = [(BAindex[y], BAcols[x]) for y, x in zip(
+                *np.where(skeleton == True))]
+        # Dataframe from skeleton coords
+        coordDF = pd.DataFrame(skelValues, columns=['Y', 'X'])
+        # BEGIN CREATION OF VECTOR FROM SKELETON COORDS
+        finder = Sett.find_dist # Variable for detection of nearby XY
+        line = [] # For storing vector
+        start = coordDF.X.idxmin()
         sx, sy = coordDF.loc[start, 'X'], coordDF.loc[start, 'Y']
-        nearStart = coordDF[(abs(coordDF.loc[:, 'X'] - sx) <= finder/2) & 
-                            (abs(coordDF.loc[:, 'Y'] - sy) <= finder/1)].index
+        nearStart = coordDF[(abs(coordDF.X - sx) <= finder/3) & 
+                            (abs(coordDF.Y - sy) <= finder)].index
         sx, sy = coordDF.loc[nearStart, 'X'].mean(), coordDF.loc[nearStart, 'Y'
                             ].mean()
         line.append((sx / resize, sy / resize))
         coordDF.drop(nearStart, inplace=True)
         flag = False
         while not flag:
-            # TODO try creating median estimation?
             point = gm.Point(sx, sy)
             with warnings.catch_warnings():
                 warnings.simplefilter('ignore', category=UserWarning)
-                nearest = coordDF[(abs(coordDF.loc[:, 'X'] - sx) <= finder) & 
-                                 (abs(coordDF.loc[:, 'Y'] - sy) <= finder)
-                                 ].index
+                nearest = coordDF[(abs(coordDF.X - sx) <= finder) & 
+                                 (abs(coordDF.Y - sy) <= finder)].index
             if nearest.size > 0:
                 try:
                     point1, point2 = line[-3], line[-1]
                 except:
-                    point1, point2 = (sx, sy), (sx + (50 / resize), sy)
-
-                x1, y1 = point1[0], point1[1]
-                x2, y2 = point2[0], point2[1]
-                shiftx = x2 - x1
-                shifty = y2 - y1
-                x3, y3 = x2 + 2 * shiftx, y2 + 2 * shifty
-                testpoint = gm.Point(x3, y3)
+                    point1, point2 = (sx, sy), (sx + (50*resize), sy)
+                shiftx = point2[0] - point1[0]
+                shifty = point2[1] - point1[1]
+                testP = gm.Point(point2[0]+1.5*shiftx, point2[1]+1.5*shifty)
                 distances = pd.DataFrame(np.zeros((nearest.size, 5)), 
                                          index=nearest, columns=['dist', 
                                          'distOG', 'score', 'X', 'Y'])
                 for index, row in coordDF.loc[nearest, :].iterrows():
-                    x4, y4 = coordDF.loc[index, 'X'], coordDF.loc[index, 'Y']
-                    point3 = gm.Point(x4, y4)
-                    dist = testpoint.distance(point3)
+                    x, y = coordDF.X.at[index], coordDF.Y.at[index]
+                    point3 = gm.Point(x, y)
+                    dist = testP.distance(point3)
                     distOg = point.distance(point3)
                     score = (0.75 * distOg) + dist
-                    distances.at[index, :] = [dist, distOg, score, x4, y4]
-                nearest = distances.score.idxmin()
-                x2, y2 = coordDF.loc[nearest, 'X'], coordDF.loc[nearest, 'Y']
+                    distances.at[index, :] = [dist, distOg, score, x, y]
+                best = distances.score.idxmin()
+                x2, y2 = coordDF.X.at[best], coordDF.Y.at[best]
                 line.append((x2 / resize, y2 / resize))
-                dropdist = distances.loc[nearest, 'distOG']
-                dropdist2 = distances.loc[nearest, 'dist']
-                # TODO alter dropping. Nearby, but only with smaller x than point?
-                forfeit = distances[(distances.dist >= dropdist) & 
-                              (distances.distOG <= dropdist2)].dropna().index
-                forfeit.union([nearest])
+                forfeit = distances[(distances.dist >= distances.distOG)
+                                    ].dropna().index
                 coordDF.drop(forfeit, inplace=True)
+                sx, sy = x2, y2
             else:
                 flag = True
         try:
             vector = gm.LineString(line)
             vector = vector.simplify(Sett.simplifyTol)
             linedf = pd.DataFrame(line, columns=['X', 'Y'])
-            return vector, BA, skeleton, linedf
+            return vector, binaryArray, skeleton, linedf
         except ValueError:
             msg = 'Faulty vector for {}'.format(self.name)
             lg.logprint(LAM_logger, msg, 'e')
