@@ -13,18 +13,18 @@ class settings:
     
     # DEFINE PATH TO ANALYSIS FOLDER:
     # (Use input r'PATH' where PATH is your path)
-    workdir = pl.Path(r'C:\Users\artoviit\exp')
+    workdir = pl.Path(r'\\ad.helsinki.fi\home\a\artoviit\Desktop\test')
     # Whether to gather raw data and create vectors. If False, expects to find 
     # pre-created datafiles in the Analysis Data directory, i.e. a previous 
     # full run has been made, and there has been no edits to the data files.
-    process_samples = True  # CLEARS DATA FILES-DIRECTORY
+    process_samples = False  # CLEARS DATA FILES-DIRECTORY
     # Whether to project, count and normalize data. If set to False, expect all 
     # data to be in place. Can be used to e.g. create additional plots faster.
     process_counts = False
     # Whether to compute average distances and clusters.
     process_dists = False
     # Set True/False to set all plotting functionalities ON/OFF
-    Create_Plots = False     # ON / OFF switch for plots
+    Create_Plots = True     # ON / OFF switch for plots
     # Whether to calculate statistics
     statistics = False
     ##################################################################
@@ -131,10 +131,10 @@ class settings:
     cntrlGroup = "starv"
     
     ### PLOTTING OPTIONS ###  
-    Create_Channel_Plots = True
+    Create_Channel_Plots = False
     Create_AddData_Plots = False     # Plots also nearest distance & clusters
-    Create_Channel_PairPlots = True
-    Create_Heatmaps = True
+    Create_Channel_PairPlots = False
+    Create_Heatmaps = False
     Create_Distribution_Plots = True
     Create_Statistics_Plots = False  # requires statistics to be True
     Create_Cluster_Plots = False

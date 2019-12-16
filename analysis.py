@@ -213,27 +213,55 @@ class Samplegroups:
             chanPaths = self._dataDir.glob('All_*')
             savepath = self._plotDir.joinpath('Distributions')
             savepath.mkdir(exist_ok=True)
-            kws = {'id_str':'Sample Group','sharey': True, 'hue':'Sample Group',  
-                   'row':'Sample Group', 'height':5, 'aspect':1,  
-                   'title_y':0.95, 'gridspec':{'hspace': 0.4}}
+            kws = {'sharey':True, 'hue':'Sample Group', 'row':'Sample Group', 
+                   'height':5, 'aspect':1, 'title_y':0.95, 
+                   'gridspec':{'hspace': 0.4}}
             ylabel = 'Density'
-            for path in chain(chanPaths, self._addData):
+            # Channels
+            print("Channels  ...")
+            for path in chanPaths:
                 plotData, name, cntr = self.read_channel(path, self._groups)
                 plot_maker = plotter(plotData, self._plotDir, center=cntr, 
                                      title=name, palette=self._grpPalette)
-                if "All_" in path.name:
-                    xlabel = 'Cell Count'
-                else:
-                    addName = plot_maker.title.split('-')[0].split('_')[1]
-                    if "DistanceMeans" in addName:
-                        xlabel = "Distance"
-                    else:
-                        try:
-                            xlabel = Sett.AddData.get(addName)[1]
-                        except: xlabel = 'Value'
-                kws.update({'var_str': xlabel, 'ylabel': ylabel, 
-                            'value_str': ylabel})
+                xlabel = 'Cell Count'
+                kws.update({'id_str':'Sample Group', 'var_str': xlabel, 
+                            'ylabel': ylabel, 'value_str': ylabel})
                 plot_maker.plot_Data(plotter.distPlot, savepath, **kws)
+            # Additional data
+            for key in Sett.AddData.keys():
+                print("{}  ...".format(key))
+                ban = ['Group', 'Channel']
+                AllVals = pd.DataFrame(columns=[key, 'Group', 'Channel'])
+                paths = [p for s in self._samplePaths for p in s.glob('*.csv')\
+                         if p.stem not in ['MPs', 'Vector']]
+                for path in paths:
+                    try:
+                        data = system.read_data(path, header=0, test=False, 
+                                                index_col=False)
+                        values = data.loc[:, data.columns.str.contains(key)]
+                        group = str(path.parent.name).split('_')[0]
+                        channel = str(path.stem)
+                        values = values.assign(Group=group, Channel=channel)
+                        for col in values.loc[:,~values.columns.isin(ban)
+                                            ].columns:
+                            if values.loc[:, col].nunique() == 1:
+                                values.loc[:, str(col)] = np.nan
+                        AllVals = pd.concat([AllVals, values], axis=0, 
+                                            ignore_index=True, sort=True)
+                    except:
+                        pass
+                xlabel = Sett.AddData.get(key)[1]
+                kws.update({'id_str': ['Group','Channel'], 'ylabel': ylabel, 
+                            'var_str': xlabel, 'value_str': ylabel, 
+                            'hue':'Group', 'row':'Group'})                
+                for col in AllVals.loc[:,~AllVals.columns.isin(ban)].columns:
+                    allData = AllVals.loc[:, ['Group', 'Channel', col]].dropna()
+                    for plotChan in allData.Channel.unique():
+                        name = "{}_{}".format(plotChan, col)
+                        plotData = allData.loc[allData.Channel == plotChan,:]
+                        plot_maker = plotter(plotData, self._plotDir, 
+                                             title=name, palette=self._grpPalette)
+                        plot_maker.plot_Data(plotter.distPlot, savepath, **kws)
                 
         def __clusters():
             # Find paths to sample-specific data based on found cluster data:
@@ -332,7 +360,7 @@ class Samplegroups:
             lg.logprint(LAM_logger, 'additional data VS additional data done.',                                                                         'i')
         if Sett.Create_Distribution_Plots:
             lg.logprint(LAM_logger, 'Plotting distributions', 'i')
-            print('Plotting distributions  ...')
+            print('-Distributions-')
             __distributions()
             lg.logprint(LAM_logger, 'Distributions done', 'i')
         # TODO nearest dist plots ???

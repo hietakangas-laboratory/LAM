@@ -53,7 +53,7 @@ def Project(PATHS):
         # Collection of data for each channel
         for path2 in [p for p in sample.channelpaths if Sett.MPname \
                       != str(p).split('_')[-2]]:
-            channel = get_channel(path2, sample, Sett.AddData)
+            channel = get_channel(path2, sample, Sett.AddData, PATHS.datadir)
             sample.data = sample.project_channel(channel, PATHS.datadir)
             channelName = str(path2.stem)
             if channelName not in ["MPs"]:
@@ -418,8 +418,9 @@ class get_sample:
 
 
 class get_channel:
-    def __init__(self, path, sample, dataKeys):
-        self.name = str(path.stem).split('_')[(-2)]
+    def __init__(self, path, sample, dataKeys, datadir):
+        self.datadir = datadir
+        self.name = str(path.stem).split('_')[-2]
         self.path = path
         pospath = next(self.path.glob("*Position.csv"))
         self.data = self.read_channel(pospath)

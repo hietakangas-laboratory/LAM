@@ -4,7 +4,7 @@ Created on Wed Mar  6 12:42:28 2019
 @author: Arto I. Viitanen
 
 """
-from settings import settings
+from settings import settings as Sett
 import warnings, numpy as np, matplotlib.pyplot as plt, seaborn as sns
 with warnings.catch_warnings():
     warnings.simplefilter('ignore', category=FutureWarning)
@@ -17,15 +17,15 @@ class plotter:
     
     def __init__(self, plotData, savepath, center=0, title=None, 
                  palette=None, color='b'):
-        sns.set_style(settings.seaborn_style)
-        sns.set_context(settings.seaborn_context)
+        sns.set_style(Sett.seaborn_style)
+        sns.set_context(Sett.seaborn_context)
         self.data = plotData
         self.title = title
         self.savepath = savepath
         self.palette = palette
         self.color = color
-        self.ext = ".{}".format(settings.saveformat)
-        self.format = settings.saveformat
+        self.ext = ".{}".format(Sett.saveformat)
+        self.format = Sett.saveformat
         if center != 0:
             self.MPbin = center
         else:
@@ -33,7 +33,7 @@ class plotter:
 
     def vector(self, samplename, vectordata, X, Y, binaryArray=None, 
                skeleton=None):
-        if skeleton is not None and settings.SkeletonVector:
+        if skeleton is not None and Sett.SkeletonVector:
             figskel, axes = plt.subplots(nrows=1, ncols=2, figsize=(15, 6), 
                                          sharex=True,
               sharey=True)
@@ -85,8 +85,11 @@ class plotter:
                 elif value <= 0.01:
                     pStr = "*\n*"
                     color = colors[2]
-                elif value <= 0.05:
-                    pStr = "*"
+                elif value <= Sett.alpha:
+                    if value <= 0.5:
+                        pStr = "*"
+                    else:
+                        pStr = ""
                     color = colors[1]
                 else:
                     pStr = " "
@@ -99,8 +102,8 @@ class plotter:
             ax = plt.gca()
             ax.set_ylim(top=tytop)
             MPbin = kws.get('centerline')
-            if settings.negLog2: # Creation of -log2 P-valueaxis and line plot
-                settings.stars = False
+            if Sett.negLog2: # Creation of -log2 P-valueaxis and line plot
+                Sett.stars = False
                 Y = stats.iloc[:, 7]
                 X = Y.index.tolist()
                 Y.replace(0, np.nan, inplace=True)
@@ -118,9 +121,9 @@ class plotter:
                 ax2.set_ylabel('P value\n(-log2)')
                 # Find top of original y-axis and create a buffer for twin to 
                 # create a prettier plot
-                botAdd = 2.75*-settings.ylim
-                ax2.set_ylim(bottom=botAdd, top=settings.ylim)
-                ytick = np.arange(0, settings.ylim, 5)
+                botAdd = 2.75*-Sett.ylim
+                ax2.set_ylim(bottom=botAdd, top=Sett.ylim)
+                ytick = np.arange(0, Sett.ylim, 5)
                 ax2.set_yticks(ytick)
                 ax2.set_yticklabels(ytick, fontdict={'fontsize': 14})
                 ax2.yaxis.set_label_coords(1.04, 0.85)
@@ -135,8 +138,8 @@ class plotter:
                 ax.plot((MPbin, MPbin), (0, tytop), 'r--')
             # Create significance stars and color fills
             if 'windowed' in kws:
-                comment = "Window: lead {}, trail {}".format(settings.lead, 
-                                        settings.trail)
+                comment = "Window: lead {}, trail {}".format(Sett.lead, 
+                                        Sett.trail)
                 ax.text(0, tytop*1.02, comment)
             LScolors = sns.color_palette('Reds',n_colors=4)
             GRcolors = sns.color_palette('Blues',n_colors=4)
@@ -147,15 +150,15 @@ class plotter:
                 xaxis = [index-0.5, index+0.5]
                 if row[3] == True:# cntrl is greater
                     pStr, color = __marker(row[1], LScolors)
-                    if settings.fill:
+                    if Sett.fill:
                         plt.fill_between(xaxis,yaxis, color=color, alpha=0.2)
-                    if settings.stars:
+                    if Sett.stars:
                         plt.text(index, yheight, pStr, fontdict={'fontsize':14})
                 if row[6] == True:# cntrl is lesser
                     pStr, color = __marker(row[4], GRcolors)
-                    if settings.fill:
+                    if Sett.fill:
                         plt.fill_between(xaxis,yaxis, color=color, alpha=0.2)
-                    if settings.stars:
+                    if Sett.stars:
                         plt.text(index, yheight, pStr, fontdict={'fontsize':14})
         
         def __add(centerline=True):
@@ -195,10 +198,12 @@ class plotter:
                     print('STOPPING PAIRPLOT')
                     return
             else:
-                g = sns.FacetGrid(plotData, row=kws.get('row'),hue=kws.get('hue'), 
-                          sharex=True,sharey=kws.get('sharey'),gridspec_kws=kws.get('gridspec'),
-                          height=kws.get('height'),aspect=kws.get('aspect'),
-                          legend_out=True, dropna=False, palette=self.palette)
+#                print(plotData)
+                g = sns.FacetGrid(plotData,row=kws.get('row'),col=kws.get('col'),
+                          hue=kws.get('hue'), sharex=True,sharey=kws.get('sharey'),
+                          gridspec_kws=kws.get('gridspec'),height=kws.get('height'),
+                          aspect=kws.get('aspect'),legend_out=True, dropna=False, 
+                          palette=self.palette)
                 g = g.map_dataframe(plotfunc, self.palette, **kws).add_legend()
                 if plotfunc.__name__ == 'distPlot':
                     g._legend.remove()
@@ -260,11 +265,19 @@ class plotter:
     def distPlot(palette, **kws):
         axes = plt.gca()
         data = kws.pop('data')
-        data = data.dropna()
-        color = palette.get(data['Sample Group'].iloc[0])
         values = kws.get('value_str')
-        sns.distplot(a=data[values], hist=True, rug=True, norm_hist=True, 
+        try:
+            color = palette.get(data[kws.get('hue')].iloc[0])
+            sns.distplot(a=data[values], hist=True, rug=True, norm_hist=True, 
                      color=color, axlabel=kws.get('xlabel'), ax=axes)
+        except np.linalg.LinAlgError:
+            pass
+#            msg = '-> Confirm that all samples have proper channel data'
+#            fullmsg = 'Distribution singular matrix\n{}'.format(msg)
+#            lg.logprint(LAM_logger, fullmsg, 'ex')
+#            print('ERROR: Distribution singular matrix')
+#            print(msg)
+#            axes.text(x=0.1, y=0.1, s="ERROR")
         return axes
 
     def linePlot(palette, **kws):
@@ -319,8 +332,11 @@ class plotter:
                 elif value <= 0.01:
                     pStr = "**"
                     offset = 0.42
-                elif value <= 0.05:
-                    pStr = "*"
+                elif value <= Sett.alpha:
+                    if value <= 0.5:
+                        pStr = "*"
+                    else:
+                        pStr = ""
                     offset = 0.47
                 else:
                     pStr = ""
@@ -337,7 +353,7 @@ class plotter:
                         data=plotData, col='Channel', palette=self.palette,
                         kind='violin', sharey=False, saturation=0.5)
         stats.sort_index(inplace=True)
-        Cntrl_x = order.index(settings.cntrlGroup)
+        Cntrl_x = order.index(Sett.cntrlGroup)
         for axInd, ax in enumerate(g.axes.flat):
             statRow = stats.iloc[axInd, :]
             rejects = statRow.iloc[statRow.index.get_level_values(1).str.

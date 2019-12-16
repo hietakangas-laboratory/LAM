@@ -4,7 +4,7 @@ Created on Wed Mar  6 12:42:28 2019
 @author: Arto I. Viitanen
 
 """
-from settings import settings
+from settings import settings as Sett
 from plot import plotter
 import system, analysis, numpy as np, pandas as pd, copy, warnings, re
 import scipy.stats as ss, statsmodels.stats.multitest as multi
@@ -44,7 +44,7 @@ class statistics:
                 if not np.array_equal(np.unique(row), np.unique(row2)) and \
                     len(np.unique(row)) > 1 and len(np.unique(row2)) > 1:
                     with warnings.catch_warnings():
-                        warnings.simplefilter('ignore', category=RuntimeWarning)
+                        warnings.simplefilter('ignore',category=RuntimeWarning)
                         stat, pval = ss.mannwhitneyu(row, row2, 
                                                      alternative='greater')
                         __, pval2 = ss.mannwhitneyu(row, row2, 
@@ -65,7 +65,7 @@ class statistics:
             with warnings.catch_warnings():
                 warnings.simplefilter('ignore', category=RuntimeWarning)
                 Reject, CorrP, _, _ = multi.multipletests(vals, method='fdr_bh', 
-                                                      alpha=settings.alpha)
+                                                      alpha=Sett.alpha)
             statData.iloc[:,corrInd], statData.iloc[:, rejInd] = CorrP, Reject
             return statData
                 
@@ -80,11 +80,11 @@ class statistics:
          'Corr. Greater', 'P Greater', 'Reject Greater', 'Corr. Lesser', 
          'P Lesser', 'Reject Lesser', 'Corr. Two-sided', 'P Two-sided', 
          'Reject Two-sided'])
-        if settings.windowed:
-            for ind, __ in cntrlData.iloc[settings.trail:-(settings.lead+1), 
+        if Sett.windowed:
+            for ind, __ in cntrlData.iloc[Sett.trail:-(Sett.lead+1), 
                                        :].iterrows():
-                sInd = ind - settings.trail
-                eInd = ind + settings.lead
+                sInd = ind - Sett.trail
+                eInd = ind + Sett.lead
                 cntrlVals = cntrlData.iloc[sInd:eInd, :].values.flatten()
                 tstVals = tstData.iloc[sInd:eInd, :].values.flatten()
                 statData = __get_stats(cntrlVals, tstVals, ind, statData)
@@ -98,11 +98,11 @@ class statistics:
         statData = __correct(statData.iloc[:, 8], 7, 9)
         filename = 'Stats_{} = {}.csv'.format(self.title, self.channel)
         system.saveToFile(statData, self.statsDir, filename, append=False)
-        self.statData, self.cntrlData, self.tstData = statData, cntrlData, tstData
+        self.statData, self.cntrlData, self.tstData=statData, cntrlData,tstData
         return self
     
     def Create_Plots(self, stats, unit="Count", palette = None):
-        if settings.Drop_Outliers:
+        if Sett.Drop_Outliers:
             cntrlData = analysis.DropOutlier(self.cntrlData)
             tstData = analysis.DropOutlier(self.tstData)
         else:
@@ -118,7 +118,7 @@ class statistics:
                'centerline':plot_maker.MPbin, 'xlen':self.length,
                'title':plot_maker.title, 'Stats': stats, 'title_y':1, 
                'fliersize': {'fliersize':'2'}}
-        if settings.windowed: kws.update({'windowed': True})
+        if Sett.windowed: kws.update({'windowed': True})
         plot_maker.plot_Data(plotter.catPlot, plot_maker.savepath, **kws)
         
 class Total_Stats:
@@ -128,7 +128,7 @@ class Total_Stats:
         self.data = system.read_data(path, header=0, test=False, index_col=0)
         self.groups = copy.deepcopy(groups)
         self.channels = self.data.index.tolist()
-        self.cntrlGrp = settings.cntrlGroup
+        self.cntrlGrp = Sett.cntrlGroup
         groups.remove(self.cntrlGrp)
         self.tstGroups = groups
         self.palette = palette
@@ -140,14 +140,14 @@ class Total_Stats:
         mcols = pd.MultiIndex.from_product([self.tstGroups, cols], 
                                            names=['Sample Group', 'Statistics'])
         TotalStats = pd.DataFrame(index=cntrlData.index, columns=mcols)
-        TotalStats.sort_index(level=['Sample Group', 'Statistics'], inplace=True)
+        TotalStats.sort_index(level=['Sample Group', 'Statistics'],inplace=True)
         for grp in self.tstGroups:
             namer = "{}_".format(grp)
             tstData = self.data.loc[:, self.data.columns.str.contains(namer)]
             for i, row in cntrlData.iterrows():
                 row2 = tstData.loc[i, :]
                 stat, pval = ss.mannwhitneyu(row, row2,alternative='two-sided')
-                if pval < settings.alpha:
+                if pval < Sett.alpha:
                     reject = True
                 else:
                     reject = False
