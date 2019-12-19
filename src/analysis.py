@@ -127,9 +127,11 @@ class Samplegroups:
                     if "DistanceMeans" in addName:
                         newlabel = "Distance"
                     else:
-                        newlabel = Sett.AddData.get(addName)[1]
-                        if newlabel is None:
+                        temp = Sett.AddData.get(addName)
+                        if temp is None:
                             newlabel = 'Cell Count'
+                        else:
+                            newlabel = temp[1]
                     kws2.update({'ylabel': newlabel, 'value_str': newlabel})
                 kws2.update(kws)  # Update with kws passed to this function
                 plot_maker.plot_Data(func, savepath, **kws2)  # Plotting
@@ -632,7 +634,7 @@ class Samplegroups:
                             ylabel = "Count"
                         # Create statistical plots
                         Stats.Create_Plots(Stats.statData, ylabel,
-                                       palette=self._grpPalette)
+                                           palette=self._grpPalette)
             lg.logprint(LAM_logger, 'Versus statistics done', 'i')
         # Create stats of total cell numbers if stat_total set to True
         if Sett.stat_total:
@@ -747,25 +749,26 @@ class Sample(Group):
         kws = {'Dist': dist}  # Maximum distance for considering clustering
         # Listing of paths of channels on which clusters are to be found
         clustChans = [p for p in self.channelPaths for t in
-                     Sett.Cluster_Channels if t.lower() == p.stem.lower()]
+                      Sett.Cluster_Channels if t.lower() == p.stem.lower()]
         for path in clustChans:  # Loop paths, read file, and find clusters
             try:
                 Data = system.read_data(path, header=0)
-            except:
+            except (FileNotFoundError, AttributeError):
                 msg = "No file for channel {}".format(path.stem)
-                lg.logprint(LAM_logger,"{}: {}".format(self.name,msg),'w')
+                lg.logprint(LAM_logger, "{}: {}".format(self.name, msg), 'w')
                 print("-> {}".format(msg))
                 return
             Data = Data.loc[:, ~Data.columns.str.contains('ClusterID')]
-            Data.name = path.stem # The name of the clustering channel
-            self.find_distances(Data, volIncl=Sett.Cl_Vol_inclusion, 
-                   compare=Sett.Cl_incl_type, clusters=True, **kws)            
+            Data.name = path.stem  # The name of the clustering channel
+            self.find_distances(Data, volIncl=Sett.Cl_Vol_inclusion,
+                                compare=Sett.Cl_incl_type, clusters=True,
+                                **kws)
         return clustChans
 
-    def find_distances(self, Data, volIncl=200, compare='smaller', 
+    def find_distances(self, Data, volIncl=200, compare='smaller',
                        clusters=False, **kws):
-        """Calculate distances between cells to either find the nearest cell 
-        and distance means per bin, or to find cell clusters. Argument "Data" 
+        """Calculate distances between cells to either find the nearest cell
+        and distance means per bin, or to find cell clusters. Argument "Data"
         is channel data from a sample."""
 
         def __get_nearby(ind, row, target, maxDist, rmv_self=False, **kws):
@@ -774,13 +777,13 @@ class Sample(Group):
             point = CG3dPoint(row.x, row.y, row.z)
             # When finding nearest in the same channel, remove the current
             # cell from the frame, otherwise nearest cell would be itself.
-            if rmv_self == True:
+            if rmv_self:
                 target = target.loc[target.index.difference([ind]), :]
                 # Find cells within the accepted limits (Sett.maxDist)
-            near = target[((abs(target.x - row.x) <= maxDist) & 
-                          (abs(target.y - row.y) <= maxDist) & 
-                          (abs(target.z - row.z) <= maxDist))].index
-            if not near.empty: # Then get distances to nearby cells:
+            near = target[((abs(target.x - row.x) <= maxDist) &
+                           (abs(target.y - row.y) <= maxDist) &
+                           (abs(target.z - row.z) <= maxDist))].index
+            if not near.empty:  # Then get distances to nearby cells:
                 cols = ['XYZ', 'Dist', 'ID']
                 nearby = pd.DataFrame(columns=cols)
                 # Loop through the nearby cells
@@ -788,38 +791,39 @@ class Sample(Group):
                     point2 = CG3dPoint(row2.x, row2.y, row2.z)
                     # Distance from the first cell to the second
                     dist = utils.distance(point, point2)
-                    if dist <= maxDist: # If distance is acceptable, store data
-                        temp = pd.Series([(row2.x, row2.y, row2.z), dist, 
+                    if dist <= maxDist:  # If distance is OK, store data
+                        temp = pd.Series([(row2.x, row2.y, row2.z), dist,
                                           row2.ID], index=cols, name=i2)
                         nearby = nearby.append(temp, ignore_index=True)
                 # if there are cells nearby, return data
-                if not nearby.empty: return nearby
+                if not nearby.empty:
+                    return nearby
             # If no nearby cells, return with None
             return None
 
         def __find_clusters():
-            """Finding of cluster 'seeds', and merging them to create full 
+            """Finding of cluster 'seeds', and merging them to create full
             clusters."""
             def __merge(Seeds):
                 """Merging of seeds that share cells."""
-                r = sum(Seeds, []) # List of all cells
+                r = sum(Seeds, [])  # List of all cells
                 # Create map object containing a set for each cell ID:
                 r = map(lambda x: set([x]), set(r))
                 # Loop through a set of each seed
                 for item in map(set, Seeds):
-                    # For each seed, find corresponding IDs from the set of cell 
+                    # For each seed, find IDs from the set of cell
                     # IDs and merge them
-                    out = [x for x in r if not x & item] # ID-sets not in seed
-                    mSeeds = [x for x in r if x & item] # ID-sets found in seed
+                    out = [x for x in r if not x & item]  # ID-sets not in seed
+                    mSeeds = [x for x in r if x & item]  # found ID-sets
                     # make union of the ID sets that are found
                     mSeeds = set([]).union(*mSeeds)
                     # Reassign r to contain the newly merged ID-sets
                     r = out + [mSeeds]
                 yield r
-            
-            maxDist = kws.get('Dist') # the max distance to consider clustering
-            clusterSeed = {} # For storing cluster 'seeds'
-            for i, row in XYpos.iterrows(): # Iterate over all cells
+
+            maxDist = kws.get('Dist')  # max distance to consider clustering
+            clusterSeed = {}  # For storing cluster 'seeds'
+            for i, row in XYpos.iterrows():  # Iterate over all cells
                 # Find nearby cells
                 nearby = __get_nearby(i, row, XYpos, maxDist, **kws)
                 # If nearby cells, make a list of their IDs and add to seeds
@@ -827,57 +831,56 @@ class Sample(Group):
                     if nearby.shape[0] > 1:
                         clusterSeed[i] = nearby.ID.tolist()
             # Make a sorted list of lists of the found cluster seeds
-            Cl_lst = [sorted(list(clusterSeed.get(key))) for key in 
+            Cl_lst = [sorted(list(clusterSeed.get(key))) for key in
                       clusterSeed.keys()]
             # Merging of the seeds
-            Cl_gen = __merge(Cl_lst) 
-            # Change the generator into list of lists and drop clusters of size 
+            Cl_gen = __merge(Cl_lst)
+            # Change the generator into list of lists and drop clusters of size
             # under/over limits
-            Clusters = [list(y) for x in Cl_gen for y in x if y and len(y) >= 
+            Clusters = [list(y) for x in Cl_gen for y in x if y and len(y) >=
                         Sett.Cl_min and len(y) <= Sett.Cl_max]
             return Clusters
-            
 
         def __find_nearest():
             """For iterating the passed data to determine nearby cells."""
-            maxDist = kws.get('Dist') # the distance used for subsetting target.
+            maxDist = kws.get('Dist')  # distance used for subsetting target
             # If distances are found on other channel:
-            if 'targetXY' in locals(): 
+            if 'targetXY' in locals():
                 target = targetXY
                 comment = Sett.target_chan
-                filename = 'Avg_{} VS {}_Distance Means.csv'.format(Data.name, 
-                                                                  comment)
+                filename = 'Avg_{} VS {}_Distance Means.csv'.format(Data.name,
+                                                                    comment)
                 rmv = False
-            else: # If using the same channel:
+            else:  # If using the same channel:
                 target = XYpos
                 rmv = True
                 comment = Data.name
                 filename = 'Avg_{}_Distance Means.csv'.format(Data.name)
-            cols = ['Nearest_XYZ_{}'.format(comment),'Nearest_Dist_{}'.format(
+            cols = ['Nearest_XYZ_{}'.format(comment), 'Nearest_Dist_{}'.format(
                     comment), 'Nearest_ID_{}'.format(comment)]
             pointData = pd.DataFrame(columns=cols, index=XYpos.index)
             # Iterate over each cell (row) in the data
             for i, row in XYpos.iterrows():
-                nearby = __get_nearby(i, row, target, maxDist, rmv_self=rmv, 
+                nearby = __get_nearby(i, row, target, maxDist, rmv_self=rmv,
                                       **kws)
                 if nearby is not None:
                     nearest = nearby.Dist.idxmin()
                     pointData.loc[i, cols] = nearby.loc[nearest].values
             # Concatenate the obtained data with the read data.
             NewData = pd.concat([Data, pointData], axis=1)
-            # Get bin and distance to nearest cell for each cell, then calculate
+            # Get bin and distance to nearest cell for each cell, calculate
             # average distance within each bin.
             binnedData = NewData.loc[:, 'DistBin']
             distances = NewData.loc[:, cols[1]].astype('float64')
             with warnings.catch_warnings():
                 warnings.simplefilter('ignore', category=RuntimeWarning)
-                means = [np.nanmean(distances[binnedData.values==k]) for k in 
+                means = [np.nanmean(distances[binnedData.values == k]) for k in
                          np.arange(0, store.binNum)]
             return NewData, means, filename
-        #--------#
-        if volIncl > 0: # Subsetting of data based on cell volume
+
+        if volIncl > 0:  # Subsetting of data based on cell volume
             dInd = self.subset_data(Data, compare, volIncl)
-            if 'tData' in kws.keys(): # Obtain target channel if used.
+            if 'tData' in kws.keys():  # Obtain target channel if used
                 tData = kws.pop('tData')
                 tData.name = Data.name
                 tInd = self.subset_data(tData, compare, volIncl)
@@ -885,69 +888,73 @@ class Sample(Group):
             tData = kws.pop('tData')
             tInd = tData.index
             dInd = Data.index
-        else: dInd = Data.index
+        else:
+            dInd = Data.index
         # Accessing the data for the analysis via the indexes taken before.
         # Cells for which the nearest cells will be found:
-        XYpos = Data.loc[dInd,['Position X', 'Position Y', 'Position Z', 
-                               'ID','DistBin']]
-        renames = {'Position X':'x', 'Position Y':'y', 'Position Z':'z'}
-        XYpos.rename(columns=renames, inplace=True) # renaming for dot notation
+        XYpos = Data.loc[dInd, ['Position X', 'Position Y', 'Position Z',
+                                'ID', 'DistBin']]
+        renames = {'Position X': 'x', 'Position Y': 'y', 'Position Z': 'z'}
+        XYpos.rename(columns=renames, inplace=True)  # rename for dot notation
         if 'tInd' in locals():  # Get data from target channel, if used
-            targetXY = tData.loc[tInd,['Position X', 'Position Y', 'Position Z',
-              'ID']]
+            targetXY = tData.loc[tInd, ['Position X', 'Position Y',
+                                        'Position Z', 'ID']]
             targetXY.rename(columns=renames, inplace=True)
-        if clusters == False: # Finding nearest distances
+        if not clusters:  # Finding nearest distances
             NewData, Means, filename = __find_nearest()
             Means = pd.Series(Means, name=self.name)
-            insert, _ = process.relate_data(Means, self.MP, self._center, 
+            insert, _ = process.relate_data(Means, self.MP, self._center,
                                             self._length)
             SMeans = pd.Series(data=insert, name=self.name)
             system.saveToFile(SMeans, self._dataDir, filename)
-        else: # Finding clusters
+        else:  # Finding clusters
             Clusters = __find_clusters()
             # Create dataframe for storing the obtained data
-            clustData = pd.DataFrame(index=Data.index, columns=['ID', 'ClusterID'])
-            clustData = clustData.assign(ID = Data.ID) # Copy ID column from Data
-            # Gives a name from a continuous range to each of the found clusters 
-            # and adds it to cell-specific data (for each belonging cell).
+            clustData = pd.DataFrame(index=Data.index, columns=['ID',
+                                                                'ClusterID'])
+            clustData = clustData.assign(ID=Data.ID)  # Copy ID column
+            # Give name from a continuous range to each of the found clusters
+            # and add it to cell-specific data (for each belonging cell).
             if Clusters:
                 for i, vals in enumerate(Clusters):
                     vals = [int(v) for v in vals]
-                    clustData.loc[clustData.ID.isin(vals),'ClusterID'] = i
+                    clustData.loc[clustData.ID.isin(vals), 'ClusterID'] = i
             # Merge obtained data with the original data
             NewData = Data.merge(clustData, how='outer', copy=False, on=['ID'])
             self.Count_clusters(NewData, Data.name)
-        # Overwrite the original sample data with the data containing new columns.
+        # Overwrite original sample data with the data containing new columns
         OW_name = '{}.csv'.format(Data.name)
-        system.saveToFile(NewData, self.path, OW_name, append=False)    
-        
+        system.saveToFile(NewData, self.path, OW_name, append=False)
+
     def Count_clusters(self, Data, name):
         # Find bins of the clustered cells to find counts per bin
-        idx = Data.loc[:,'ClusterID'].notna().index
-        binnedData = Data.loc[Data.dropna(subset=['ClusterID']).index,'DistBin']
+        idx = Data.loc[:, 'ClusterID'].notna().index
+        binnedData = Data.loc[Data.dropna(subset=['ClusterID']).index,
+                              'DistBin']
         # Sort values and then get counts
         bins = binnedData.sort_values().to_numpy()
         unique, counts = np.unique(bins, return_counts=True)
         idx = np.arange(0, store.binNum)
         # Create series to store the cell count data
-        binnedCounts = pd.Series(np.full(len(idx), np.nan), index=idx, 
+        binnedCounts = pd.Series(np.full(len(idx), np.nan), index=idx,
                                  name=self.name)
         binnedCounts.loc[unique] = counts
         filename = 'Clusters-{}.csv'.format(name)
         system.saveToFile(binnedCounts, self._dataDir, filename)
         # Relate the counts to context, i.e. anchor them at the MP
-        insert, _ = process.relate_data(binnedCounts, self.MP, 
+        insert, _ = process.relate_data(binnedCounts, self.MP,
                                         self._center, self._length)
         # Save the data
         SCounts = pd.Series(data=insert, name=self.name)
         filename = 'ClNorm_Clusters-{}.csv'.format(name)
         system.saveToFile(SCounts, self._dataDir, filename)
-        
+
+
 def DropOutlier(Data):
-    with warnings.catch_warnings(): # Ignore warnings regarding empty bins
+    with warnings.catch_warnings():  # Ignore warnings regarding empty bins
         warnings.simplefilter('ignore', category=RuntimeWarning)
         Mean = np.nanmean(Data.values)
         std = np.nanstd(Data.values)
-        Data = Data.applymap(lambda x: x if np.abs(x - Mean) <= \
+        Data = Data.applymap(lambda x: x if np.abs(x - Mean) <=
                              (Sett.dropSTD * std) else np.nan)
     return Data

@@ -18,6 +18,7 @@ try:
 except AttributeError:
     print('Cannot get logger')
 
+
 class paths:
     def __init__(self, workdir):
         """Creation of output folders."""
@@ -28,12 +29,12 @@ class paths:
             self.plotdir = pl.Path(self.outputdir / 'Plots')
             self.samplesdir = pl.Path(self.outputdir / 'Samples')
             self.statsdir = pl.Path(self.outputdir / 'Statistics')
-            # If samples are to be processed and output data directory exists, the 
-            # directory will be removed with all files as not to interfere with 
-            # analysis.
-            if self.datadir.exists() == True and Sett.process_counts:
+            # If samples are to be processed and output data directory exists,
+            # the directory will be removed with all files as not to interfere
+            # with analysis.
+            if self.datadir.exists() and Sett.process_counts:
                 files = list(self.datadir.glob('*'))
-                msg="'Analysis Data'-folder will be cleared. Continue? [y/n] "
+                msg = "'Analysis Data'-folder will be cleared. Continue? [y/n]"
                 if files:
                     flag = 1
                     while flag:
@@ -55,21 +56,19 @@ class paths:
             pl.Path.mkdir(self.statsdir, exist_ok=True)
         except KeyboardInterrupt:
             raise KeyboardInterrupt
-        except:
-            lg.logprint(LAM_logger, 'Problem with directory creation.', 'ex')
-            return
         lg.logprint(LAM_logger, 'Directories successfully created.', 'i')
 
     def save_AnalysisInfo(self, sample, group, channels):
         """For saving information of all analyzed samples."""
-        pd.DataFrame(sample).to_csv(self.outputdir.joinpath('SampleList.csv'), 
-                     index=False, header=False)
-        pd.DataFrame(group).to_csv(self.outputdir.joinpath('SampleGroups.csv'), 
-                     index=False, header=False)
-        pd.DataFrame(channels).to_csv(self.outputdir.joinpath('Channels.csv'), 
-                     index=False, header=False)
+        pd.DataFrame(sample).to_csv(self.outputdir.joinpath('SampleList.csv'),
+                                    index=False, header=False)
+        pd.DataFrame(group).to_csv(self.outputdir.joinpath('SampleGroups.csv'),
+                                   index=False, header=False)
+        pd.DataFrame(channels).to_csv(self.outputdir.joinpath('Channels.csv'),
+                                      index=False, header=False)
         lg.logprint(LAM_logger, 'All metadata successfully saved.', 'i')
-                   
+
+
 def read_data(filepath, header=Sett.header_row, test=True, index_col=False):
     """For reading csv-data."""
     try:
@@ -79,19 +78,20 @@ def read_data(filepath, header=Sett.header_row, test=True, index_col=False):
             try:
                 data.loc[:, 'ID']
             except KeyError:
-                msg = 'Column label test failed: ID not present at {}'.format(
-                                                                        filepath)
+                msg = 'Column label test failed: ID not present at {}'\
+                                                            .format(filepath)
                 lg.logprint(LAM_logger, msg, 'ex')
                 print('WARNING: read_data() call from {} line {}'.format(
                                 inspect.stack()[1][1], inspect.stack()[1][2]))
                 print("Key 'ID' not found. Wrong header row?")
-                print("If all correct, set test=False\nPath: {}".format(filepath))
+                print("If all correct, set test=False\nPath: {}"
+                      .format(filepath))
     except FileNotFoundError:
-        lg.logprint(LAM_logger, 'File not found at {}'.format(filepath),'e')
+        lg.logprint(LAM_logger, 'File not found at {}'.format(filepath), 'e')
         print('WARNING: read_data() call from {} line {}'.format(
                                 inspect.stack()[1][1], inspect.stack()[1][2]))
-        print('File {} not found at {}'.format(filepath.name, 
-                                          str(filepath.parent)))
+        print('File {} not found at {}'.format(filepath.name,
+                                               str(filepath.parent)))
         return
     return data
 
@@ -101,7 +101,7 @@ def saveToFile(data, directory, filename, append=True, w_index=False):
     a DataFrame to a file. Expects the Series to be of same length as the data
     in the csv"""
     path = directory.joinpath(filename)
-    if append == False: # 
+    if not append:
         if isinstance(data, pd.DataFrame):
             data.to_csv(str(path), index=w_index)
         else:
@@ -120,28 +120,31 @@ def saveToFile(data, directory, filename, append=True, w_index=False):
         else:
             data.to_frame().to_csv(str(path), index=w_index)
 
+
 def start():
     """Check that everything is OK when starting a run."""
     # If workdir variable isn't pathlib.Path, make it so
     if not isinstance(Sett.workdir, pl.Path):
         Sett.workdir = pl.Path(Sett.workdir)
     # Check that at least one primary setting is True
-    if not any([Sett.process_samples, Sett.process_counts, 
+    if not any([Sett.process_samples, Sett.process_counts,
                 Sett.Create_Plots, Sett.process_dists, Sett.statistics]):
         lg.logprint(LAM_logger, 'All primary settings are False', 'e')
         print("\nAll primary settings are set to False.\n\nExiting ...")
         raise SystemExit
-    else: # Otherwise create paths and directories
+    else:  # Otherwise create paths and directories
         PATHS = paths(Sett.workdir)
-        store.samples = [p.name for p in PATHS.samplesdir.iterdir() if p.is_dir()]
+        store.samples = [p.name for p in PATHS.samplesdir.iterdir() if
+                         p.is_dir()]
         return PATHS
-        
+
+
 class store:
     """Store important variables for the analysis."""
-    samplegroups = [] # All samplegroup in analysis
-    channels = [] # All channels in analysis
-    samples = [] # All samples in analysis
-    binNum = len(Sett.projBins) # Number of used bins
-    totalLength = 0 # The length of DataFrame after all samples are anchored
-    center = 0 # The index of the anchoring point within the DataFrame
+    samplegroups = []  # All samplegroup in analysis
+    channels = []  # All channels in analysis
+    samples = []  # All samples in analysis
+    binNum = len(Sett.projBins)  # Number of used bins
+    totalLength = 0  # The length of DataFrame after all samples are anchored
+    center = 0  # The index of the anchoring point within the DataFrame
     clusterPaths = []
