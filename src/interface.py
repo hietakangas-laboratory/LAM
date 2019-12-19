@@ -4,9 +4,15 @@ Created on Wed Mar  6 12:42:28 2019
 @author: Arto I. Viitanen
 
 """
-from run import MAIN_catch_exit
-import tkinter as tk, numpy as np, copy, pathlib as pl
+# Standard libraries
+import copy
+import tkinter as tk
 from tkinter import filedialog
+# Other packages
+import numpy as np
+import pathlib as pl
+# LAM modules
+from run import MAIN_catch_exit
 from settings import settings as Sett
 
 class base_GUI(tk.Toplevel):   

@@ -4,10 +4,19 @@ Created on Wed Mar  6 12:42:28 2019
 @author: Arto I. Viitanen
 
 """
+# Standard libraries
+import copy
+import warnings
+import re
+# Other packages
+import numpy as np
+import pandas as pd
+import scipy.stats as ss
+import statsmodels.stats.multitest as multi
+# LAM modules
 from settings import settings as Sett
 from plot import plotter
-import system, analysis, numpy as np, pandas as pd, copy, warnings, re
-import scipy.stats as ss, statsmodels.stats.multitest as multi
+import system, analysis
 
 class statistics:
     def __init__(self, control, group2):
@@ -71,11 +80,12 @@ class statistics:
                 
         self.channel = ' '.join(str(Path.stem).split('_')[1:])
         Data = system.read_data(Path, header=0, test=False)
-        Data = Data.replace(np.nan, 0)
-        Cntrlreg = re.compile(self.cntrlNamer, re.I)
-        tstreg = re.compile(self.tstNamer, re.I)
-        cntrlData = Data.loc[:, Data.columns.str.contains(Cntrlreg, regex=True)]
-        tstData = Data.loc[:, Data.columns.str.contains(tstreg, regex=True)]
+        # NaN-values changed to zero in order to allow statistical comparison
+        nulData = Data.replace(np.nan, 0)
+        Cntrlreg = re.compile("^{}".format(self.cntrlNamer), re.I)
+        tstreg = re.compile("^{}".format(self.tstNamer), re.I)
+        cntrlData = nulData.loc[:, Data.columns.str.contains(Cntrlreg, regex=True)]
+        tstData = nulData.loc[:, Data.columns.str.contains(tstreg, regex=True)]
         statData = pd.DataFrame(index=Data.index, columns=['U Score',
          'Corr. Greater', 'P Greater', 'Reject Greater', 'Corr. Lesser', 
          'P Lesser', 'Reject Lesser', 'Corr. Two-sided', 'P Two-sided', 
@@ -98,6 +108,9 @@ class statistics:
         statData = __correct(statData.iloc[:, 8], 7, 9)
         filename = 'Stats_{} = {}.csv'.format(self.title, self.channel)
         system.saveToFile(statData, self.statsDir, filename, append=False)
+        # Slice data again to have NaN-values where data doesn't exist
+        cntrlData = Data.loc[:, Data.columns.str.contains(Cntrlreg, regex=True)]
+        tstData = Data.loc[:, Data.columns.str.contains(tstreg, regex=True)]
         self.statData, self.cntrlData, self.tstData=statData, cntrlData,tstData
         return self
     
@@ -134,7 +147,7 @@ class Total_Stats:
         self.palette = palette
         
     def stats(self):
-        namer = re.compile("{}_".format(self.cntrlGrp), re.I)
+        namer = re.compile("^{}_".format(self.cntrlGrp), re.I)
         cntrlData = self.data.loc[:, self.data.columns.str.contains(namer)]
         cols = ['U Score', 'P Two-sided', 'Reject Two-sided']
         mcols = pd.MultiIndex.from_product([self.tstGroups, cols], 
@@ -142,7 +155,7 @@ class Total_Stats:
         TotalStats = pd.DataFrame(index=cntrlData.index, columns=mcols)
         TotalStats.sort_index(level=['Sample Group', 'Statistics'],inplace=True)
         for grp in self.tstGroups:
-            namer = "{}_".format(grp)
+            namer = re.compile("^{}_".format(grp), re.I)
             tstData = self.data.loc[:, self.data.columns.str.contains(namer)]
             for i, row in cntrlData.iterrows():
                 row2 = tstData.loc[i, :]
@@ -163,7 +176,7 @@ class Total_Stats:
         order = self.tstGroups
         order.insert(cntrlN, self.cntrlGrp)
         for namer in namers:
-            plotData.loc['Sample Group', plotData.columns.str.contains(
+            plotData.loc['Sample Group', plotData.columns.str.startswith(
                                                 namer)] = namer.split('_')[0]
         plot_maker = plotter(plotData, self.plotDir, center=0, 
                              title='Total Counts', palette=self.palette, 

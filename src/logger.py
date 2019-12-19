@@ -4,7 +4,9 @@ Created on Wed Mar  6 12:42:28 2019
 @author: Arto I. Viitanen
 
 """
-import logging, time
+# Standard libraries
+import logging
+import time
 # A list of logger names used by the modules. Used for clearing of handlers.
 loggers = ['run', 'process', 'analysis', 'interface', 'plot', 'system']
 

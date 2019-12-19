@@ -4,16 +4,29 @@ Created on Wed Mar  6 12:42:28 2019
 @author: Arto I. Viitanen
 
 """
-import system, math, pandas as pd, numpy as np, shapely.geometry as gm
-import pathlib as pl, re, warnings, decimal as dl, inspect
+# Standard libraries
+import decimal as dl
+import inspect
+import math
+import re
+import warnings
+# Other packages
+import numpy as np
+import pandas as pd
+import pathlib as pl
+from scipy.ndimage import morphology as mp
+import shapely.geometry as gm
+from skimage.morphology import skeletonize
+from skimage.filters import gaussian
+# LAM modules
 from settings import settings as Sett
 from plot import plotter
 from system import store
-from scipy.ndimage import morphology as mp
-from skimage.morphology import skeletonize
-from skimage.filters import gaussian
-import logger as lg
-LAM_logger = lg.get_logger(__name__)
+import logger as lg, system
+try:
+    LAM_logger = lg.get_logger(__name__)
+except AttributeError:
+    print('Cannot get logger')
 
 def Create_Samples(PATHS):
     lg.logprint(LAM_logger, 'Begin vector creation.', 'i')
@@ -492,7 +505,7 @@ class normalize:
         Avgs = pd.DataFrame(index=NormCounts.index, columns=cols)
         for grp in Groups:
             namer = "{}_".format(grp)
-            grpData = NormCounts.loc[:,(NormCounts.columns.str.contains(namer))]
+            grpData = NormCounts.loc[:,(NormCounts.columns.str.startswith(namer))]
             Avgs.loc[:, "{}_All".format(grp)] = grpData.mean(axis=1)
         filename = str('ChanAvg_{}.csv'.format(self.channel))
         system.saveToFile(Avgs, self.path.parent, filename, append=False)
