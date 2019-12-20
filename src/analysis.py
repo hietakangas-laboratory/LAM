@@ -172,8 +172,6 @@ class Samplegroups:
 
         def __versus(paths1, paths2=None, folder=None):
             """Creation of bivariant jointplots."""
-            # Can create a lot ofplots, so when given a folder-input, the
-            # figures are saved there instead of the normal plotting folder.
             if folder:
                 savepath = self._plotDir.joinpath(folder)
             else:

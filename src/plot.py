@@ -378,7 +378,7 @@ class plotter:
             statRow = stats.iloc[axInd, :]
             rejects = statRow.iloc[statRow.index.get_level_values(1).str
                                    .contains('Reject')].where(
-                                       statRow is True).dropna()
+                                       statRow == True).dropna()
             rejectN = np.count_nonzero(rejects.to_numpy())
             if rejectN > 0:
                 __, ytop = ax.get_ylim()

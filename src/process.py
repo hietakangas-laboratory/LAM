@@ -70,6 +70,11 @@ def Project(PATHS):
         for path2 in [p for p in sample.channelpaths if Sett.MPname
                       != str(p).split('_')[-2]]:
             channel = get_channel(path2, sample, Sett.AddData, PATHS.datadir)
+            if channel.datafail:
+                datatypes = ', '.join(channel.datafail)
+                info = "No variance, data discarded"
+                msg = "-> {} - {}: {}".format(info, channel.name, datatypes)
+                print(msg)
             sample.data = sample.project_channel(channel, PATHS.datadir)
             channelName = str(path2.stem)
             if channelName not in ["MPs"]:
@@ -443,6 +448,7 @@ class get_sample:
 
 class get_channel:
     def __init__(self, path, sample, dataKeys, datadir):
+        self.datafail = []
         self.datadir = datadir
         self.name = str(path.stem).split('_')[-2]
         self.path = path
@@ -472,6 +478,9 @@ class get_channel:
             for path in paths:
                 addData = system.read_data(str(path))
                 addData = addData.loc[:, [key, 'ID']]
+                if addData.loc[:, key].nunique() == 1:
+                    addData.loc[:, key] = np.nan
+                    self.datafail.append(key)
                 if len(paths) > 1:
                     # If multiple files found, search identifier from filename
                     strings = str(path.stem).split(fstring)
