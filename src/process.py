@@ -110,6 +110,8 @@ def Get_Counts(PATHS):
             lg.logprint(LAM_logger, msg, 'w')
         Groups = set({s.casefold(): s.split('_')[0] for s in samples}.values())
         store.samplegroups = sorted(Groups)
+        store.channels = [c.stem.split('_')[1] for c in 
+                          PATHS.datadir.glob("All_*.csv")]
         try:  # If required lengths of matrices haven't been defined because
             # Process and Count are both False, get the sizes from files.
             chan = Sett.vectChannel

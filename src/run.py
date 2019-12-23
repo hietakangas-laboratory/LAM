@@ -87,9 +87,6 @@ def main(LAM_logger):
     SampleGroups = analysis.Samplegroups(store.samplegroups, store.channels,
                                          store.totalLength, store.center,
                                          systemPaths)
-    # Computing total cell numbers from each sample's each bin
-    if Sett.process_counts:
-        SampleGroups.Get_Totals()
         # TODO add cluster counting (maybe save channel paths to csv when
         # finding clusters) ???
 #        if store.clusterPaths: # Collect clustering data from existing files
@@ -100,6 +97,9 @@ def main(LAM_logger):
     # Finding clustered cells
     if Sett.Find_Clusters and Sett.process_dists:
         SampleGroups.Get_Clusters()
+    # Computing total values from each sample's each bin
+    if Sett.stat_total or Sett.process_counts:
+        SampleGroups.Get_Totals()
     # Calculation of MWW-statistics for cell counts and other data
     if Sett.statistics:
         SampleGroups.Get_Statistics()

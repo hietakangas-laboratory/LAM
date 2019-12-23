@@ -150,7 +150,8 @@ class Total_Stats:
     def __init__(self, path, groups, plotDir, statsdir, palette=None):
         self.plotDir = plotDir
         self.statsDir = statsdir
-        self.data = system.read_data(path, header=0, test=False, index_col=0)
+        self.filename = path.stem
+        self.data = system.read_data(path, header=0, test=False, index_col=1)
         self.groups = copy.deepcopy(groups)
         self.channels = self.data.index.tolist()
         self.cntrlGrp = Sett.cntrlGroup
@@ -160,7 +161,8 @@ class Total_Stats:
 
     def stats(self):
         namer = re.compile("^{}_".format(self.cntrlGrp), re.I)
-        cntrlData = self.data.loc[:, self.data.columns.str.contains(namer)]
+        # TODO handle new data structure
+        cntrlData = self.data.loc[:, ('Sample Group' == namer)]
         cols = ['U Score', 'P Two-sided', 'Reject Two-sided']
         mcols = pd.MultiIndex.from_product([self.tstGroups, cols],
                                            names=['Sample Group',
@@ -180,7 +182,8 @@ class Total_Stats:
                 else:
                     reject = False
                 TotalStats.loc[i, (grp, cols)] = [stat, pval, reject]
-        system.saveToFile(TotalStats, self.statsDir, "Total Count Stats.csv",
+        self.savename = self.filename + ' Stats.csv'
+        system.saveToFile(TotalStats, self.statsDir, self.savename,
                           append=False, w_index=True)
         return TotalStats
 
@@ -194,6 +197,6 @@ class Total_Stats:
             plotData.loc['Sample Group', plotData.columns.str.startswith(
                                                 namer)] = namer.split('_')[0]
         plot_maker = plotter(plotData, self.plotDir, center=0,
-                             title='Total Counts', palette=self.palette,
+                             title=self.filename, palette=self.palette,
                              color='b')
         plot_maker.total_plot(stats, order)

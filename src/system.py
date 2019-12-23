@@ -34,7 +34,7 @@ class paths:
             # with analysis.
             if self.datadir.exists() and Sett.process_counts:
                 files = list(self.datadir.glob('*'))
-                msg = "'Analysis Data'-folder will be cleared. Continue? [y/n]"
+                msg = "'Data Files'-folder will be cleared. Continue? [y/n]"
                 if files:
                     flag = 1
                     while flag:

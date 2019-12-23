@@ -364,14 +364,14 @@ class plotter:
             return pStr, offset
 
         plotData = pd.melt(self.data.T, id_vars='Sample Group',
-                           value_name='Total Count', var_name='Channel')
-        plotData['Total Count'] = plotData['Total Count'].astype('float64')
+                           value_name='Value', var_name='Variable')
+        plotData['Value'] = plotData['Value'].astype('float64')
         plotData['Ord'] = plotData.loc[:, 'Sample Group'].apply(lambda x:
                                                                 order.index(x))
-        plotData.sort_values(by=['Ord', 'Channel'], axis=0, inplace=True)
-        g = sns.catplot('Sample Group', 'Total Count',
-                        data=plotData, col='Channel', palette=self.palette,
-                        kind='violin', sharey=False, saturation=0.5)
+        plotData.sort_values(by=['Ord', 'Variable'], axis=0, inplace=True)
+        g = sns.catplot('Sample Group', 'Value', data=plotData,
+                        col='Variable', palette=self.palette, kind='violin',
+                        sharey=False, saturation=0.5)
         stats.sort_index(inplace=True)
         Cntrl_x = order.index(Sett.cntrlGroup)
         for axInd, ax in enumerate(g.axes.flat):
@@ -399,8 +399,10 @@ class plotter:
                     pStr, offset = __marker(Pvalue)
                     x = xmin + offset
                     ax.text(x, y, pStr)
-        plt.suptitle('Total Counts', weight='bold', y=1.02)
-        filepath = self.savepath.joinpath('All Channels Total Counts'+self.ext)
+        for ax in g.axes.flat:
+            ax.set_ylim(bottom=0)
+        plt.suptitle(self.title, weight='bold', y=1.02)
+        filepath = self.savepath.joinpath(self.title + self.ext)
         g.savefig(str(filepath), format=self.format)
         plt.close('all')
 
