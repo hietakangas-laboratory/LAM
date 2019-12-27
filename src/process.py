@@ -448,12 +448,13 @@ class get_sample:
 
 class get_channel:
     def __init__(self, path, sample, dataKeys, datadir):
+        self.sample = sample
         self.datafail = []
         self.datadir = datadir
         self.name = str(path.stem).split('_')[-2]
         self.path = path
-        pospath = next(self.path.glob("*Position.csv"))
-        self.data = self.read_channel(pospath)
+        self.pospath = next(self.path.glob("*Position.csv"))
+        self.data = self.read_channel(self.pospath)
         self.data = self.read_additional(dataKeys)
         if 'ClusterID' in self.data.columns:
             store.clusterPaths.append(self.path)
@@ -470,28 +471,65 @@ class get_channel:
                         'ex')
 
     def read_additional(self, dataKeys):
+        
+        def _testVariance(data):
+            for col in data.columns:
+                if data.loc[:, col].nunique() == 1:
+                    data.loc[:, col] = np.nan
+                    self.datafail.append(col)
+        
+        def _rename_ID():
+            rename = None
+            strings = str(col).split('_')
+            if len(strings) > 1:
+                IDstring = strings[-1]
+                if Sett.replaceID:
+                    temp = Sett.channelID.get(IDstring)
+                    if temp is not None:
+                        IDstring = temp
+                rename = str(key + '-' + IDstring)
+            return rename
+
         newData = self.data
         for key in dataKeys:
             fstring = dataKeys.get(key)[0]
             finder = str('*{}*'.format(fstring))
             paths = list(self.path.glob(finder))
-            for path in paths:
-                addData = system.read_data(str(path))
-                addData = addData.loc[:, [key, 'ID']]
-                if addData.loc[:, key].nunique() == 1:
-                    addData.loc[:, key] = np.nan
-                    self.datafail.append(key)
-                if len(paths) > 1:
-                    # If multiple files found, search identifier from filename
+            addData = pd.DataFrame(newData.loc[:, 'ID'])
+            if not paths:
+                print("{} file not found for {}".format(key, self.sample.name))
+                continue
+            elif len(paths) == 1:
+                namer = re.compile('^{}'.format(key), re.I)
+                if (paths[0] == self.pospath and 
+                        any(newData.columns.str.contains(namer))):
+                    continue
+                elif (paths[0] == self.pospath and 
+                      not any(newData.columns.str.contains(namer))):
+                    print("'{}' not in AddData-file of {} on channel {}"
+                          .format(key, self.sample.name, self.name))
+                tmpData = system.read_data(str(paths[0]))
+                cols = tmpData.columns.map(lambda x: bool(re.match(namer, x)) or x == 'ID')
+                tmpData = tmpData.loc[:, cols]
+                addData = pd.merge(addData, tmpData, on='ID')
+            else:
+                for path in paths:
+                    # Search identifier for column from filename
                     strings = str(path.stem).split(fstring)
                     IDstring = strings[1].split('_')[1]
-                    if Sett.replaceID:
-                        temp = Sett.channelID.get(IDstring)
-                        if temp is not None:
-                            IDstring = temp
-                    rename = str(key + '-' + IDstring)
-                    addData.rename(columns={key: rename}, inplace=True)
-                newData = pd.merge(newData, addData, on='ID')
+                    # Locate columns
+                    tmpData = system.read_data(str(path))
+                    tmpData = tmpData.loc[:, [key, 'ID']]
+                    for col in [c for c in tmpData.columns if c != 'ID']:
+                        rename = str(col + '_' + IDstring)
+                        tmpData.rename(columns={key: rename}, inplace=True)
+                    addData = pd.merge(addData, tmpData, on='ID')
+            for col in [c for c in addData.columns if c != 'ID']:
+                _testVariance(tmpData)
+                rename = _rename_ID()
+                if rename is not None:
+                    addData.rename(columns={col: rename}, inplace=True)
+            newData = pd.merge(newData, addData, on='ID')
         return newData
 
 

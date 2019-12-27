@@ -15,20 +15,20 @@ class settings:
 
     # DEFINE PATH TO ANALYSIS FOLDER:
     # (Use input r'PATH' where PATH is your path)
-    workdir = pl.Path(r'\\ad.helsinki.fi\home\a\artoviit\Desktop\test')
+    workdir = pl.Path(r'E:\Code_folder\Statistics')
     # Whether to gather raw data and create vectors. If False, expects to find
     # pre-created datafiles in the Analysis Data directory, i.e. a previous
     # full run has been made, and there has been no edits to the data files.
-    process_samples = True  # CLEARS DATA FILES-DIRECTORY
+    process_samples = False  # CLEARS DATA FILES-DIRECTORY
     # Whether to project, count and normalize data. If set to False, expect all
     # data to be in place. Can be used to e.g. create additional plots faster.
     process_counts = True
     # Whether to compute average distances and clusters.
-    process_dists = True
+    process_dists = False
     # Set True/False to set all plotting functionalities ON/OFF
-    Create_Plots = True     # ON / OFF switch for plots
+    Create_Plots = False     # ON / OFF switch for plots
     # Whether to calculate statistics
-    statistics = True
+    statistics = False
     ##################################################################
 
     # -#-#-#-#-#-#-#-# VECTOR CREATION & PROJECTION #-#-#-#-#-#-#-#-#- #
@@ -80,7 +80,7 @@ class settings:
                }
     # If set to true, replaces the above mentioned (AddData) ID numbers with an
     # alternative moniker as defined in channelID
-    replaceID = False
+    replaceID = True
     channelID = {"Ch=1": "Pros",
                  "Ch=2": "GFP",
                  "Ch=3": "SuH",
