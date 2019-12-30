@@ -268,12 +268,19 @@ class get_sample:
         # Dataframe from skeleton coords
         coordDF = pd.DataFrame(skelValues, columns=['Y', 'X'])
         # BEGIN CREATION OF VECTOR FROM SKELETON COORDS
-        finder = Sett.find_dist  # Variable for detection of nearby XY
+        finder = Sett.find_dist  # Distance for detection of nearby XY
         line = []  # For storing vector
         start = coordDF.X.idxmin()
         sx, sy = coordDF.loc[start, 'X'], coordDF.loc[start, 'Y']
-        nearStart = coordDF[(abs(coordDF.X - sx) <= finder/3) &
-                            (abs(coordDF.Y - sy) <= finder)].index
+        div = 5
+        flag = False
+        while not flag:
+            nearStart = coordDF[(abs(coordDF.X - sx) <= finder/div) &
+                                (abs(coordDF.Y - sy) <= finder)].index
+            if nearStart.size < 3:
+                div -= 0.1
+            else:
+                flag = True
         sx, sy = coordDF.loc[nearStart, 'X'].mean(), coordDF.loc[
             nearStart, 'Y'].mean()
         line.append((sx / resize, sy / resize))
@@ -285,6 +292,12 @@ class get_sample:
                 warnings.simplefilter('ignore', category=UserWarning)
                 nearest = coordDF[(abs(coordDF.X - sx) <= finder) &
                                   (abs(coordDF.Y - sy) <= finder)].index
+            if nearest.size == 0:
+                with warnings.catch_warnings():
+                    warnings.simplefilter('ignore', category=UserWarning)
+                    nearest = coordDF[(abs(coordDF.X - sx) <= finder * 2) &
+                                      (abs(coordDF.Y - sy) <= finder * 2)
+                                      ].index
             if nearest.size > 0:
                 try:
                     point1, point2 = line[-3], line[-1]
@@ -292,7 +305,7 @@ class get_sample:
                     point1, point2 = (sx, sy), (sx + (50*resize), sy)
                 shiftx = point2[0] - point1[0]
                 shifty = point2[1] - point1[1]
-                testP = gm.Point(point2[0]+1.5*shiftx, point2[1]+1.5*shifty)
+                testP = gm.Point(point2[0]+1.25*shiftx, point2[1]+shifty)
                 distances = pd.DataFrame(np.zeros((nearest.size, 5)),
                                          index=nearest,
                                          columns=['dist', 'distOG', 'penalty',

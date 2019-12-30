@@ -43,10 +43,10 @@ class settings:
     SkeletonVector = True
     SkeletonResize = 0.7    # Binary image resize. Keep at steps of ten.
     # Find distance (XY-coord system) in skeleton vector creation
-    find_dist = 35
-    BDiter = 0          # Binary dilation iterations (set to 0 if not needed)
-    SigmaGauss = 0.5    # Sigma for gaussian smoothing (set to 0 if not needed)
-    simplifyTol = 25    # Tolerance for vector simplification.
+    find_dist = 40
+    BDiter = 2          # Binary dilation iterations (set to 0 if not needed)
+    SigmaGauss = 0.4    # Sigma for gaussian smoothing (set to 0 if not needed)
+    simplifyTol = 10    # Tolerance for vector simplification.
     # Number of bins used for vector creation when using the median vector
     # creation. Increasing bin number too much may lead to stair-like vector;
     # increasing 'simplifyTol' can correct the steps.
