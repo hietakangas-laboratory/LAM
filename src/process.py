@@ -221,7 +221,7 @@ class get_sample:
         create_plot.vector(self.name, vector, X, Y, binaryArray, skeleton)
 
     def SkeletonVector(self, X, Y, resize, BDiter, SigmaGauss):
-        def resize_minmax(minv, maxv, axis, resize):
+        def resize_minmax(minv, maxv):
             rminv = math.floor(minv * resize / 10) * 10
             rmaxv = math.ceil(maxv * resize / 10) * 10
             return rminv, rmaxv
@@ -230,17 +230,17 @@ class get_sample:
             """Transformation of coordinates into binary image and subsequent
             dilation and smoothing."""
             buffer = 500 * resize
-            ylbl = np.arange(int(rminy) - buffer,
+            ylbl = np.arange(int(rminy - buffer),
                              int(rmaxy + (buffer + 1)), 10)
-            xlbl = np.arange(int(rminx) - buffer,
+            xlbl = np.arange(int(rminx - buffer),
                              int(rmaxx + (buffer + 1)), 10)
             BA = pd.DataFrame(np.zeros((len(ylbl), len(xlbl))),
                               index=np.flip(ylbl, 0), columns=xlbl)
             BAind, BAcol = BA.index, BA.columns
-            coords = list(zip(X, Y))
             for coord in coords:  # Transform coords into binary array
-                BA.at[(round(coord[1] * resize / 10) * 10,
-                       round(coord[0] * resize / 10) * 10)] = 1
+                y = round(coord[1] * resize / 10) * 10
+                x = (round(coord[0] * resize / 10) * 10)
+                BA.at[y, x] = 1
             if BDiter > 0:  # binary dilations
                 struct1 = mp.generate_binary_structure(2, 2)
                 try:
@@ -256,14 +256,15 @@ class get_sample:
             BA = mp.binary_fill_holes(BA)
             return BA, BAind, BAcol
 
-        rminy, rmaxy = resize_minmax(Y.min(), Y.max(), 'y', resize)
-        rminx, rmaxx = resize_minmax(X.min(), X.max(), 'x', resize)
+        coords = list(zip(X, Y))
+        rminy, rmaxy = resize_minmax(Y.min(), Y.max())
+        rminx, rmaxx = resize_minmax(X.min(), X.max())
         # Transform to binary
         binaryArray, BAindex, BAcols = _binarize()
         # Make skeleton and get coordinates of skeleton pixels
         skeleton = skeletonize(binaryArray)
         skelValues = [(BAindex[y], BAcols[x]) for y, x in zip(
-            *np.where(skeleton is True))]
+            *np.where(skeleton == 1))]
         # Dataframe from skeleton coords
         coordDF = pd.DataFrame(skelValues, columns=['Y', 'X'])
         # BEGIN CREATION OF VECTOR FROM SKELETON COORDS
@@ -294,20 +295,22 @@ class get_sample:
                 testP = gm.Point(point2[0]+1.5*shiftx, point2[1]+1.5*shifty)
                 distances = pd.DataFrame(np.zeros((nearest.size, 5)),
                                          index=nearest,
-                                         columns=['dist', 'distOG', 'score',
+                                         columns=['dist', 'distOG', 'penalty',
                                                   'X', 'Y'])
                 for index, row in coordDF.loc[nearest, :].iterrows():
                     x, y = coordDF.X.at[index], coordDF.Y.at[index]
                     point3 = gm.Point(x, y)
-                    dist = testP.distance(point3)
-                    distOg = point.distance(point3)
-                    score = (0.75 * distOg) + dist
-                    distances.at[index, :] = [dist, distOg, score, x, y]
-                best = distances.score.idxmin()
+                    dist = testP.distance(point3)  # dist to a tespoint
+                    distOg = point.distance(point3)  # dist to current coord
+                    penalty = (0.75 * distOg) + dist
+                    distances.loc[index, :] = [dist, distOg, penalty, x, y]
+                best = distances.penalty.idxmin()
                 x2, y2 = coordDF.X.at[best], coordDF.Y.at[best]
                 line.append((x2 / resize, y2 / resize))
                 forfeit = distances[(distances.dist >= distances.distOG)
                                     ].dropna().index
+                best = pd.Index([best], dtype='int64')
+                forfeit = forfeit.append(best)
                 coordDF.drop(forfeit, inplace=True)
                 sx, sy = x2, y2
             else:

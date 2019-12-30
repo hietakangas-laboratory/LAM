@@ -15,14 +15,14 @@ class settings:
 
     # DEFINE PATH TO ANALYSIS FOLDER:
     # (Use input r'PATH' where PATH is your path)
-    workdir = pl.Path(r'E:\Code_folder\Statistics')
+    workdir = pl.Path(r'\\ad.helsinki.fi\home\a\artoviit\Desktop\test')
     # Whether to gather raw data and create vectors. If False, expects to find
     # pre-created datafiles in the Analysis Data directory, i.e. a previous
     # full run has been made, and there has been no edits to the data files.
-    process_samples = False  # CLEARS DATA FILES-DIRECTORY
+    process_samples = True  # CLEARS DATA FILES-DIRECTORY
     # Whether to project, count and normalize data. If set to False, expect all
     # data to be in place. Can be used to e.g. create additional plots faster.
-    process_counts = True
+    process_counts = False
     # Whether to compute average distances and clusters.
     process_dists = False
     # Set True/False to set all plotting functionalities ON/OFF
@@ -40,12 +40,12 @@ class settings:
     # Make vector by creating binary image and then skeletonizing. If False,
     # vector is created by finding middle point between smallest and largest
     # Y-axis position in bin.
-    SkeletonVector = False
-    SkeletonResize = 0.8    # Binary image resize. Keep at steps of ten.
+    SkeletonVector = True
+    SkeletonResize = 0.7    # Binary image resize. Keep at steps of ten.
     # Find distance (XY-coord system) in skeleton vector creation
-    find_dist = 275
+    find_dist = 35
     BDiter = 0          # Binary dilation iterations (set to 0 if not needed)
-    SigmaGauss = 0.2    # Sigma for gaussian smoothing (set to 0 if not needed)
+    SigmaGauss = 0.5    # Sigma for gaussian smoothing (set to 0 if not needed)
     simplifyTol = 25    # Tolerance for vector simplification.
     # Number of bins used for vector creation when using the median vector
     # creation. Increasing bin number too much may lead to stair-like vector;
