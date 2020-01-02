@@ -15,7 +15,7 @@ class settings:
 
     # DEFINE PATH TO ANALYSIS FOLDER:
     # (Use input r'PATH' where PATH is your path)
-    workdir = pl.Path(r'E:\Code_folder\ALLSTATS')
+    workdir = pl.Path(r'P:\h919\hietakangas\Arto\21.01.2019 Statistics')
     # Whether to gather raw data and create vectors. If False, expects to find
     # pre-created datafiles in the Analysis Data directory, i.e. a previous
     # full run has been made, and there has been no edits to the data files.
@@ -26,9 +26,9 @@ class settings:
     # Whether to compute average distances and clusters.
     process_dists = False
     # Set True/False to set all plotting functionalities ON/OFF
-    Create_Plots = False     # ON / OFF switch for plots
+    Create_Plots = True     # ON / OFF switch for plots
     # Whether to calculate statistics
-    statistics = False
+    statistics = True
     ##################################################################
 
     # -#-#-#-#-#-#-#-# VECTOR CREATION & PROJECTION #-#-#-#-#-#-#-#-#- #

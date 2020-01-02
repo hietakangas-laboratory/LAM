@@ -363,8 +363,9 @@ class plotter:
                 offset = 0
             return pStr, offset
 
-        plotData = pd.melt(self.data.T, id_vars='Sample Group',
-                           value_name='Value', var_name='Variable')
+        plotData = pd.melt(self.data, id_vars=['Sample Group', 'Variable'],
+                           value_name='Value')
+        plotData = plotData.dropna(subset=['Value'])
         plotData['Value'] = plotData['Value'].astype('float64')
         plotData['Ord'] = plotData.loc[:, 'Sample Group'].apply(lambda x:
                                                                 order.index(x))

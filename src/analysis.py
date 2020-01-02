@@ -550,7 +550,7 @@ class Samplegroups:
     def Get_Statistics(self):
         """Handling of data that is to be passed on to group-wise statistical
         analysis of cell counts on each channel, and additional data."""
-        
+
         def _test_control():
             if Sett.cntrlGroup not in store.samplegroups:
                 lg.logprint(LAM_logger, 'Set control group not found', 'c')
@@ -562,19 +562,21 @@ class Samplegroups:
                         msg = "Control group-setting is case-sensitive!"
                         print("WARNING: {}".format(msg))
                         Sett.cntrlGroup = group
-                        print("Control group has been changed to '{}'\n".format(
-                                                                            group))
+                        msg = "Control group has been changed to"
+                        print("{} '{}'\n".format(msg, group))
                         lg.logprint(LAM_logger, '-> Changed to group {}'
                                     .format(group), 'i')
                         test += 1
                 if test == 0:
-                    print("WARNING: control group NOT found in sample groups!\n")
+                    msg = "control group NOT found in sample groups!"
+                    print("WARNING: {}\n".format(msg))
                     flag = 1
                     while flag:
                         print('Found groups:')
                         for i, grp in enumerate(store.samplegroups):
                             print('{}: {}'.format(i, grp))
-                        ans = int(input('Select the number of control group: '))
+                        msg = "Select the number of control group: "
+                        ans = int(input(msg))
                         if 0 <= ans <= len(store.samplegroups):
                             Sett.cntrlGroup = store.samplegroups[ans]
                             print("Control group set as '{}'.\n".format(
@@ -584,7 +586,7 @@ class Samplegroups:
                             print('Command not understood.')
                     msg = "-> Changed to group '{}' by user".format(group)
                     lg.logprint(LAM_logger, msg, 'i')
-                    
+
         def _get_ylabel():
             if 'Clusters' in addChan_name[1]:
                 ylabel = 'Clustered Cells'
@@ -653,16 +655,16 @@ class Samplegroups:
             for path in datapaths:
                 TCounts = Total_Stats(path, self._groups, self._plotDir,
                                       self._statsDir, self._grpPalette)
-                TStats = TCounts.stats()
+                TCounts.stats()
                 # If wanted, create plots of the stats
                 if Sett.Create_Plots and Sett.Create_Statistics_Plots:
-                    TCounts.Create_Plots(TStats)
+                    TCounts.Create_Plots()
             lg.logprint(LAM_logger, 'Total statistics done', 'i')
         lg.logprint(LAM_logger, 'Statistics done', 'i')
 
     def Get_Totals(self):
         """Counting of sample & channel -specific cell count totals."""
-  
+
         def _readAndSum(Avg=False):
             ChData, __, __ = self.read_channel(path, self._groups, drop=dropB)
 #            ChData = ChData.T.drop('Sample Group')
@@ -671,7 +673,7 @@ class Samplegroups:
             ChSum = ChSum.to_frame().assign(group=groups.values)
             ChSum.rename(columns={'group': 'Sample Group'}, inplace=True)
             return ChSum
-        
+
         lg.logprint(LAM_logger, 'Finding total counts', 'i')
         dropB = Sett.Drop_Outliers
         datadir = self._dataDir
@@ -690,10 +692,10 @@ class Samplegroups:
             for path in datadir.glob('Avg_{}_*'.format(channel)):
                 ChData, __, __ = self.read_channel(path, self._groups,
                                                    drop=dropB)
-                add_name = path.stem.split('_')[2]  # Channel name
-                ChData = ChData.assign(Variable=add_name)
+                add_name = path.stem.split('_')[2:]  # Channel name
+                ChData = ChData.assign(Variable='_'.join(add_name))
                 All = pd.concat([All, ChData], ignore_index=False, sort=False)
-            All = All[All.iloc[:, :-3].nunique(axis=1) > 1]
+            All = All[All.iloc[:, :-3].nunique(axis=1, dropna=True) > 1]
         # Save dataframe containing sums of each channel for each sample
             filename = 'Total {} AddData.csv'.format(channel)
             system.saveToFile(All, datadir, filename, append=False,
@@ -706,11 +708,13 @@ class Samplegroups:
             else:
                 name = "{} Distances".format(path.name.split('_')[1])
             ChData, __, __ = self.read_channel(path, self._groups,
-                                                   drop=dropB)
+                                               drop=dropB)
             ChData = ChData.assign(Variable=name)
             All = pd.concat([All, ChData], ignore_index=False, sort=False)
-        filename = 'Total Distance Data.csv'
-        system.saveToFile(All, datadir, filename, append=False, w_index=True)
+        if not All.empty:
+            filename = 'Total Distance Data.csv'
+            system.saveToFile(All, datadir, filename, append=False,
+                              w_index=True)
         lg.logprint(LAM_logger, 'Total counts done', 'i')
 
 

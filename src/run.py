@@ -87,8 +87,8 @@ def main(LAM_logger):
     SampleGroups = analysis.Samplegroups(store.samplegroups, store.channels,
                                          store.totalLength, store.center,
                                          systemPaths)
-        # TODO add cluster counting (maybe save channel paths to csv when
-        # finding clusters) ???
+# TODO add cluster counting (maybe save channel paths to csv when
+# finding clusters) ???
 #        if store.clusterPaths: # Collect clustering data from existing files
 #            SampleGroups.Read_Clusters()
     # Finding of nearest cells and distances

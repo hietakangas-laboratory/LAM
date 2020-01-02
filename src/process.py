@@ -110,7 +110,7 @@ def Get_Counts(PATHS):
             lg.logprint(LAM_logger, msg, 'w')
         Groups = set({s.casefold(): s.split('_')[0] for s in samples}.values())
         store.samplegroups = sorted(Groups)
-        store.channels = [c.stem.split('_')[1] for c in 
+        store.channels = [c.stem.split('_')[1] for c in
                           PATHS.datadir.glob("All_*.csv")]
         try:  # If required lengths of matrices haven't been defined because
             # Process and Count are both False, get the sizes from files.
@@ -489,13 +489,13 @@ class get_channel:
                         'ex')
 
     def read_additional(self, dataKeys):
-        
+
         def _testVariance(data):
             for col in data.columns:
                 if data.loc[:, col].nunique() == 1:
                     data.loc[:, col] = np.nan
                     self.datafail.append(col)
-        
+
         def _rename_ID():
             rename = None
             strings = str(col).split('_')
@@ -519,15 +519,16 @@ class get_channel:
                 continue
             elif len(paths) == 1:
                 namer = re.compile('^{}'.format(key), re.I)
-                if (paths[0] == self.pospath and 
+                if (paths[0] == self.pospath and
                         any(newData.columns.str.contains(namer))):
                     continue
-                elif (paths[0] == self.pospath and 
+                elif (paths[0] == self.pospath and
                       not any(newData.columns.str.contains(namer))):
                     print("'{}' not in AddData-file of {} on channel {}"
                           .format(key, self.sample.name, self.name))
                 tmpData = system.read_data(str(paths[0]))
-                cols = tmpData.columns.map(lambda x: bool(re.match(namer, x)) or x == 'ID')
+                cols = tmpData.columns.map(lambda x: bool(re.match(namer, x))
+                                           or x == 'ID')
                 tmpData = tmpData.loc[:, cols]
                 addData = pd.merge(addData, tmpData, on='ID')
             else:
@@ -587,6 +588,7 @@ class normalize:
         system.saveToFile(Avgs, self.path.parent, filename, append=False)
 
     def Avg_AddData(self, PATHS, dataNames, TotalLen):
+
     # TODO Make area and volume plots only for some channels + datafile naming
         samples = self.starts.index
         for sample in samples:

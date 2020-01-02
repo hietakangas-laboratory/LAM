@@ -151,52 +151,59 @@ class Total_Stats:
         self.plotDir = plotDir
         self.statsDir = statsdir
         self.filename = path.stem
-        self.data = system.read_data(path, header=0, test=False, index_col=1)
-        self.groups = copy.deepcopy(groups)
+        self.data = system.read_data(path, header=0, test=False, index_col=0)
+        self.groups = groups
         self.channels = self.data.index.tolist()
         self.cntrlGrp = Sett.cntrlGroup
-        groups.remove(self.cntrlGrp)
-        self.tstGroups = groups
+        self.tstGroups = [g for g in groups if g != self.cntrlGrp]
         self.palette = palette
 
     def stats(self):
-        namer = re.compile("^{}_".format(self.cntrlGrp), re.I)
         # TODO handle new data structure
-        cntrlData = self.data.loc[:, ('Sample Group' == namer)]
+        grpData = self.data.groupby(['Sample Group'])
+        cntrlData = grpData.get_group(self.cntrlGrp)
+        # cntrlData = self.data.loc[:, ('Sample Group' == namer)]
         cols = ['U Score', 'P Two-sided', 'Reject Two-sided']
         mcols = pd.MultiIndex.from_product([self.tstGroups, cols],
                                            names=['Sample Group',
                                                   'Statistics'])
-        TotalStats = pd.DataFrame(index=cntrlData.index, columns=mcols)
+        variables = self.data.Variable.unique()
+        TotalStats = pd.DataFrame(index=variables, columns=mcols)
         TotalStats.sort_index(level=['Sample Group', 'Statistics'],
                               inplace=True)
         for grp in self.tstGroups:
-            namer = re.compile("^{}_".format(grp), re.I)
-            tstData = self.data.loc[:, self.data.columns.str.contains(namer)]
-            for i, row in cntrlData.iterrows():
-                row2 = tstData.loc[i, :]
-                stat, pval = ss.mannwhitneyu(row, row2,
+            tstData = grpData.get_group(grp)
+            # tstData = self.data.loc[:, self.data.columns.str.contains(namer)]
+            for var in variables:
+                cVals = cntrlData.loc[(cntrlData.Variable == var),
+                                      cntrlData.columns.difference(
+                                          ['Sample Group', 'Variable'])]
+                tVals = tstData.loc[(tstData.Variable == var),
+                                    tstData.columns.difference(
+                                        ['Sample Group', 'Variable'])]
+                stat, pval = ss.mannwhitneyu(cVals.to_numpy().flatten(),
+                                             tVals.to_numpy().flatten(),
                                              alternative='two-sided')
                 if pval < Sett.alpha:
                     reject = True
                 else:
                     reject = False
-                TotalStats.loc[i, (grp, cols)] = [stat, pval, reject]
+                TotalStats.loc[var, (grp, cols)] = [stat, pval, reject]
         self.savename = self.filename + ' Stats.csv'
         system.saveToFile(TotalStats, self.statsDir, self.savename,
                           append=False, w_index=True)
-        return TotalStats
+        self.statData = TotalStats
 
-    def Create_Plots(self, stats):
+    def Create_Plots(self):
         namers = ['{}_'.format(g) for g in self.groups]
         plotData = self.data
         cntrlN = int(len(self.groups) / 2)
         order = self.tstGroups
         order.insert(cntrlN, self.cntrlGrp)
-        for namer in namers:
-            plotData.loc['Sample Group', plotData.columns.str.startswith(
-                                                namer)] = namer.split('_')[0]
+        # for namer in namers:
+        #     plotData.loc['Sample Group', plotData.columns.str.startswith(
+        #                                         namer)] = namer.split('_')[0]
         plot_maker = plotter(plotData, self.plotDir, center=0,
                              title=self.filename, palette=self.palette,
                              color='b')
-        plot_maker.total_plot(stats, order)
+        plot_maker.total_plot(self.statData, order)
