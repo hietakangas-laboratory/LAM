@@ -223,7 +223,7 @@ class get_sample:
         create_plot.vector(self.name, vector, X, Y, binaryArray, skeleton)
 
     def SkeletonVector(self, X, Y, resize, BDiter, SigmaGauss):
-        def resize_minmax(minv, maxv, axis, resize):
+        def resize_minmax(minv, maxv):
             rminv = math.floor(minv * resize / 10) * 10
             rmaxv = math.ceil(maxv * resize / 10) * 10
             return rminv, rmaxv
@@ -232,17 +232,17 @@ class get_sample:
             """Transformation of coordinates into binary image and subsequent
             dilation and smoothing."""
             buffer = 500 * resize
-            ylbl = np.arange(int(rminy) - buffer,
+            ylbl = np.arange(int(rminy - buffer),
                              int(rmaxy + (buffer + 1)), 10)
-            xlbl = np.arange(int(rminx) - buffer,
+            xlbl = np.arange(int(rminx - buffer),
                              int(rmaxx + (buffer + 1)), 10)
             BA = pd.DataFrame(np.zeros((len(ylbl), len(xlbl))),
                               index=np.flip(ylbl, 0), columns=xlbl)
             BAind, BAcol = BA.index, BA.columns
-            coords = list(zip(X, Y))
             for coord in coords:  # Transform coords into binary array
-                BA.at[(round(coord[1] * resize / 10) * 10,
-                       round(coord[0] * resize / 10) * 10)] = 1
+                y = round(coord[1] * resize / 10) * 10
+                x = (round(coord[0] * resize / 10) * 10)
+                BA.at[y, x] = 1
             if BDiter > 0:  # binary dilations
                 struct1 = mp.generate_binary_structure(2, 2)
                 try:
@@ -258,23 +258,31 @@ class get_sample:
             BA = mp.binary_fill_holes(BA)
             return BA, BAind, BAcol
 
-        rminy, rmaxy = resize_minmax(Y.min(), Y.max(), 'y', resize)
-        rminx, rmaxx = resize_minmax(X.min(), X.max(), 'x', resize)
+        coords = list(zip(X, Y))
+        rminy, rmaxy = resize_minmax(Y.min(), Y.max())
+        rminx, rmaxx = resize_minmax(X.min(), X.max())
         # Transform to binary
         binaryArray, BAindex, BAcols = _binarize()
         # Make skeleton and get coordinates of skeleton pixels
         skeleton = skeletonize(binaryArray)
         skelValues = [(BAindex[y], BAcols[x]) for y, x in zip(
-            *np.where(skeleton is True))]
+            *np.where(skeleton == 1))]
         # Dataframe from skeleton coords
         coordDF = pd.DataFrame(skelValues, columns=['Y', 'X'])
         # BEGIN CREATION OF VECTOR FROM SKELETON COORDS
-        finder = Sett.find_dist  # Variable for detection of nearby XY
+        finder = Sett.find_dist  # Distance for detection of nearby XY
         line = []  # For storing vector
         start = coordDF.X.idxmin()
         sx, sy = coordDF.loc[start, 'X'], coordDF.loc[start, 'Y']
-        nearStart = coordDF[(abs(coordDF.X - sx) <= finder/3) &
-                            (abs(coordDF.Y - sy) <= finder)].index
+        div = 5
+        flag = False
+        while not flag:
+            nearStart = coordDF[(abs(coordDF.X - sx) <= finder/div) &
+                                (abs(coordDF.Y - sy) <= finder)].index
+            if nearStart.size < 3:
+                div -= 0.1
+            else:
+                flag = True
         sx, sy = coordDF.loc[nearStart, 'X'].mean(), coordDF.loc[
             nearStart, 'Y'].mean()
         line.append((sx / resize, sy / resize))
@@ -286,6 +294,12 @@ class get_sample:
                 warnings.simplefilter('ignore', category=UserWarning)
                 nearest = coordDF[(abs(coordDF.X - sx) <= finder) &
                                   (abs(coordDF.Y - sy) <= finder)].index
+            if nearest.size == 0:
+                with warnings.catch_warnings():
+                    warnings.simplefilter('ignore', category=UserWarning)
+                    nearest = coordDF[(abs(coordDF.X - sx) <= finder * 2) &
+                                      (abs(coordDF.Y - sy) <= finder * 2)
+                                      ].index
             if nearest.size > 0:
                 try:
                     point1, point2 = line[-3], line[-1]
@@ -293,23 +307,25 @@ class get_sample:
                     point1, point2 = (sx, sy), (sx + (50*resize), sy)
                 shiftx = point2[0] - point1[0]
                 shifty = point2[1] - point1[1]
-                testP = gm.Point(point2[0]+1.5*shiftx, point2[1]+1.5*shifty)
+                testP = gm.Point(point2[0]+1.25*shiftx, point2[1]+shifty)
                 distances = pd.DataFrame(np.zeros((nearest.size, 5)),
                                          index=nearest,
-                                         columns=['dist', 'distOG', 'score',
+                                         columns=['dist', 'distOG', 'penalty',
                                                   'X', 'Y'])
                 for index, row in coordDF.loc[nearest, :].iterrows():
                     x, y = coordDF.X.at[index], coordDF.Y.at[index]
                     point3 = gm.Point(x, y)
-                    dist = testP.distance(point3)
-                    distOg = point.distance(point3)
-                    score = (0.75 * distOg) + dist
-                    distances.at[index, :] = [dist, distOg, score, x, y]
-                best = distances.score.idxmin()
+                    dist = testP.distance(point3)  # dist to a tespoint
+                    distOg = point.distance(point3)  # dist to current coord
+                    penalty = (0.75 * distOg) + dist
+                    distances.loc[index, :] = [dist, distOg, penalty, x, y]
+                best = distances.penalty.idxmin()
                 x2, y2 = coordDF.X.at[best], coordDF.Y.at[best]
                 line.append((x2 / resize, y2 / resize))
                 forfeit = distances[(distances.dist >= distances.distOG)
                                     ].dropna().index
+                best = pd.Index([best], dtype='int64')
+                forfeit = forfeit.append(best)
                 coordDF.drop(forfeit, inplace=True)
                 sx, sy = x2, y2
             else:
@@ -450,12 +466,13 @@ class get_sample:
 
 class get_channel:
     def __init__(self, path, sample, dataKeys, datadir):
+        self.sample = sample
         self.datafail = []
         self.datadir = datadir
         self.name = str(path.stem).split('_')[-2]
         self.path = path
-        pospath = next(self.path.glob("*Position.csv"))
-        self.data = self.read_channel(pospath)
+        self.pospath = next(self.path.glob("*Position.csv"))
+        self.data = self.read_channel(self.pospath)
         self.data = self.read_additional(dataKeys)
         if 'ClusterID' in self.data.columns:
             store.clusterPaths.append(self.path)
@@ -472,28 +489,65 @@ class get_channel:
                         'ex')
 
     def read_additional(self, dataKeys):
+        
+        def _testVariance(data):
+            for col in data.columns:
+                if data.loc[:, col].nunique() == 1:
+                    data.loc[:, col] = np.nan
+                    self.datafail.append(col)
+        
+        def _rename_ID():
+            rename = None
+            strings = str(col).split('_')
+            if len(strings) > 1:
+                IDstring = strings[-1]
+                if Sett.replaceID:
+                    temp = Sett.channelID.get(IDstring)
+                    if temp is not None:
+                        IDstring = temp
+                rename = str(key + '-' + IDstring)
+            return rename
+
         newData = self.data
         for key in dataKeys:
             fstring = dataKeys.get(key)[0]
             finder = str('*{}*'.format(fstring))
             paths = list(self.path.glob(finder))
-            for path in paths:
-                addData = system.read_data(str(path))
-                addData = addData.loc[:, [key, 'ID']]
-                if addData.loc[:, key].nunique() == 1:
-                    addData.loc[:, key] = np.nan
-                    self.datafail.append(key)
-                if len(paths) > 1:
-                    # If multiple files found, search identifier from filename
+            addData = pd.DataFrame(newData.loc[:, 'ID'])
+            if not paths:
+                print("{} file not found for {}".format(key, self.sample.name))
+                continue
+            elif len(paths) == 1:
+                namer = re.compile('^{}'.format(key), re.I)
+                if (paths[0] == self.pospath and 
+                        any(newData.columns.str.contains(namer))):
+                    continue
+                elif (paths[0] == self.pospath and 
+                      not any(newData.columns.str.contains(namer))):
+                    print("'{}' not in AddData-file of {} on channel {}"
+                          .format(key, self.sample.name, self.name))
+                tmpData = system.read_data(str(paths[0]))
+                cols = tmpData.columns.map(lambda x: bool(re.match(namer, x)) or x == 'ID')
+                tmpData = tmpData.loc[:, cols]
+                addData = pd.merge(addData, tmpData, on='ID')
+            else:
+                for path in paths:
+                    # Search identifier for column from filename
                     strings = str(path.stem).split(fstring)
                     IDstring = strings[1].split('_')[1]
-                    if Sett.replaceID:
-                        temp = Sett.channelID.get(IDstring)
-                        if temp is not None:
-                            IDstring = temp
-                    rename = str(key + '-' + IDstring)
-                    addData.rename(columns={key: rename}, inplace=True)
-                newData = pd.merge(newData, addData, on='ID')
+                    # Locate columns
+                    tmpData = system.read_data(str(path))
+                    tmpData = tmpData.loc[:, [key, 'ID']]
+                    for col in [c for c in tmpData.columns if c != 'ID']:
+                        rename = str(col + '_' + IDstring)
+                        tmpData.rename(columns={key: rename}, inplace=True)
+                    addData = pd.merge(addData, tmpData, on='ID')
+            for col in [c for c in addData.columns if c != 'ID']:
+                _testVariance(tmpData)
+                rename = _rename_ID()
+                if rename is not None:
+                    addData.rename(columns={col: rename}, inplace=True)
+            newData = pd.merge(newData, addData, on='ID')
         return newData
 
 

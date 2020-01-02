@@ -137,7 +137,7 @@ if __name__ == '__main__':
         root = tk.Tk()
         gui = interface.base_GUI(root)
         root.mainloop()
-    else:  # Otherwise start the analysis
+    else:  # Otherwise create logger and start the analysis
         import logger as lg
         LAM_logger = lg.setup_logger(__name__)
         lg.print_settings(LAM_logger)  # print settings of analysis to log

@@ -26,9 +26,9 @@ class settings:
     # Whether to compute average distances and clusters.
     process_dists = False
     # Set True/False to set all plotting functionalities ON/OFF
-    Create_Plots = True     # ON / OFF switch for plots
+    Create_Plots = False     # ON / OFF switch for plots
     # Whether to calculate statistics
-    statistics = True
+    statistics = False
     ##################################################################
 
     # -#-#-#-#-#-#-#-# VECTOR CREATION & PROJECTION #-#-#-#-#-#-#-#-#- #
@@ -40,13 +40,13 @@ class settings:
     # Make vector by creating binary image and then skeletonizing. If False,
     # vector is created by finding middle point between smallest and largest
     # Y-axis position in bin.
-    SkeletonVector = False
-    SkeletonResize = 0.8    # Binary image resize. Keep at steps of ten.
+    SkeletonVector = True
+    SkeletonResize = 0.7    # Binary image resize. Keep at steps of ten.
     # Find distance (XY-coord system) in skeleton vector creation
-    find_dist = 275
-    BDiter = 0          # Binary dilation iterations (set to 0 if not needed)
-    SigmaGauss = 0.2    # Sigma for gaussian smoothing (set to 0 if not needed)
-    simplifyTol = 25    # Tolerance for vector simplification.
+    find_dist = 40
+    BDiter = 2          # Binary dilation iterations (set to 0 if not needed)
+    SigmaGauss = 0.4    # Sigma for gaussian smoothing (set to 0 if not needed)
+    simplifyTol = 10    # Tolerance for vector simplification.
     # Number of bins used for vector creation when using the median vector
     # creation. Increasing bin number too much may lead to stair-like vector;
     # increasing 'simplifyTol' can correct the steps.
@@ -80,7 +80,7 @@ class settings:
                }
     # If set to true, replaces the above mentioned (AddData) ID numbers with an
     # alternative moniker as defined in channelID
-    replaceID = False
+    replaceID = True
     channelID = {"Ch=1": "Pros",
                  "Ch=2": "GFP",
                  "Ch=3": "SuH",
