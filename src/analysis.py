@@ -41,14 +41,14 @@ class Samplegroups:
     _AllMPs = None
     _AllStarts = None
     _length = 0
-    _center = int(len(Sett.projBins / 2))
+    _center = None
 
     def __init__(self, groups=None, channels=None, length=0, center=None,
                  PATHS=None, child=False):
         # Creation of variables related to all samples, that are later passed
         # on to child classes.
         if not child:
-            Samplegroups._groups = groups
+            Samplegroups._groups = sorted(groups)
             Samplegroups._channels = channels
             Samplegroups._chanPaths = list(PATHS.datadir.glob('Norm_*'))
             Samplegroups._samplePaths = [p for p in PATHS.samplesdir.iterdir()
@@ -634,13 +634,14 @@ class Samplegroups:
                 for path in chain(Stats.chanPaths, Stats.avgPaths,
                                   Stats.clPaths):
                     Stats = Stats.MWW_test(path)
+                    if Stats.error or "Distance Means" not in path.stem:
+                        continue
                     # If plotting set to True, make plots of current stats
                     if Sett.Create_Statistics_Plots and Sett.Create_Plots:
                         # Find name of data and make title and y-label
                         addChan_name = str(path.stem).split('_')
-                        titlep = addChan_name[1:]
-                        Stats.plottitle = "{} = {}".format(
-                                        Stats.title, '-'.join(titlep))
+                        titlep = '-'.join(addChan_name[1:])
+                        Stats.plottitle = "{} = {}".format(Stats.title, titlep)
                         ylabel = _get_ylabel()
                         # Create statistical plots
                         Stats.Create_Plots(Stats.statData, ylabel,

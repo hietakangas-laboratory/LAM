@@ -120,7 +120,8 @@ class plotter:
                 Sett.stars = False
                 Y = stats.iloc[:, 7]
                 X = Y.index.tolist()
-                Y.replace(0, np.nan, inplace=True)
+#                Y.replace(0, np.nan, inplace=True)
+                # Find locations where the log line should be drawn
                 ind = Y[Y.notnull()].index
                 logvals = pd.Series(np.zeros(Y.shape[0]), index=Y.index)
                 logvals.loc[ind] = np.log2(Y[ind].astype(np.float64))
@@ -233,7 +234,8 @@ class plotter:
         # Giving a title and then saving the plot
         plt.suptitle(self.title, weight='bold', y=kws.get('title_y'))
         filepath = savepath.joinpath(self.title + self.ext)
-        g.savefig(str(filepath), format=self.format)
+        fig = fig = plt.gcf()
+        fig.savefig(str(filepath), format=self.format)
         plt.close('all')
 
     def boxPlot(palette, **kws):
@@ -321,16 +323,22 @@ class plotter:
 
     def catPlot(self, palette, **kws):
         data = kws.pop('data')
-        col = kws.get('ylabel')
-        plotData = data.dropna(subset=[col])
-        flierprops = kws.pop('fliersize')
-        fkws = {'dropna': True}
+#        col = kws.get('ylabel')
+#        plotData = data.dropna(subset=[col])
+#        flierprops = kws.pop('fliersize')
+        fkws = {'dropna': False}
         xlabel, ylabel = kws.get('xlabel'), kws.get('ylabel')
-        plotData = plotData.astype({xlabel: 'int', ylabel: 'int'})
-        g = sns.catplot(data=plotData, x=xlabel, y=ylabel, hue="Sample Group",
+#        ind = data[[kws.get('ylabel')]].notna()
+#        data[ind] = data[ind].astype({ylabel: 'float'})
+        data = data.replace(np.nan, 0)
+        g = sns.catplot(data=data, x=xlabel, y=ylabel, hue="Sample Group",
                         kind="box", palette=palette, linewidth=0.15,
                         height=kws.get('height'), aspect=kws.get('aspect'),
-                        facet_kws=fkws, **flierprops)
+                        facet_kws=fkws, showfliers=False, legend=False)
+        g = sns.swarmplot(data=data, x=xlabel, y=ylabel, hue="Sample Group",
+                          size=1.5, linewidth=0.05, palette=palette)
+        plt.subplots_adjust(right=1.05, bottom=0)
+#        pp plotData[["Sample Group"]].str.split(';\s*', expand=True).stack().unique()
         return g
 
     def Heatmap(palette, **kws):

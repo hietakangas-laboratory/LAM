@@ -40,14 +40,16 @@ class statistics:
         self.statsDir = control._statsDir
         self.plotDir = control._plotDir.joinpath("Stat Plots")
         self.plotDir.mkdir(exist_ok=True)
-        self.chanPaths = self.dataDir.glob('Norm_*')
-        self.avgPaths = self.dataDir.glob('Avg_*')
-        self.clPaths = self.dataDir.glob('ClNorm_*')
+        self.chanPaths = self.dataDir.glob('Norm_*')  # Cell counts
+        self.avgPaths = self.dataDir.glob('Avg_*')  # Additional data avgs
+        self.clPaths = self.dataDir.glob('ClNorm_*')  # Cluster data
         self.palette = {control: control.color, group2.group: group2.color}
         # Statistics and data
         self.statData = None
         self.cntrlData = None
         self.tstData = None
+        self.order = [self.cntrlGroup, self.tstGroup]
+        self.error = False
 
     def MWW_test(self, Path):
         def __get_stats(row, row2, ind, statData):
@@ -81,11 +83,16 @@ class statistics:
                                                           alpha=Sett.alpha)
             statData.iloc[:, corrInd], statData.iloc[:, rejInd] = CorrP, Reject
             return statData
-
+        
+        self.error = False
         self.channel = ' '.join(str(Path.stem).split('_')[1:])
         Data = system.read_data(Path, header=0, test=False)
         # NaN-values changed to zero in order to allow statistical comparison
         nulData = Data.replace(np.nan, 0)
+        if nulData.nunique().nunique() == 1:
+            print("-> {}: No data, passed.".format(self.channel))
+            self.error = True
+            return self
         Cntrlreg = re.compile("^{}".format(self.cntrlNamer), re.I)
         tstreg = re.compile("^{}".format(self.tstNamer), re.I)
         cntrlData = nulData.loc[:, Data.columns.str.contains(Cntrlreg,
@@ -143,6 +150,7 @@ class statistics:
                'title_y': 1, 'fliersize': {'fliersize': '2'}}
         if Sett.windowed:
             kws.update({'windowed': True})
+        plot_maker.order = self.order
         plot_maker.plot_Data(plotter.catPlot, plot_maker.savepath, **kws)
 
 
