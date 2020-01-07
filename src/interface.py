@@ -1022,6 +1022,10 @@ class Plot_Settings(tk.Toplevel):
                                relief='sunken')
         self.ylimIn.grid(row=2, column=2, columnspan=2)
         self.sign_check()
+        self.CObs = tk.BooleanVar(value=Sett.observations)
+        self.CobsC = tk.Checkbutton(self.statframe, text="Observations",
+                                    variable=self.CObs)
+        self.CobsC.grid(row=3, column=0, columnspan=2)
         # Buttons
         self.Save_b = tk.Button(self.Bframe, text='Save & Return\n<Enter>',
                                 font=('Arial', 10, 'bold'),
@@ -1062,6 +1066,7 @@ class Plot_Settings(tk.Toplevel):
         Sett.stars = self.starsV.get()
         Sett.fill = self.CfillV.get()
         Sett.ylim = self.setLogy.get()
+        Sett.observations = self.CObs.get()
         ChStr = self.setVsCh.get().split(',')
         for i, channel in enumerate(ChStr):
             ChStr[i] = channel.strip()

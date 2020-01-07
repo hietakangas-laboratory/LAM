@@ -147,7 +147,7 @@ class statistics:
                'aspect': 4, 'var_str': 'Longitudinal Position',
                'value_str': unit, 'centerline': plot_maker.MPbin,
                'xlen': self.length, 'title': plot_maker.title, 'Stats': stats,
-               'title_y': 1, 'fliersize': {'fliersize': '2'}}
+               'title_y': 1, 'fliersize': {'fliersize': '1'}}
         if Sett.windowed:
             kws.update({'windowed': True})
         plot_maker.order = self.order

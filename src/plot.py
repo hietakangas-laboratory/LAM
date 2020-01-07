@@ -124,7 +124,9 @@ class plotter:
                 # Find locations where the log line should be drawn
                 ind = Y[Y.notnull()].index
                 logvals = pd.Series(np.zeros(Y.shape[0]), index=Y.index)
-                logvals.loc[ind] = np.log2(Y[ind].astype(np.float64))
+                with warnings.catch_warnings():
+                    warnings.simplefilter('ignore', category=RuntimeWarning)
+                    logvals.loc[ind] = np.log2(Y[ind].astype(np.float64))
                 xmin, xtop = stats.index.min(), stats.index.max()
                 # Create twin axis with -log2 P-values
                 ax2 = plt.twinx()
@@ -321,24 +323,25 @@ class plotter:
                       color=palette.get(key), ax=axes, space=0,
                       joint_kws={'shade_lowest': False})
 
-    def catPlot(self, palette, **kws):
+    def catPlot(self, palette, fliers=True, **kws):
         data = kws.pop('data')
-#        col = kws.get('ylabel')
-#        plotData = data.dropna(subset=[col])
-#        flierprops = kws.pop('fliersize')
         fkws = {'dropna': False}
         xlabel, ylabel = kws.get('xlabel'), kws.get('ylabel')
-#        ind = data[[kws.get('ylabel')]].notna()
-#        data[ind] = data[ind].astype({ylabel: 'float'})
         data = data.replace(np.nan, 0)
+        flierprops = kws.pop('fliersize')
+        if Sett.observations:
+            fliers = False
+            flierprops = {}
         g = sns.catplot(data=data, x=xlabel, y=ylabel, hue="Sample Group",
                         kind="box", palette=palette, linewidth=0.15,
                         height=kws.get('height'), aspect=kws.get('aspect'),
-                        facet_kws=fkws, showfliers=False, legend=False)
-        g = sns.swarmplot(data=data, x=xlabel, y=ylabel, hue="Sample Group",
-                          size=1.5, linewidth=0.05, palette=palette)
-        plt.subplots_adjust(right=1.05, bottom=0)
-#        pp plotData[["Sample Group"]].str.split(';\s*', expand=True).stack().unique()
+                        facet_kws=fkws, showfliers=fliers, legend_out=True,
+                        **flierprops)
+        if Sett.observations:
+            g = sns.swarmplot(data=data, x=xlabel, y=ylabel,
+                              hue="Sample Group", size=2.5, linewidth=0.05,
+                              palette=palette)
+            g.get_legend().set_visible(False)
         return g
 
     def Heatmap(palette, **kws):

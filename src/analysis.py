@@ -634,7 +634,7 @@ class Samplegroups:
                 for path in chain(Stats.chanPaths, Stats.avgPaths,
                                   Stats.clPaths):
                     Stats = Stats.MWW_test(path)
-                    if Stats.error or "Distance Means" not in path.stem:
+                    if Stats.error:
                         continue
                     # If plotting set to True, make plots of current stats
                     if Sett.Create_Statistics_Plots and Sett.Create_Plots:

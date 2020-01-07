@@ -15,7 +15,7 @@ class settings:
 
     # DEFINE PATH TO ANALYSIS FOLDER:
     # (Use input r'PATH' where PATH is your path)
-    workdir = pl.Path(r'E:\Code_folder\ALLSTATS')
+    workdir = pl.Path(r'\\ad.helsinki.fi\home\a\artoviit\Desktop\test')
     # Whether to gather raw data and create vectors. If False, expects to find
     # pre-created datafiles in the Analysis Data directory, i.e. a previous
     # full run has been made, and there has been no edits to the data files.
@@ -130,6 +130,7 @@ class settings:
     stars = False  # Make P-value stars (*:<0.05 **:<0.01 ***:<0.001)
     fill = True  # fill significant bins with marker color
     negLog2 = True  # Forces stars to be False
+    observations = True  # Plot individual observations
     # The name of the control group that the statistics are run against.
     cntrlGroup = "starv"
 
