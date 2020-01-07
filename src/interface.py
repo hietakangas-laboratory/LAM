@@ -59,15 +59,17 @@ class base_GUI(tk.Toplevel):
         self.browse = tk.Button(self.topf, text="Directory",
                                 command=self.browse_button)
         self.browse.grid(row=0, column=0)
-        self.DetChans = tk.StringVar()
-        self.DetGroups = tk.StringVar()
-        self.Detect_Channels()
+        self.DetChans = tk.StringVar(value="Detected channels:")
+        self.DetGroups = tk.StringVar(value="Detected groups:")
+        self.detect = tk.Button(self.topf, text="Detect",
+                                command=self.Detect_Channels)
+        self.detect.grid(row=1, column=0)
         self.lblGroups = tk.Label(self.topf, text=self.DetGroups.get(),
                                   textvariable=self.DetGroups)
-        self.lblGroups.grid(row=1, column=0, columnspan=8, pady=(0, 0))
+        self.lblGroups.grid(row=1, column=1, columnspan=8, pady=(0, 0))
         self.lblChannels = tk.Label(self.topf, text=self.DetChans.get(),
                                     textvariable=self.DetChans)
-        self.lblChannels.grid(row=2, column=0, columnspan=8, pady=(0, 0))
+        self.lblChannels.grid(row=2, column=1, columnspan=8, pady=(0, 0))
 
         # MIDDLE FRAME / PRIMARY SETTINGS BOX
         global SampleV, CountV, DistV, PlotV, StatsV, MPV, setMP, setHead
@@ -662,12 +664,12 @@ class base_GUI(tk.Toplevel):
                     pass
         if chans:
             chanstring = tk.StringVar(value="Detected channels: {}".format(
-                                            ', '.join(chans)))
+                                            ', '.join(sorted(chans))))
         else:
             chanstring = tk.StringVar(value='No detected channels!')
         if groups:
             grpstring = tk.StringVar(value="Detected groups: {}".format(
-                                            ', '.join(groups)))
+                                            ', '.join(sorted(groups))))
         else:
             grpstring = tk.StringVar(value='No detected groups!')
         self.DetGroups.set(grpstring.get())
