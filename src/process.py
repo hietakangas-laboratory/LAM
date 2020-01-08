@@ -515,7 +515,7 @@ class get_channel:
             paths = list(self.path.glob(finder))
             addData = pd.DataFrame(newData.loc[:, 'ID'])
             if not paths:
-                print("{} file not found for {}".format(key, self.sample.name))
+                print("-> {} {}-file not found".format(self.name, key))
                 continue
             elif len(paths) == 1:
                 namer = re.compile('^{}'.format(key), re.I)
