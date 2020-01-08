@@ -4,6 +4,7 @@ Created on Wed Mar  6 12:42:28 2019
 @author: Arto I. Viitanen
 
 """
+
 # Standard libraries
 import logging
 import time
@@ -12,8 +13,13 @@ loggers = ['run', 'process', 'analysis', 'interface', 'plot', 'system']
 
 
 def setup_logger(name=None, new=True):
-    """Sets up variables for the logger when run starts.
-        Param. name: the calling module."""
+    """
+    Sets up variables for the logger when run starts.
+    
+    Args:
+        name - the calling module.
+        new - create new logger
+    """
     # Create variables for the creation of logfile
     global logFile, ctime, log_created
     ctime = time.strftime("%d%b%y_%H%M%S")  # Start time for the run
@@ -24,10 +30,8 @@ def setup_logger(name=None, new=True):
         log_created = True  # Create variable to indicate log has been created
         return logger
 
-
 def get_logger(name):
-    """Get module-specific logger.
-        Param. name: the calling module."""
+    """Get module-specific logger."""
     logger = logging.getLogger(name)  # Create logger
     if not logger.handlers:
         logger.addHandler(_get_handler())  # Get andler that passes messages
@@ -36,7 +40,6 @@ def get_logger(name):
     if name not in loggers:
         loggers.append(name)
     return logger
-
 
 def _get_handler():
     """Create message handler in conjunction with get_logger()"""
@@ -49,23 +52,16 @@ def _get_handler():
     file_handler.setLevel(logging.DEBUG)  # Set logs of all level to be shown
     return file_handler
 
-
 def Close():
+    """Close all created loggers."""
     for lgr in loggers:
         logger = logging.getLogger(lgr)
         for handler in logger.handlers:
             handler.close()
         logger.handlers = []
 
-
-def print_lgrs():
-    for lgr in loggers:
-        print(lgr)
-        logger = logging.getLogger(lgr)
-        print(logger.handlers)
-
-
 def Update():
+    """Update current loggers."""
     setup_logger(new=False)
     for lgr in loggers:
         logger = logging.getLogger(lgr)
@@ -73,15 +69,18 @@ def Update():
 
 
 def log_Shutdown():
+    """Shut down all logging elements."""
     logging.shutdown()
 
 
 def logprint(self, msg="Missing", logtype='e'):
-    """Prints information of different level to the log file.
-    Params:
-        msg: message to log
-        logtype: type of log
-            i = info; w = warning; d = debug; c = critical; e = error;
+    """
+    Prints information of different level to the log file.
+    
+    Args:
+        msg - message to log
+        logtype - type of log
+            i = info, w = warning, d = debug, c = critical, e = error,
             ex = exception
     """
     if logtype == 'i':

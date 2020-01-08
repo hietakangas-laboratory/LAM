@@ -17,6 +17,8 @@ import pathlib as pl
 
 
 class base_GUI(tk.Toplevel):
+    """Container for the most important settings of the GUI."""
+
     def __init__(self, master=None):
         master.title("LAM-v1.0")
         self.master = master
@@ -375,6 +377,7 @@ class base_GUI(tk.Toplevel):
         self.Distance_check()
 
     def Distance_check(self):
+        """Relevant changes when distances-setting is checked."""
         if not DistV.get():
             for widget in self.distf.winfo_children():
                 widget.configure(state='disable')
@@ -388,6 +391,7 @@ class base_GUI(tk.Toplevel):
         self.run_check()
 
     def Cluster_check(self):
+        """Relevant changes when cluster-setting is checked."""
         if not self.clustV.get():
             for widget in [self.ClChanlbl, self.ClChIn, self.ClDistlbl,
                            self.ClDistIn, self.ClMinlbl, self.ClMinIn,
@@ -405,6 +409,7 @@ class base_GUI(tk.Toplevel):
             self.Filter_check()
 
     def Dist_check(self):
+        """Relevant changes when find distance-setting is checked."""
         if not self.FdistV.get():
             for widget in [self.DChanlbl, self.DChIn, self.DDistlbl,
                            self.DDistIn, self.DTarget, self.DTargetIn,
@@ -421,6 +426,7 @@ class base_GUI(tk.Toplevel):
             self.Filter_check()
 
     def Filter_check(self):
+        """Relevant changes when filtering by size is checked."""
         if not self.UseSubV.get():
             for widget in [self.DSizlbl, self.DSizIn, self.VDbut1, self.VDbut2,
                            self.ClSizlbl, self.ClSizIn, self.VClbut1,
@@ -437,6 +443,7 @@ class base_GUI(tk.Toplevel):
                     widget.configure(state='normal')
 
     def MP_check(self):
+        """Relevant changes when MP is in use or not."""
         if not MPV.get():
             self.lblMP.configure(state='disable')
             self.MPIn.configure(state='disable')
@@ -445,12 +452,14 @@ class base_GUI(tk.Toplevel):
             self.MPIn.configure(state='normal')
 
     def Target_check(self):
+        """Relevant changes when target-setting is checked."""
         if not self.UseTargetV.get():
             self.DTargetIn.configure(state='disable')
         else:
             self.DTargetIn.configure(state='normal')
 
     def Stat_check(self):
+        """Relevant changes when statistics-setting is checked."""
         if not StatsV.get():
             self.statsbutton.configure(state='disable')
             self.statC.configure(state='disable')
@@ -461,6 +470,7 @@ class base_GUI(tk.Toplevel):
         self.run_check()
 
     def Plot_check(self):
+        """Relevant changes when plot-setting is checked."""
         if PlotV.get() is False:
             self.plotbutton.configure(state='disable')
             for widget in self.rightf.winfo_children():
@@ -472,6 +482,7 @@ class base_GUI(tk.Toplevel):
         self.run_check()
 
     def Process_check(self):
+        """Relevant changes when Process-setting is checked."""
         if not SampleV.get():
             for widget in self.Up_leftf.winfo_children():
                 if widget not in [self.binIn, self.lbl5]:
@@ -492,6 +503,7 @@ class base_GUI(tk.Toplevel):
         self.run_check()
 
     def run_check(self):
+        """Determine whether run button is active."""
         Ps = [SampleV.get(), CountV.get(), DistV.get(), PlotV.get(),
               StatsV.get()]
         if not any(Ps):
@@ -500,6 +512,7 @@ class base_GUI(tk.Toplevel):
             self.Run_b.configure(state='normal', bg='lightgreen')
 
     def Count_check(self):
+        """Relevant changes when count-setting is checked."""
         if not CountV.get():
             self.binIn.configure(state='disable')
             self.lbl5.configure(state='disable')
@@ -517,12 +530,14 @@ class base_GUI(tk.Toplevel):
         self.run_check()
 
     def browse_button(self):
+        """Allow input of path when browse-button is pressed."""
         filename = filedialog.askdirectory()
         self.folder_path.set(filename)
         Sett.workdir = str(self.folder_path.get())
         self.Detect_Channels()
 
     def RUN_button(self, event=None):
+        """Relevant changes when Run-button is pressed + run initialization."""
         Sett.workdir = pl.Path(self.folder_path.get())
         Sett.process_samples = SampleV.get()
         Sett.process_counts = CountV.get()
@@ -618,43 +633,52 @@ class base_GUI(tk.Toplevel):
         MAIN_catch_exit()
 
     def show_VSett(self, name):
+        """Change shown vector settings based on type."""
         for frame in self.frames.values():
             frame.grid_remove()
         frame = self.frames[name]
         frame.grid()
 
     def switch_pages(self):
+        """Switch page of vector settings."""
         if not VType.get():
             self.show_VSett(Median_settings)
         else:
             self.show_VSett(Skel_settings)
 
     def func_destroy(self, event=None):
+        """Destroy GUI."""
         import logger as lg
         lg.log_Shutdown()
         self.master.destroy()
 
     def Open_AddSettings(self):
+        """Open additional settings window."""
         Additional_data(self.master)
 
     def Open_PlotSettings(self):
+        """Open plot settings window."""
         Plot_Settings(self.master)
 
     def Open_StatSettings(self):
+        """Open statistics settings window."""
         Stat_Settings(self.master)
 
     def Detect_Channels(self):
+        """Detect channels and groups found at current set path."""
         workdir = pl.Path(self.folder_path.get())
         chans = []
         groups = []
+        # Loop found sample directories
         for samplepath in [p for p in workdir.iterdir() if p.is_dir() and
                            'Analysis Data' not in p.name]:
-            try:
+            try:  # Get groups from folder names
                 group = str(samplepath.name).split('_')[0]
                 if group not in groups:
                     groups.append(group)
             except IndexError:
                 pass
+            # Loop through channels of found samples
             for channelpath in [p for p in samplepath.iterdir() if p.is_dir()]:
                 try:
                     channel = str(channelpath.name).split('_')[-2]
@@ -662,6 +686,7 @@ class base_GUI(tk.Toplevel):
                         chans.append(channel)
                 except IndexError:
                     pass
+        # Change text variables to contain new groups and channels
         if chans:
             chanstring = tk.StringVar(value="Detected channels: {}".format(
                                             ', '.join(sorted(chans))))
@@ -672,17 +697,22 @@ class base_GUI(tk.Toplevel):
                                             ', '.join(sorted(groups))))
         else:
             grpstring = tk.StringVar(value='No detected groups!')
+        # Set new text variables to be shown
         self.DetGroups.set(grpstring.get())
         self.DetChans.set(chanstring.get())
 
 
 class Skel_settings(tk.Frame):
+    """Container for skeleton vector-related settings."""
+
     def __init__(self, parent, master):
         tk.Frame.__init__(self, parent, bd=2, relief='groove')
+        # Container label
         self.lblSetS = tk.Label(self, text='Vector Parameters:', bd=1,
                                 font=('Arial', 10))
         self.lblSetS.grid(row=0, column=0, columnspan=3, pady=(0, 3))
 
+        # Container widgets
         global SimpTol, reSz, fDist, dilI, SSmooth
         self.lbl6 = tk.Label(self, text='Simplify tol.', bd=1,
                              font=('Arial', 9))
@@ -726,13 +756,17 @@ class Skel_settings(tk.Frame):
 
 
 class Median_settings(tk.Frame):
+    """Container for median vector-related settings."""
+
     def __init__(self, parent, master):
+        # Container label
         tk.Frame.__init__(self, parent, bd=2, relief='groove')
 
         self.lblSetM = tk.Label(self, text='Vector Parameters:', bd=1,
                                 font=('Arial', 10))
         self.lblSetM.grid(row=0, column=0, columnspan=3, pady=(0, 3))
 
+        # Container widgets
         global SimpTol, medBins
         self.lbl6 = tk.Label(self, text='Simplify tol.', bd=1,
                              font=('Arial', 9))
@@ -752,6 +786,8 @@ class Median_settings(tk.Frame):
 
 
 class Additional_data(tk.Toplevel):
+    """Container for Other-window settings."""
+
     def __init__(self, master):
         self.window = tk.Toplevel(master)
         self.window.grab_set()
@@ -794,6 +830,7 @@ class Additional_data(tk.Toplevel):
         self.unitIn = tk.Entry(self.frame, text=setUnit.get(), bg='white',
                                textvariable=setUnit, bd=2, relief='sunken')
         self.unitIn.grid(row=1, column=5, columnspan=2, pady=(0, 10))
+        
         # buttons
         self.Add_b = tk.Button(self.frame, text='Add',
                                font=('Arial', 10, 'bold'),
@@ -862,6 +899,7 @@ class Additional_data(tk.Toplevel):
         self.replace_check()
 
     def replace_check(self):
+        """Change relevant settings when replaceID is checked."""
         if not self.repID.get():
             for child in self.Dframe.winfo_children():
                 if isinstance(child, tk.Entry):
@@ -872,6 +910,7 @@ class Additional_data(tk.Toplevel):
                     child.configure(state='normal')
 
     def add_data(self):
+        """Handling of data input to the additional data table."""
         if setLbl.get() not in self.addDict.keys():
             i = self.rowN
             row = self.rowN+2
@@ -896,6 +935,7 @@ class Additional_data(tk.Toplevel):
             print("Delete old label of same name before adding.")
 
     def rmv_data(self, i):
+        """Handling of data removal from the additional data table."""
         for widget in self.frame.grid_slaves():
             if int(widget.grid_info()["row"]) == i+2 and int(
                     widget.grid_info()["column"]) == 0:
@@ -909,6 +949,7 @@ class Additional_data(tk.Toplevel):
                 widget.grid_forget()
 
     def save_setts(self, event=None):
+        """Saving of data when exiting other window."""
         Sett.AddData = self.addDict
         Sett.replaceID = self.repID.get()
         if Sett.replaceID:
@@ -928,6 +969,8 @@ class Additional_data(tk.Toplevel):
 
 
 class Plot_Settings(tk.Toplevel):
+    """Container for Other-window settings."""
+
     def __init__(self, master):
         self.window = tk.Toplevel(master)
         self.window.grab_set()
@@ -1043,12 +1086,14 @@ class Plot_Settings(tk.Toplevel):
         self.exit_b.grid(row=0, column=4)
 
     def Drop_check(self):
+        """Relevant changes when dropping of outliers is selected."""
         if not self.DropV.get():
             self.stdIn.configure(state='disable')
         else:
             self.stdIn.configure(state='normal')
 
     def sign_check(self):
+        """Relevant changes when neglog2-setting is selected."""
         if not self.neglogV.get():
             self.starC.configure(state='normal')
             self.lbl7.configure(state='disable')
@@ -1060,6 +1105,7 @@ class Plot_Settings(tk.Toplevel):
             self.ylimIn.configure(state='normal')
 
     def save_setts(self, event=None):
+        """Saving of settings when plot-window is exited"""
         Sett.Drop_Outliers = self.DropV.get()
         Sett.dropSTD = self.setSTD.get()
         Sett.plot_jitter = self.JitterV.get()
@@ -1080,10 +1126,12 @@ class Plot_Settings(tk.Toplevel):
         self.window.destroy()
 
     def func_destroy(self, event=None):
+        """Destroy window without saving."""
         self.window.destroy()
 
-
 class Stat_Settings(tk.Toplevel):
+    """Container for statistics-window settings."""
+    
     def __init__(self, master):
         self.window = tk.Toplevel(master)
         self.window.grab_set()
@@ -1161,6 +1209,7 @@ class Stat_Settings(tk.Toplevel):
         self.exit_b.grid(row=0, column=4)
 
     def Window_check(self):
+        """Relevant changes when windowed statistics is selected."""
         if not self.WindV.get():
             for widget in self.Winframe.winfo_children():
                 widget.configure(state='disable')
@@ -1169,6 +1218,7 @@ class Stat_Settings(tk.Toplevel):
                 widget.configure(state='normal')
 
     def save_setts(self, event=None):
+        """Save settings when exiting stats-window."""
         Sett.cntrlGroup = self.setCtrlGrp.get()
         Sett.stat_total = self.TotalV.get()
         Sett.stat_versus = self.VersusV.get()
@@ -1180,4 +1230,5 @@ class Stat_Settings(tk.Toplevel):
         self.window.destroy()
 
     def func_destroy(self, event=None):
+        """Destroy stats-window."""
         self.window.destroy()
