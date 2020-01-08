@@ -1,5 +1,5 @@
 # Longitudinal Analysis of Midgut
-## -----------LAM v1.0-----------
+### ---------------LAM v1.0---------------
 
 Longitudinal Analysis of Midgut (LAM) is a tool for reducing the dimensionality of microscopy
 image–obtained data, and for subsequent quantification of variables and feature counts while
@@ -35,6 +35,6 @@ circumstances, it is recommended that each sample group should have >=10 samples
 This project is licensed under the MIT License - see the LICENSE.md file for details
 
 ### Acknowledgments
-    Ville Hietakangas - [Hietakangas laboratory](https://www.helsinki.fi/en/researchgroups/nutrient-sensing)
-    Jaakko Mattila - [Mattila laboratory](https://www.helsinki.fi/en/researchgroups/metabolism-and-signaling)
+    Ville Hietakangas - [Hietakangas laboratory](https://www.helsinki.fi/en/researchgroups/nutrient-sensing/)
+    Jaakko Mattila - [Mattila laboratory](https://www.helsinki.fi/en/researchgroups/metabolism-and-signaling/)
 
