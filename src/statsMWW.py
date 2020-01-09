@@ -160,9 +160,9 @@ class Total_Stats:
         self.statsDir = statsdir
         self.filename = path.stem
         self.data = system.read_data(path, header=0, test=False, index_col=0)
-        if self.data.empty:
+        if self.data is None or self.data.empty:  # Test that data is fine
             self.dataerror = True
-            return
+            return None
         self.groups = groups
         self.channels = self.data.index.tolist()
         self.cntrlGrp = Sett.cntrlGroup

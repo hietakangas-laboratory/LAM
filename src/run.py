@@ -104,7 +104,10 @@ def main(LAM_logger):
     if Sett.statistics:
         SampleGroups.Get_Statistics()
     # Creation of plots from various data (excluding statistical plots)
-    if Sett.Create_Plots:
+    plots = [Sett.Create_Channel_Plots, Sett.Create_AddData_Plots,
+             Sett.Create_Channel_PairPlots, Sett.Create_Heatmaps,
+             Sett.Create_Distribution_Plots, Sett.Create_Cluster_Plots]
+    if Sett.Create_Plots and any(plots):
         SampleGroups.create_plots()
 
 

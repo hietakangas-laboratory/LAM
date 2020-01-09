@@ -254,7 +254,7 @@ class Samplegroups:
                 kws.update({'id_str': 'Sample Group', 'var_str': xlabel,
                             'ylabel': ylabel, 'value_str': ylabel})
                 plot_maker.plot_Data(plotter.distPlot, savepath, **kws)
-                
+    
             # Additional data
             for key in Sett.AddData.keys():
                 print("{}  ...".format(key))
@@ -702,7 +702,8 @@ class Samplegroups:
             for path in datapaths:
                 TCounts = Total_Stats(path, self._groups, self._plotDir,
                                       self._statsDir, self._grpPalette)
-                if TCounts.dataerror:
+                # If error in data, continue to next total file
+                if TCounts.dataerror or TCounts is None:
                     continue
                 TCounts.stats()
                 # If wanted, create plots of the stats

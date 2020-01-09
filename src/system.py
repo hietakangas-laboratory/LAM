@@ -93,8 +93,8 @@ def read_data(filepath, header=Sett.header_row, test=True, index_col=False):
         print('File {} not found at {}'.format(filepath.name,
                                                str(filepath.parent)))
         return
-    except AttributeError:
-        if data.empty:
+    except (AttributeError, pd.errors.EmptyDataError) as err:
+        if isinstance(err, pd.errors.EmptyDataError):
             msg = "{} is empty. Skipped.".format(filepath.name)
             print("ERROR: {}".format(msg))
             lg.logprint(LAM_logger, msg, 'e')
