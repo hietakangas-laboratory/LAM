@@ -680,6 +680,8 @@ class Samplegroups:
                                   Stats.clPaths):
                     Stats = Stats.MWW_test(path)
                     if Stats.error:
+                        msg = "Missing or faulty data for {}".format(path.name)
+                        lg.logprint(LAM_logger, msg, 'e')
                         continue
                     # If plotting set to True, make plots of current stats
                     if Sett.Create_Statistics_Plots and Sett.Create_Plots:

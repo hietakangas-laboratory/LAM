@@ -86,23 +86,25 @@ class statistics:
         self.error = False
         self.channel = ' '.join(str(Path.stem).split('_')[1:])
         Data = system.read_data(Path, header=0, test=False)
-        # NaN-values changed to zero in order to allow statistical comparison
-        nulData = Data.replace(np.nan, 0)
-        if nulData.nunique().nunique() == 1:
-            print("-> {}: No data, passed.".format(self.channel))
+        # Test that data exists and has non-zero, numeric values
+        cols = Data.any().index
+        validData = Data.loc[:, cols]
+        validGrpN = cols.map(lambda x: str(x).split('_')[0]).unique().size
+        if validData.empty or validGrpN < 2:
+            print("-> {}: Insufficient data, passed.".format(self.channel))
             self.error = True
             return self
+        # NaN-values changed to zero in order to allow statistical comparison
+        nulData = validData.replace(np.nan, 0)
+        # Find group-specific data
         Cntrlreg = re.compile("^{}".format(self.cntrlNamer), re.I)
         tstreg = re.compile("^{}".format(self.tstNamer), re.I)
-        cntrlData = nulData.loc[:, Data.columns.str.contains(Cntrlreg,
-                                                             regex=True)]
-        tstData = nulData.loc[:, Data.columns.str.contains(tstreg, regex=True)]
-        statData = pd.DataFrame(
-            index=Data.index, columns=['U Score', 'Corr. Greater', 'P Greater',
-                                       'Reject Greater', 'Corr. Lesser',
-                                       'P Lesser', 'Reject Lesser',
-                                       'Corr. Two-sided', 'P Two-sided',
-                                       'Reject Two-sided'])
+        cntrlData = nulData.loc[:, cols.str.contains(Cntrlreg, regex=True)]
+        tstData = nulData.loc[:, cols.str.contains(tstreg, regex=True)]
+        statCols = ['U Score', 'Corr. Greater', 'P Greater', 'Reject Greater',
+                    'Corr. Lesser', 'P Lesser', 'Reject Lesser',
+                    'Corr. Two-sided', 'P Two-sided', 'Reject Two-sided']
+        statData = pd.DataFrame(index=Data.index, columns=statCols)
         if Sett.windowed:
             for ind, __ in cntrlData.iloc[Sett.trail:-(Sett.lead+1),
                                           :].iterrows():
@@ -122,9 +124,8 @@ class statistics:
         filename = 'Stats_{} = {}.csv'.format(self.title, self.channel)
         system.saveToFile(statData, self.statsDir, filename, append=False)
         # Slice data again to have NaN-values where data doesn't exist
-        cntrlData = Data.loc[:, Data.columns.str.contains(Cntrlreg,
-                                                          regex=True)]
-        tstData = Data.loc[:, Data.columns.str.contains(tstreg, regex=True)]
+        cntrlData = Data.loc[:, cols.str.contains(Cntrlreg, regex=True)]
+        tstData = Data.loc[:, cols.str.contains(tstreg, regex=True)]
         self.statData = statData
         self.cntrlData, self.tstData = cntrlData, tstData
         return self

@@ -103,7 +103,7 @@ class plotter:
             MPbin = kws.get('centerline')
             __, ytop = plt.ylim()
             for ax in g.axes.flat:
-                ax.plot((MPbin, MPbin), (0, ytop), 'r--')
+                ax.plot((MPbin, MPbin), (0, ytop), 'r--', zorder=0)
 
         def __stats():
             """Plot statistical elements within data plots."""
@@ -162,10 +162,10 @@ class plotter:
                 ax2.set_yticks(ytick)
                 ax2.set_yticklabels(ytick, fontdict={'fontsize': 14})
                 ax2.yaxis.set_label_coords(1.04, 0.85)
-                ybot2, ytop2 = ax2.get_ylim()
-                yaxis = [ybot2, ybot2]
-                # Create centerline
-                ax2.plot((MPbin, MPbin), (ybot2, ytop2), 'r--')
+                # Create centerline:
+                ybot, ytop = ax.get_ylim()
+                yaxis = [ybot, ybot]
+                ax.plot((MPbin, MPbin), (ybot, ytop), 'r--', zorder=0)
             # Initiation of variables when not using -log2 & make centerline
             else:
                 yaxis = [tytop, tytop]
@@ -266,7 +266,7 @@ class plotter:
         axes = plt.gca()
         data = kws.pop('data')
         sns.boxplot(data=data, x=kws.get('xlabel'), y=kws.get('ylabel'),
-                    hue=kws.get('id_str'), saturation=0.5, linewidth=0.2,
+                    hue=kws.get('id_str'), saturation=0.5, linewidth=0.8,
                     showmeans=False, notch=False, palette=palette,
                     fliersize=kws.get('flierS'), ax=axes)
         return axes
@@ -372,7 +372,7 @@ class plotter:
                         facet_kws=fkws, showfliers=fliers, legend_out=True,
                         **flierprops)
         if Sett.observations:  # Create scatters of individual observations
-            g = sns.swarmplot(data=data, x=xlabel, y=ylabel,
+            g = sns.swarmplot(data=data, x=xlabel, y=ylabel, zorder=1,
                               hue="Sample Group", size=2.5, linewidth=0.05,
                               palette=palette)
             g.get_legend().set_visible(False)
