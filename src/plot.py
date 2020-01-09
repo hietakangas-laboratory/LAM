@@ -452,7 +452,7 @@ class plotter:
                     Pvalue = statRow.loc[(grp, 'P Two-sided')]
                     pStr, offset = __marker(Pvalue)
                     # Define plot location for stars and plot
-                    x = xmin + offset
+                    x = line[0] + offset
                     ax.text(x, y, pStr)
         for ax in g.axes.flat:
             ax.set_ylim(bottom=0)

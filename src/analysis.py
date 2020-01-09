@@ -304,7 +304,7 @@ class Samplegroups:
             # Find cluster channels
             clchans = [str(p.stem).split('-')[1] for p in
                        self._dataDir.glob('Clusters-*.csv')]
-            
+
             # Creation of sample-specific position plots:
             if clchans:
                 # Find all channels of each sample
@@ -328,7 +328,7 @@ class Samplegroups:
                 msg = 'No cluster count files found (Clusters_*)'
                 print('WARNING: {}'.format(msg))
                 lg.logprint(LAM_logger, msg, 'w')
-            
+
             # Creation of cluster heatmaps:
             paths = list(self._dataDir.glob('ClNorm_*.csv'))
             if paths:  # Only if cluster data is found
@@ -371,25 +371,25 @@ class Samplegroups:
         print("\n---Creating plots---")
         # Update addData variable to contain newly created average-files
         self._addData = list(self._dataDir.glob('Avg_*'))
-        
+
         if Sett.Create_Channel_Plots:  # Plot channels
             lg.logprint(LAM_logger, 'Plotting channels', 'i')
             print('Plotting channels  ...')
             __base(self._chanPaths, plotter.boxPlot)
             lg.logprint(LAM_logger, 'Channel plots done.', 'i')
-            
+
         if Sett.Create_AddData_Plots:  # Plot additional data
             lg.logprint(LAM_logger, 'Plotting additional data', 'i')
             print('Plotting additional data  ...')
             __base(self._addData, plotter.linePlot, ylabel=None)
             lg.logprint(LAM_logger, 'Additional data plots done.', 'i')
-            
+
         if Sett.Create_Channel_PairPlots:  # Plot pair plot
             lg.logprint(LAM_logger, 'Plotting channel pairs', 'i')
             print('Plotting channel pairs  ...')
             __pair()
             lg.logprint(LAM_logger, 'Channel pairs done.', 'i')
-            
+
         if Sett.Create_Heatmaps:  # Plot channel heatmaps
             lg.logprint(LAM_logger, 'Plotting heatmaps', 'i')
             print('Plotting heatmaps  ...')
@@ -398,7 +398,7 @@ class Samplegroups:
             HMpaths = self._dataDir.glob("Norm_*")
             __heat(HMpaths, samples=True)  # Sample-specific
             lg.logprint(LAM_logger, 'Heatmaps done.', 'i')
-            
+
         if Sett.Create_ChanVSAdd_Plots:  # Plot channels
             lg.logprint(LAM_logger, 'Plotting channel VS additional data', 'i')
             print('Plotting channel VS additional data  ...')
@@ -406,7 +406,7 @@ class Samplegroups:
             paths2 = _select(self._addData)
             __versus(paths1, paths2, 'Chan VS AddData')
             lg.logprint(LAM_logger, 'Channel VS additional data done.', 'i')
-            
+
         if Sett.Create_AddVSAdd_Plots:  # Plot additional data against self
             lg.logprint(LAM_logger, 'Plotting add. data vs add. data', 'i')
             print('Plotting additional data VS additional data  ...')
@@ -414,18 +414,18 @@ class Samplegroups:
             __versus(paths, folder='AddData VS AddData')
             lg.logprint(LAM_logger, 'additional data VS additional data done',
                         'i')
-            
+
         if Sett.Create_Distribution_Plots:  # Plot distributions
             lg.logprint(LAM_logger, 'Plotting distributions', 'i')
             print('-Distributions-')
             __distributions()
             lg.logprint(LAM_logger, 'Distributions done', 'i')
-            
+
         # TODO nearest dist plots ???
 #        if Sett.Create_NearestDist_Plots:
 #            print('Plotting average distances  ...')
 #            __nearestDist()
-            
+
         if Sett.Create_Cluster_Plots:  # Plot cluster data
             lg.logprint(LAM_logger, 'Plotting clusters', 'i')
             print('Plotting clusters  ...')
@@ -438,7 +438,7 @@ class Samplegroups:
                 lg.logprint(LAM_logger, 'Clusters done', 'i')
             else:
                 print('No cluster files found')
-                lg.logprint(LAM_logger, 'No cluster files found', 'e')          
+                lg.logprint(LAM_logger, 'No cluster files found', 'e')
         lg.logprint(LAM_logger, 'Plotting completed', 'i')
 
     def read_channel(self, path, groups, drop=False, name_sep=1):
@@ -652,7 +652,7 @@ class Samplegroups:
         else:
             print('\n---Calculating statistics---')
         _test_control()  # Test if given control group is found
-        
+
         # Create stats of control vs. other groups if stat_versus set to True
         if Sett.stat_versus:
             lg.logprint(LAM_logger, 'Calculating versus statistics', 'i')
@@ -692,7 +692,7 @@ class Samplegroups:
                         Stats.Create_Plots(Stats.statData, ylabel,
                                            palette=self._grpPalette)
             lg.logprint(LAM_logger, 'Versus statistics done', 'i')
-            
+
         # Create stats of total cell numbers if stat_total set to True
         if Sett.stat_total:
             lg.logprint(LAM_logger, 'Calculating total statistics', 'i')
@@ -702,6 +702,8 @@ class Samplegroups:
             for path in datapaths:
                 TCounts = Total_Stats(path, self._groups, self._plotDir,
                                       self._statsDir, self._grpPalette)
+                if TCounts.dataerror:
+                    continue
                 TCounts.stats()
                 # If wanted, create plots of the stats
                 if Sett.Create_Plots and Sett.Create_Statistics_Plots:
@@ -713,7 +715,7 @@ class Samplegroups:
         """Counting of sample & channel -specific cell count totals."""
 
         def _readAndSum():
-            """Read current path and sum cell numbers of bins for each sample 
+            """Read current path and sum cell numbers of bins for each sample
             in order to get totals for plotting."""
             ChData, __, __ = self.read_channel(path, self._groups, drop=dropB)
             # Get sum of cells for each sample
@@ -823,7 +825,7 @@ class Sample(Group):
         # List paths of channels where distances are to be found
         distChans = [p for p in self.channelPaths for t in
                      Sett.Distance_Channels if t.lower() == p.stem.lower()]
-        
+
         if Sett.use_target:  # If distances are found against other channel:
             target = Sett.target_chan  # Get the name of the target channel
             try:  # Find target's data file, read, and update data to keywords
@@ -838,7 +840,7 @@ class Sample(Group):
                 lg.logprint(LAM_logger, "{}: {}".format(self.name, msg), 'w')
                 print("-> {}".format(msg))
                 return
-            
+
         # Loop through the channels, read, and find distances
         for path in distChans:
             try:

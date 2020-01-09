@@ -93,6 +93,17 @@ def read_data(filepath, header=Sett.header_row, test=True, index_col=False):
         print('File {} not found at {}'.format(filepath.name,
                                                str(filepath.parent)))
         return
+    except AttributeError:
+        if data.empty:
+            msg = "{} is empty. Skipped.".format(filepath.name)
+            print("ERROR: {}".format(msg))
+            lg.logprint(LAM_logger, msg, 'e')
+            return None
+        else:
+            msg = "Data or columns may be faulty in {}".format(filepath.name)
+            print("WARNING: {}".format(msg))
+            lg.logprint(LAM_logger, msg, 'w')
+            return data
     return data
 
 

@@ -10,7 +10,6 @@ from plot import plotter
 import system
 import analysis
 # Standard libraries
-import copy
 import warnings
 import re
 # Other packages
@@ -83,7 +82,7 @@ class statistics:
                                                           alpha=Sett.alpha)
             statData.iloc[:, corrInd], statData.iloc[:, rejInd] = CorrP, Reject
             return statData
-        
+
         self.error = False
         self.channel = ' '.join(str(Path.stem).split('_')[1:])
         Data = system.read_data(Path, header=0, test=False)
@@ -156,10 +155,14 @@ class statistics:
 
 class Total_Stats:
     def __init__(self, path, groups, plotDir, statsdir, palette=None):
+        self.dataerror = False
         self.plotDir = plotDir
         self.statsDir = statsdir
         self.filename = path.stem
         self.data = system.read_data(path, header=0, test=False, index_col=0)
+        if self.data.empty:
+            self.dataerror = True
+            return
         self.groups = groups
         self.channels = self.data.index.tolist()
         self.cntrlGrp = Sett.cntrlGroup
@@ -203,7 +206,6 @@ class Total_Stats:
         self.statData = TotalStats
 
     def Create_Plots(self):
-        namers = ['{}_'.format(g) for g in self.groups]
         plotData = self.data
         cntrlN = int(len(self.groups) / 2)
         order = self.tstGroups
