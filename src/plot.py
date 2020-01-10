@@ -56,10 +56,10 @@ class plotter:
             figskel, axes = plt.subplots(nrows=1, ncols=2, figsize=(15, 6),
                                          sharex=True, sharey=True)
             ax = axes.ravel()
-            ax[0].imshow(binaryArray, cmap=(plt.cm.gray))
+            ax[0].imshow(binaryArray)
             ax[0].axis('off')
             ax[0].set_title('modified', fontsize=16)
-            ax[1].imshow(skeleton, cmap=(plt.cm.gray))
+            ax[1].imshow(skeleton)
             ax[1].axis('off')
             ax[1].set_title('skeleton', fontsize=16)
             figskel.tight_layout()
@@ -78,7 +78,7 @@ class plotter:
 
     def plot_Data(self, plotfunc, savepath, palette=None, **kws):
         """General plotting function for many kinds of data."""
-        def __melt_data(Data, **kws):
+        def __melt_data(**kws):
             """Melt dataframes to long form."""
             if 'var_str' in kws.keys():
                 varname = kws.get('var_str')
@@ -164,7 +164,7 @@ class plotter:
                 ax2.yaxis.set_label_coords(1.04, 0.85)
                 # Create centerline:
                 ybot, ytop = ax.get_ylim()
-                yaxis = [ybot, ybot]
+                yaxis = [ytop, ytop]
                 ax.plot((MPbin, MPbin), (ybot, ytop), 'r--', zorder=0)
             # Initiation of variables when not using -log2 & make centerline
             else:
@@ -177,24 +177,28 @@ class plotter:
                 comment = "Window: lead {}, trail {}".format(Sett.lead,
                                                              Sett.trail)
                 ax.text(0, tytop*1.02, comment)
+            # Get colors for fills
             LScolors = sns.color_palette('Reds', n_colors=4)
             GRcolors = sns.color_palette('Blues', n_colors=4)
+            # Plot significances:
             for index, row in stats.iterrows():
                 # If both hypothesis rejections have same value, continue
                 if row[3] == row[6]:
                     continue
                 xaxis = [index-0.5, index+0.5]
-                if row[3] is True:  # cntrl is greater
+                if row[3] is True:  # ctrl is greater
                     pStr, color = __marker(row[1], LScolors)
                     if Sett.fill:
-                        plt.fill_between(xaxis, yaxis, color=color, alpha=0.2)
+                        ax.fill_between(xaxis, yaxis, color=color, alpha=0.2,
+                                        zorder=0)
                     if Sett.stars:
                         plt.text(index, yheight, pStr,
                                  fontdict={'fontsize': 14})
-                if row[6] is True:  # cntrl is lesser
+                if row[6] is True:  # ctrl is lesser
                     pStr, color = __marker(row[4], GRcolors)
                     if Sett.fill:
-                        plt.fill_between(xaxis, yaxis, color=color, alpha=0.2)
+                        ax.fill_between(xaxis, yaxis, color=color, alpha=0.2,
+                                        zorder=0)
                     if Sett.stars:
                         plt.text(index, yheight, pStr,
                                  fontdict={'fontsize': 14})
@@ -214,8 +218,8 @@ class plotter:
         self.plot_error = False
         # The input data is melted if id_str is found in kws:
         if 'id_str' in kws and kws.get('id_str') is not None:
-            plotData, varname, valname = __melt_data(self.data, **kws)
-            kws.update({'xlabel': varname,  'ylabel': valname,
+            plotData, varname, valname = __melt_data(**kws)
+            kws.update({'xlabel': varname, 'ylabel': valname,
                         'data': plotData})
         else:  # Otherwise data is used as is
             plotData = self.data
@@ -275,7 +279,7 @@ class plotter:
         """Creation of pair plots."""
         # Missing values changed to 0 (required for plot)
         data = self.data.sort_values(by="Sample Group").drop(
-                            'Longitudinal Position', axis=1).replace(np.nan, 0)
+            'Longitudinal Position', axis=1).replace(np.nan, 0)
         grpOrder = data["Sample Group"].unique().tolist()  # Plot order
         colors = [self.palette.get(k) for k in grpOrder]
         # Create color variables for scatter edges
@@ -294,7 +298,7 @@ class plotter:
             try:
                 g = sns.pairplot(data=data, hue=kws.get('hue'),
                                  kind=kws.get('kind'), diag_kind=kws.get(
-                                 'diag_kind'), palette=self.palette,
+                                     'diag_kind'), palette=self.palette,
                                  plot_kws=pkws, diag_kws=dkws)
             # In case of missing or erroneous data, linalgerror can be raised
             except np.linalg.LinAlgError:  # Then, exit plotting
@@ -363,19 +367,19 @@ class plotter:
         xlabel, ylabel = kws.get('xlabel'), kws.get('ylabel')
         data = data.replace(np.nan, 0)
         flierprops = kws.pop('fliersize')
-        if Sett.observations:
-            fliers = False
-            flierprops = {}
-        g = sns.catplot(data=data, x=xlabel, y=ylabel, hue="Sample Group",
-                        kind="box", palette=palette, linewidth=0.15,
-                        height=kws.get('height'), aspect=kws.get('aspect'),
-                        facet_kws=fkws, showfliers=fliers, legend_out=True,
-                        **flierprops)
-        if Sett.observations:  # Create scatters of individual observations
-            g = sns.swarmplot(data=data, x=xlabel, y=ylabel, zorder=1,
-                              hue="Sample Group", size=2.5, linewidth=0.05,
-                              palette=palette)
-            g.get_legend().set_visible(False)
+        fliers = not Sett.observations
+        with warnings.catch_warnings():
+            warnings.simplefilter('ignore', category=RuntimeWarning)
+            g = sns.catplot(data=data, x=xlabel, y=ylabel, hue="Sample Group",
+                            kind="box", palette=palette, linewidth=0.15,
+                            height=kws.get('height'), aspect=kws.get('aspect'),
+                            facet_kws=fkws, showfliers=fliers, legend_out=True,
+                            **flierprops)
+            if Sett.observations:  # Create scatters of individual observations
+                g = sns.swarmplot(data=data, x=xlabel, y=ylabel, zorder=1,
+                                  hue="Sample Group", size=2.5, linewidth=0.05,
+                                  palette=palette)
+                g.get_legend().set_visible(False)
         return g
 
     def Heatmap(palette, **kws):
@@ -386,7 +390,6 @@ class plotter:
                     ax=axes)
         plt.yticks(rotation=45)
         MPbin = kws.get('center')
-        ybot, ytop = plt.ylim()
         axes.plot((MPbin, MPbin), (0, data.shape[0]), 'r--')
         return axes
 
@@ -425,14 +428,14 @@ class plotter:
                         sharey=False, saturation=0.5)
         # Find group order number for control group for plotting significances
         stats.sort_index(inplace=True)
-        Cntrl_x = order.index(Sett.cntrlGroup)
+        ctrl_x = order.index(Sett.cntrlGroup)
         # Loop through the plot axes
         for axInd, ax in enumerate(g.axes.flat):
             # Find rejected H0 for current axis
             statRow = stats.iloc[axInd, :]
             rejects = statRow.iloc[statRow.index.get_level_values(1).str
                                    .contains('Reject')
-                                   ].where(statRow == True).dropna()
+                                   ].where(statRow).dropna()
             rejectN = np.count_nonzero(rejects.to_numpy())
             if rejectN > 0:  # If any rejected H0
                 # Raise y-limit of axis to fit significance plots
@@ -445,7 +448,7 @@ class plotter:
                 for i, grp in enumerate(rejects.index.get_level_values(0)):
                     y = heights[i]  # Get height for the group's line
                     grp_x = order.index(grp)  # Get x-axis location of group
-                    line = sorted([grp_x, Cntrl_x])
+                    line = sorted([grp_x, ctrl_x])
                     # Plot line
                     ax.hlines(y=y, xmin=line[0], xmax=line[1], color='dimgrey')
                     # Locate P-value and get significance stars

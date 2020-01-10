@@ -20,6 +20,8 @@ except AttributeError:
 
 
 class paths:
+    """Handle required system paths."""
+    
     def __init__(self, workdir):
         """Creation of output folders."""
         try:
@@ -70,7 +72,7 @@ class paths:
 
 
 def read_data(filepath, header=Sett.header_row, test=True, index_col=False):
-    """For reading csv-data."""
+    """Read csv-data."""
     try:
         data = pd.read_csv(filepath, header=header, index_col=index_col)
         data = data.loc[:, ~data.columns.str.contains('^Unnamed')]
@@ -108,9 +110,7 @@ def read_data(filepath, header=Sett.header_row, test=True, index_col=False):
 
 
 def saveToFile(data, directory, filename, append=True, w_index=False):
-    """Takes a Series and saves it to a DataFrame file, or alternatively saves
-    a DataFrame to a file. Expects the Series to be of same length as the data
-    in the csv"""
+    """Save series or DF to a file."""
     path = directory.joinpath(filename)
     if not append:
         if isinstance(data, pd.DataFrame):
@@ -152,6 +152,7 @@ def start():
 
 class store:
     """Store important variables for the analysis."""
+    
     samplegroups = []  # All samplegroup in analysis
     channels = []  # All channels in analysis
     samples = []  # All samples in analysis

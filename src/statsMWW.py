@@ -4,37 +4,32 @@ Created on Wed Mar  6 12:42:28 2019
 @author: Arto I. Viitanen
 
 """
-# LAM modules
-from settings import settings as Sett
-from plot import plotter
-import system
-import analysis
 # Standard libraries
 import warnings
-import re
 # Other packages
 import numpy as np
 import pandas as pd
 import scipy.stats as ss
 import statsmodels.stats.multitest as multi
+# LAM modules
+from settings import settings as Sett
+from plot import plotter
+import system
+import analysis
 
 
 class statistics:
+    """Find bin-wise MWW statistics between sample groups."""
+
     def __init__(self, control, group2):
-        """Takes two Group-objects and creates statistics based on their
-        normalized channel counts and additional data."""
-        # Control group variables
-        self.cntrlGroup = control.group
-        self.cntrlNamer = control.namer
-        self.cntrlSamples = control.groupPaths
-        # Test group variables
+        """Create statistics for two Group-objects, i.e. sample groups."""
+        # Sample groups
+        self.ctrlGroup = control.group
         self.tstGroup = group2.group
-        self.tstNamer = group2.namer
-        self.tstSamples = group2.groupPaths
         # Common / Stat object variables
         self.center = control._center
         self.length = control._length
-        self.title = '{} VS. {}'.format(self.cntrlGroup, self.tstGroup)
+        self.title = '{} VS. {}'.format(self.ctrlGroup, self.tstGroup)
         self.dataDir = control._dataDir
         self.statsDir = control._statsDir
         self.plotDir = control._plotDir.joinpath("Stat Plots")
@@ -45,35 +40,40 @@ class statistics:
         self.palette = {control: control.color, group2.group: group2.color}
         # Statistics and data
         self.statData = None
-        self.cntrlData = None
+        self.ctrlData = None
         self.tstData = None
-        self.order = [self.cntrlGroup, self.tstGroup]
+        self.order = [self.ctrlGroup, self.tstGroup]
         self.error = False
+        self.channel = ""
 
     def MWW_test(self, Path):
+        """Perform MWW-test for a data set of two groups."""
         def __get_stats(row, row2, ind, statData):
-            if row.any() or row2.any():
-                if not (np.array_equal(np.unique(row), np.unique(row2)) and
-                        len(np.unique(row)) > 1 and len(np.unique(row2)) > 1):
-                    with warnings.catch_warnings():
-                        warnings.simplefilter('ignore',
-                                              category=RuntimeWarning)
-                        stat, pval = ss.mannwhitneyu(row, row2,
-                                                     alternative='greater')
-                        __, pval2 = ss.mannwhitneyu(row, row2,
-                                                    alternative='less')
-                        __, pval3 = ss.mannwhitneyu(row, row2,
-                                                    alternative='two-sided')
+            """Compare respective bins of both groups."""
+            unqs = np.unique(np.hstack((row, row2))).size
+            if ((row.any() or row2.any()) and not np.array_equal(
+                    np.unique(row), np.unique(row2)) and unqs > 1):
+                with warnings.catch_warnings():
+                    warnings.simplefilter('ignore', category=RuntimeWarning)
+                    # Whether ctrl is greater
+                    stat, pval = ss.mannwhitneyu(row, row2,
+                                                 alternative='greater')
                     statData.iat[ind, 0], statData.iat[ind, 2] = stat, pval
-                    statData.iat[ind, 5] = pval2
-                    statData.iat[ind, 8] = pval3
-                else:
-                    statData.iat[ind, 0], statData.iat[ind, 2] = 0, 0
-                    statData.iat[ind, 5] = 0
-                    statData.iat[ind, 8] = 0
+                    # Whether ctrl is lesser
+                    __, pval = ss.mannwhitneyu(row, row2, alternative='less')
+                    statData.iat[ind, 5] = pval
+                    # Whether significant difference exists
+                    __, pval = ss.mannwhitneyu(row, row2,
+                                               alternative='two-sided')
+                    statData.iat[ind, 8] = pval
+            else:
+                statData.iat[ind, 0], statData.iat[ind, 2] = 0, 0
+                statData.iat[ind, 5] = 0
+                statData.iat[ind, 8] = 0
             return statData
 
         def __correct(Pvals, corrInd, rejInd):
+            """Perform multipletest correction."""
             vals = Pvals.values
             with warnings.catch_warnings():
                 warnings.simplefilter('ignore', category=RuntimeWarning)
@@ -94,52 +94,48 @@ class statistics:
             print("-> {}: Insufficient data, passed.".format(self.channel))
             self.error = True
             return self
-        # NaN-values changed to zero in order to allow statistical comparison
-        nulData = validData.replace(np.nan, 0)
         # Find group-specific data
-        Cntrlreg = re.compile("^{}".format(self.cntrlNamer), re.I)
-        tstreg = re.compile("^{}".format(self.tstNamer), re.I)
-        cntrlData = nulData.loc[:, cols.str.contains(Cntrlreg, regex=True)]
-        tstData = nulData.loc[:, cols.str.contains(tstreg, regex=True)]
+        grpData = validData.T.groupby(lambda x: str(x).split('_')[0])
+        self.ctrlData = grpData.get_group(self.ctrlGroup).T
+        self.tstData = grpData.get_group(self.tstGroup).T
         statCols = ['U Score', 'Corr. Greater', 'P Greater', 'Reject Greater',
                     'Corr. Lesser', 'P Lesser', 'Reject Lesser',
                     'Corr. Two-sided', 'P Two-sided', 'Reject Two-sided']
         statData = pd.DataFrame(index=Data.index, columns=statCols)
         if Sett.windowed:
-            for ind, __ in cntrlData.iloc[Sett.trail:-(Sett.lead+1),
-                                          :].iterrows():
+            for ind, __ in self.ctrlData.iloc[Sett.trail:-Sett.lead,
+                                         :].iterrows():
                 sInd = ind - Sett.trail
                 eInd = ind + Sett.lead
-                cntrlVals = cntrlData.iloc[sInd:eInd, :].values.flatten()
-                tstVals = tstData.iloc[sInd:eInd, :].values.flatten()
-                statData = __get_stats(cntrlVals, tstVals, ind, statData)
+                ctrlVals = self.ctrlData.iloc[sInd:eInd, :].values.flatten()
+                ctrlVals = ctrlVals[~np.isnan(ctrlVals)]
+                tstVals = self.tstData.iloc[sInd:eInd, :].values.flatten()
+                tstVals = tstVals[~np.isnan(tstVals)]
+                statData = __get_stats(ctrlVals, tstVals, ind, statData)
         else:
-            for ind, row in cntrlData.iterrows():
-                cntrlVals = row.values
-                tstVals = tstData.loc[ind, :].values
-                statData = __get_stats(cntrlVals, tstVals, ind, statData)
+            for ind, row in self.ctrlData.iterrows():
+                ctrlVals = row.dropna().values
+                tstVals = self.tstData.loc[ind, :].dropna().values
+                statData = __get_stats(ctrlVals, tstVals, ind, statData)
         statData = __correct(statData.iloc[:, 2], 1, 3)
         statData = __correct(statData.iloc[:, 5], 4, 6)
         statData = __correct(statData.iloc[:, 8], 7, 9)
         filename = 'Stats_{} = {}.csv'.format(self.title, self.channel)
         system.saveToFile(statData, self.statsDir, filename, append=False)
-        # Slice data again to have NaN-values where data doesn't exist
-        cntrlData = Data.loc[:, cols.str.contains(Cntrlreg, regex=True)]
-        tstData = Data.loc[:, cols.str.contains(tstreg, regex=True)]
         self.statData = statData
-        self.cntrlData, self.tstData = cntrlData, tstData
         return self
 
     def Create_Plots(self, stats, unit="Count", palette=None):
+        """Handle statistical data for plots."""
         if Sett.Drop_Outliers:
-            cntrlData = analysis.DropOutlier(self.cntrlData)
+            ctrlData = analysis.DropOutlier(self.ctrlData)
             tstData = analysis.DropOutlier(self.tstData)
         else:
-            cntrlData = self.cntrlData
+            ctrlData = self.ctrlData
             tstData = self.tstData
-        cntrlData.loc['Sample Group', :] = self.cntrlGroup
+        ctrlData.loc['Sample Group', :] = self.ctrlGroup
         tstData.loc['Sample Group', :] = self.tstGroup
-        plotData = pd.concat([cntrlData.T, tstData.T], ignore_index=True)
+        plotData = pd.concat([ctrlData.T, tstData.T], ignore_index=True)
         plot_maker = plotter(plotData, savepath=self.plotDir,
                              title=self.plottitle, palette=palette,
                              center=self.center)
@@ -155,6 +151,8 @@ class statistics:
 
 
 class Total_Stats:
+    """Find statistics based on sample-specific totals."""
+
     def __init__(self, path, groups, plotDir, statsdir, palette=None):
         self.dataerror = False
         self.plotDir = plotDir
@@ -163,18 +161,18 @@ class Total_Stats:
         self.data = system.read_data(path, header=0, test=False, index_col=0)
         if self.data is None or self.data.empty:  # Test that data is fine
             self.dataerror = True
-            return None
         self.groups = groups
         self.channels = self.data.index.tolist()
-        self.cntrlGrp = Sett.cntrlGroup
-        self.tstGroups = [g for g in groups if g != self.cntrlGrp]
+        self.ctrlGrp = Sett.cntrlGroup
+        self.tstGroups = [g for g in groups if g != self.ctrlGrp]
         self.palette = palette
+        self.savename = ""
+        self.statData = None
 
     def stats(self):
-        # TODO handle new data structure
+        """Calculate statistics of one variable between two groups."""
         grpData = self.data.groupby(['Sample Group'])
-        cntrlData = grpData.get_group(self.cntrlGrp)
-        # cntrlData = self.data.loc[:, ('Sample Group' == namer)]
+        ctrlData = grpData.get_group(self.ctrlGrp)
         cols = ['U Score', 'P Two-sided', 'Reject Two-sided']
         mcols = pd.MultiIndex.from_product([self.tstGroups, cols],
                                            names=['Sample Group',
@@ -185,21 +183,17 @@ class Total_Stats:
                               inplace=True)
         for grp in self.tstGroups:
             tstData = grpData.get_group(grp)
-            # tstData = self.data.loc[:, self.data.columns.str.contains(namer)]
             for var in variables:
-                cVals = cntrlData.loc[(cntrlData.Variable == var),
-                                      cntrlData.columns.difference(
-                                          ['Sample Group', 'Variable'])]
+                cVals = ctrlData.loc[(ctrlData.Variable == var),
+                                     ctrlData.columns.difference(
+                                         ['Sample Group', 'Variable'])]
                 tVals = tstData.loc[(tstData.Variable == var),
                                     tstData.columns.difference(
                                         ['Sample Group', 'Variable'])]
                 stat, pval = ss.mannwhitneyu(cVals.to_numpy().flatten(),
                                              tVals.to_numpy().flatten(),
                                              alternative='two-sided')
-                if pval < Sett.alpha:
-                    reject = True
-                else:
-                    reject = False
+                reject = bool(pval < Sett.alpha)
                 TotalStats.loc[var, (grp, cols)] = [stat, pval, reject]
         self.savename = self.filename + ' Stats.csv'
         system.saveToFile(TotalStats, self.statsDir, self.savename,
@@ -207,13 +201,11 @@ class Total_Stats:
         self.statData = TotalStats
 
     def Create_Plots(self):
+        """Handle statistical data for plotting."""
         plotData = self.data
-        cntrlN = int(len(self.groups) / 2)
+        ctrlN = int(len(self.groups) / 2)
         order = self.tstGroups
-        order.insert(cntrlN, self.cntrlGrp)
-        # for namer in namers:
-        #     plotData.loc['Sample Group', plotData.columns.str.startswith(
-        #                                         namer)] = namer.split('_')[0]
+        order.insert(ctrlN, self.ctrlGrp)
         plot_maker = plotter(plotData, self.plotDir, center=0,
                              title=self.filename, palette=self.palette,
                              color='b')

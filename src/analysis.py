@@ -1,17 +1,11 @@
 # -*- coding: utf-8 -*-
 """
+LAM-module for data handling of analysis, e.g. for statistics and plotting.
+
 Created on Wed Mar  6 12:42:28 2019
 @author: Arto I. Viitanen
 
 """
-# LAM imports
-import system
-import process
-from settings import settings as Sett
-from statsMWW import statistics, Total_Stats
-from system import store
-from plot import plotter
-import logger as lg
 # Standard libraries
 import re
 import warnings
@@ -22,6 +16,14 @@ import pathlib as pl
 from pycg3d.cg3d_point import CG3dPoint
 from pycg3d import utils
 import seaborn as sns
+# LAM imports
+import system
+import process
+from settings import settings as Sett
+from statsMWW import statistics, Total_Stats
+from system import store
+from plot import plotter
+import logger as lg
 with warnings.catch_warnings():
     warnings.simplefilter('ignore', category=FutureWarning)
     import pandas as pd
@@ -32,8 +34,8 @@ except AttributeError:
 
 
 class Samplegroups:
-    """Class for holding and handling all sample groups, i.e. every sample of
-    analysis."""
+    """Holds and handles all sample groups, i.e. every sample of analysis."""
+
     # Initiation of variables shared by all samples.
     _groups, _chanPaths, _samplePaths, _addData, _channels = [], [], [], [], []
     _plotDir, _dataDir, _statsDir = pl.Path('./'), pl.Path('./'), pl.Path('./')
@@ -76,18 +78,16 @@ class Samplegroups:
             lg.logprint(LAM_logger, 'Sample groups established.', 'i')
 
     def create_plots(self):
-        """For handling data for the creation of most plots. Passes data to
-        plot.py for plotting functions."""
+        """Handle data for the creation of most plots."""
         # Base keywords utilized in plots.
-        basekws = {'id_str': 'Sample Group',  'hue': 'Sample Group',
+        basekws = {'id_str': 'Sample Group', 'hue': 'Sample Group',
                    'row': 'Sample Group', 'height': 5, 'aspect': 3,
                    'var_str': 'Longitudinal Position', 'flierS': 2,
                    'title_y': 0.95, 'sharey': True,
                    'gridspec': {'hspace': 0.3}}
 
         def _select(paths, adds=True):
-            """Selects varying data for the versus plots, e.g. a channel and
-            additional data, such as area"""
+            """Find different types of data for versus plot."""
             retPaths = []
             # Find target names from settings
             if adds:
@@ -104,12 +104,18 @@ class Samplegroups:
                 retPaths.extend(selected)  # Add found paths to list
             return retPaths
 
-        def __base(paths, func, ylabel='Cell Count', title=None, name_sep=1,
+        def __base(paths, func, ylabel='Cell Count', name_sep=1,
                    **kws):
-            """Basic plotting for LAM, i.e. data of interest on y-axis, and
-            bins on x-axis. Name_sep defines the start of data's name when file
-            name is split by '_', e.g. name_sep=1 would name the data as DAPI
-            when file name is 'Avg_DAPI'."""
+            """
+            General plotting for LAM, i.e. variable on y-axis, and bins on x.
+
+            Args:
+            ----
+            Name_sep : int
+                the start of data's name when file name is split by '_', e.g.
+                name_sep=1 would name the data as DAPI when file name is
+                'Avg_DAPI'.
+            """
             savepath = self._plotDir
             # For each data file to be plotted:
             for path in paths:
@@ -142,8 +148,7 @@ class Samplegroups:
                 plot_maker.plot_Data(func, savepath, **kws2)  # Plotting
 
         def __heat(paths, samples=False):
-            """Creation of heatmaps of cell counts on each channel for each
-            sample group."""
+            """Create heatmaps of cell counts for each sample group."""
             savepath = self._plotDir
             fullData = pd.DataFrame()
             # Loop through the given channels and read the data file. Each
@@ -186,8 +191,7 @@ class Samplegroups:
             self.Joint_looper(paths1, paths2, savepath)
 
         def __pair():
-            """Creation of pairplot-grids, where each channel is paired with
-            each other to show relations in counts."""
+            """Create pairplot-grid, i.e. each channel vs each channel."""
             allData = pd.DataFrame()
             # Loop through all channels.
             for path in self._dataDir.glob('ChanAvg_*'):
@@ -218,8 +222,7 @@ class Samplegroups:
             plot_maker.plot_Data(plotter.pairPlot, self._plotDir, **kws)
 
         def __nearestDist():
-            """Creation of plots regarding average distances to nearest cell.
-            """
+            """Create plots of average distance to nearest cell."""
             # Find files containing calculated average distances
             paths = self._dataDir.glob('Avg_DistanceMeans_*')
             savepath = self._plotDir
@@ -229,15 +232,14 @@ class Samplegroups:
                 plotData, name, cntr = self.read_channel(path, self._groups)
                 plot_maker = plotter(plotData, self._plotDir, center=cntr,
                                      title=name, palette=self._grpPalette)
-                kws = {'centerline': plot_maker.MPbin,  'ylabel': 'Distance',
+                kws = {'centerline': plot_maker.MPbin, 'ylabel': 'Distance',
                        'title': plot_maker.title, 'xlen': self._length,
                        'title_y': 0.95}
                 kws.update(basekws)
                 plot_maker.plot_Data(plotter.linePlot, savepath, **kws)
 
         def __distributions():
-            """Handling of data for the creation of density distribution plots
-            of different data types."""
+            """Create density distribution plots of different data types."""
             savepath = self._plotDir.joinpath('Distributions')
             savepath.mkdir(exist_ok=True)
             kws = {'hue': 'Sample Group', 'row': 'Sample Group', 'height': 5,
@@ -254,7 +256,7 @@ class Samplegroups:
                 kws.update({'id_str': 'Sample Group', 'var_str': xlabel,
                             'ylabel': ylabel, 'value_str': ylabel})
                 plot_maker.plot_Data(plotter.distPlot, savepath, **kws)
-    
+
             # Additional data
             for key in Sett.AddData.keys():
                 print("{}  ...".format(key))
@@ -279,8 +281,10 @@ class Samplegroups:
                                 values.loc[:, str(col)] = np.nan
                         AllVals = pd.concat([AllVals, values], axis=0,
                                             ignore_index=True, sort=True)
-                    except:  # TODO get rid of bare except
-                        pass
+                    except AttributeError:
+                        msg = 'AttributeError when handling'
+                        print('{} {}'.format(msg, path.name))
+                        lg.logprint(LAM_logger, msg, 'e')
                 # Find unit of data
                 xlabel = Sett.AddData.get(key)[1]
                 kws.update({'id_str': ['Group', 'Channel'], 'ylabel': ylabel,
@@ -299,7 +303,7 @@ class Samplegroups:
                         plot_maker.plot_Data(plotter.distPlot, savepath, **kws)
 
         def __clusters():
-            """Data handling for cluster plots."""
+            """Handle data for cluster plots."""
             # Find paths to sample-specific data based on found cluster data:
             # Find cluster channels
             clchans = [str(p.stem).split('-')[1] for p in
@@ -421,11 +425,6 @@ class Samplegroups:
             __distributions()
             lg.logprint(LAM_logger, 'Distributions done', 'i')
 
-        # TODO nearest dist plots ???
-#        if Sett.Create_NearestDist_Plots:
-#            print('Plotting average distances  ...')
-#            __nearestDist()
-
         if Sett.Create_Cluster_Plots:  # Plot cluster data
             lg.logprint(LAM_logger, 'Plotting clusters', 'i')
             print('Plotting clusters  ...')
@@ -442,8 +441,7 @@ class Samplegroups:
         lg.logprint(LAM_logger, 'Plotting completed', 'i')
 
     def read_channel(self, path, groups, drop=False, name_sep=1):
-        """Reading of channel data, and concatenation of sample group info
-        into the resulting dataframe."""
+        """Read channel data and concatenate sample group info into DF."""
         Data = system.read_data(path, header=0, test=False)
         plotData = pd.DataFrame()
         # Loop through given groups and give an identification variable for
@@ -465,17 +463,7 @@ class Samplegroups:
         return plotData, name, center
 
     def Joint_looper(self, paths1, paths2=None, savepath=pl.PurePath()):
-        """Creates joint-plots of channels and additional data, e.g. channel
-        vs. channel."""
-        def __label(name):
-            # Gets unit of data from settings based on file name, if found.
-            test = name.split('-')
-            try:
-                label = Sett.AddData.get(test[0].split('_')[1])[1]
-                return label
-            except:  # TODO get rid of bare except
-                return
-
+        """Create joint-plots of channels and additional data."""
         # Create all possible pairs from the given lists of paths:
         if paths1 == paths2 or paths2 is None:
             pairs = combinations(paths1, 2)
@@ -486,14 +474,11 @@ class Samplegroups:
         for pair in pairs:
             (Path1, Path2) = pair
             # Find channel-data and add specific names for plotting
-            Data1, name, cntr = self.read_channel(Path1, self._groups)
+            Data1, name, __ = self.read_channel(Path1, self._groups)
             Data2, name2, __ = self.read_channel(Path2, self._groups)
             Data1['Sample'], Data2['Sample'] = Data1.index, Data2.index
             name = ' '.join(name.split('_'))
             name2 = ' '.join(name2.split('_'))
-            # Find unit of additional data from settings
-            ylabel = __label(name)
-            xlabel = __label(name2)
             # Melt data to long-form, and then merge to have one obs per row.
             Data1 = Data1.melt(id_vars=['Sample Group', 'Sample'],
                                value_name=name, var_name='Bin')
@@ -508,8 +493,7 @@ class Samplegroups:
                 plot_maker = plotter(grpData, self._plotDir, title=title,
                                      palette=self._grpPalette)
                 kws = {'x': name, 'y': name2, 'hue': 'Sample Group',
-                       'xlabel': xlabel, 'ylabel': ylabel, 'title': title,
-                       'height': 5,  'aspect': 1, 'title_y': 1}
+                       'title': title, 'height': 5, 'aspect': 1, 'title_y': 1}
                 plot_maker.plot_Data(plotter.jointPlot, savepath,
                                      palette=self._grpPalette, **kws)
 
@@ -520,8 +504,7 @@ class Samplegroups:
             C = 'Wrong datatype for find_distance, Has to be pandas DataFrame.'
             print(C)
             return None
-        ErrorM = "Volume not found in {}_{}'s {}".format(self.group,
-                                                         self.name, Data.name)
+        ErrorM = "Volume not found for {}".format(Data.name)
         if compare.lower() == 'greater':
             try:  # Get only cells that are of greater volume
                 subInd = Data[(Data['Volume'] >= volIncl)].index
@@ -535,8 +518,7 @@ class Samplegroups:
         return subInd
 
     def Get_DistanceMean(self):
-        """Gathers sample-data and passes it for calculation of average
-        distances between cells."""
+        """Get sample data and pass for cell-to-cell distance calculation."""
         lg.logprint(LAM_logger, 'Finding cell-to-cell distances', 'i')
         for grp in self._groups:  # Get one sample group
             lg.logprint(LAM_logger, '-> Distances for group {}'.format(grp),
@@ -551,7 +533,7 @@ class Samplegroups:
         lg.logprint(LAM_logger, 'Distances calculated', 'i')
 
     def Get_Clusters(self):
-        """Gathers sample-data to compute cell clusters."""
+        """Gather sample data to compute cell clusters."""
         lg.logprint(LAM_logger, 'Finding clusters', 'i')
 #        allpaths = [] ???
         for grp in self._groups:  # Get one sample group
@@ -583,12 +565,9 @@ class Samplegroups:
     #             sample.Count_clusters(Data, path.stem)
 
     def Get_Statistics(self):
-        """Handling of data that is to be passed on to group-wise statistical
-        analysis of cell counts on each channel, and additional data."""
-
+        """Handle data for group-wise statistical analysis."""
         def _test_control():
-            """Makes sure that the given control group exists, and if not, take
-            care of it."""
+            """Assert that control group exists, and if not, handle it."""
             # If control group is not found:
             if Sett.cntrlGroup not in store.samplegroups:
                 lg.logprint(LAM_logger, 'Set control group not found', 'c')
@@ -627,15 +606,16 @@ class Samplegroups:
                             flag = 0
                         else:
                             print('Command not understood.')
-                    msg = "-> Changed to group '{}' by user".format(group)
+                    msg = "-> Changed to group '{}' by user".format(
+                        Sett.cntrlGroup)
                     lg.logprint(LAM_logger, msg, 'i')
 
         def _get_ylabel():
             """Find unit of data based on name."""
             if 'Clusters' in addChan_name[1]:
                 ylabel = 'Clustered Cells'
-            # If name is longer, the data is not cell counts, but
-            # e.g. intensities, and requires different naming
+            # If name is longer, the data is not cell counts but e.g.
+            # intensities, and consequently requires different naming
             elif len(addChan_name) >= 3:
                 if 'Distance Means' in addChan_name[2]:
                     ylabel = 'Cell-to-cell distance'
@@ -659,21 +639,21 @@ class Samplegroups:
             print('-Versus-')
             # Finding control and other groups
             control = Sett.cntrlGroup
-            cntrlName = re.compile(control, re.I)
-            others = [g for g in self._groups if not cntrlName.fullmatch(g)]
+            ctrlName = re.compile(control, re.I)
+            others = [g for g in self._groups if not ctrlName.fullmatch(g)]
             # Create all possible combinations of control versus other groups
             grouping = [[control], others]
             pairs = product(*grouping)
             # Loop through all the possible group pairs
             for pair in pairs:
-                (temp, testgroup) = pair
+                (__, testgroup) = pair
                 # Initiate group-class for both groups
-                Cntrl = Group(control)
+                ctrl = Group(control)
                 Grp = Group(testgroup)
                 # Print names of groups under statistical analysis
-                print("{} Vs. {}  ...".format(Cntrl.group, Grp.group))
+                print("{} Vs. {}  ...".format(ctrl.group, Grp.group))
                 # Initiate statistics-class with the two groups
-                Stats = statistics(Cntrl, Grp)
+                Stats = statistics(ctrl, Grp)
                 # Find stats of cell counts and additional data by looping
                 # through each.
                 for path in chain(Stats.chanPaths, Stats.avgPaths,
@@ -705,7 +685,7 @@ class Samplegroups:
                 TCounts = Total_Stats(path, self._groups, self._plotDir,
                                       self._statsDir, self._grpPalette)
                 # If error in data, continue to next total file
-                if TCounts.dataerror or TCounts is None:
+                if TCounts.dataerror:
                     continue
                 TCounts.stats()
                 # If wanted, create plots of the stats
@@ -715,12 +695,10 @@ class Samplegroups:
         lg.logprint(LAM_logger, 'Statistics done', 'i')
 
     def Get_Totals(self):
-        """Counting of sample & channel -specific cell count totals."""
-
+        """Count sample & channel -specific cell totals."""
         def _readAndSum():
-            """Read current path and sum cell numbers of bins for each sample
-            in order to get totals for plotting."""
-            ChData, __, __ = self.read_channel(path, self._groups, drop=dropB)
+            """Read path and sum cell numbers of bins for each sample."""
+            ChData, __, _ = self.read_channel(path, self._groups, drop=dropB)
             # Get sum of cells for each sample
             ChSum = ChData.sum(axis=1, skipna=True, numeric_only=True)
             # Get group of each sample
@@ -748,8 +726,8 @@ class Samplegroups:
         for channel in [c for c in store.channels if c not in ['MP', 'R45']]:
             All = pd.DataFrame()
             for path in datadir.glob('Avg_{}_*'.format(channel)):
-                ChData, __, __ = self.read_channel(path, self._groups,
-                                                   drop=dropB)
+                ChData, __, _ = self.read_channel(path, self._groups,
+                                                  drop=dropB)
                 # Assign channel identifier
                 add_name = path.stem.split('_')[2:]  # Channel name
                 ChData = ChData.assign(Variable='_'.join(add_name))
@@ -769,8 +747,8 @@ class Samplegroups:
                 name = "{} Clusters".format(path.stem.split('-')[1])
             else:
                 name = "{} Distances".format(path.name.split('_')[1])
-            ChData, __, __ = self.read_channel(path, self._groups,
-                                               drop=dropB)
+            ChData, __, _ = self.read_channel(path, self._groups,
+                                              drop=dropB)
             # Assign data type identifier
             ChData = ChData.assign(Variable=name)
             All = pd.concat([All, ChData], ignore_index=False, sort=False)
@@ -783,6 +761,7 @@ class Samplegroups:
 
 class Group(Samplegroups):
     """For storing sample group-specific data."""
+
     _color = 'b'
     _groupPaths = None
     _MPs = None
@@ -806,8 +785,7 @@ class Group(Samplegroups):
 
 
 class Sample(Group):
-    """For storing sample-specific data and handling sample-related
-    functionalities."""
+    """For sample-specific data and handling sample-related functionalities."""
 
     def __init__(self, path, grp):
         # Inherit variables from the sample's group
@@ -822,8 +800,7 @@ class Sample(Group):
         self.MP = self._MPs.loc[0, self.name]
 
     def DistanceMean(self, dist=25):
-        """Preparation and data handling for finding nearest distances between
-        cells"""
+        """Prepare and handle data for cell-to-cell distances."""
         kws = {'Dist': dist}  # Maximum distance used to find cells
         # List paths of channels where distances are to be found
         distChans = [p for p in self.channelPaths for t in
@@ -861,7 +838,7 @@ class Sample(Group):
                                 compare=Sett.incl_type, **kws)
 
     def Clusters(self, dist=10):
-        """Preparation and data handling for finding clusters of cells."""
+        """Handle data for finding clusters of cells."""
         kws = {'Dist': dist}  # Maximum distance for considering clustering
         # Listing of paths of channels on which clusters are to be found
         clustChans = [p for p in self.channelPaths for t in
@@ -885,13 +862,9 @@ class Sample(Group):
 
     def find_distances(self, Data, volIncl=200, compare='smaller',
                        clusters=False, **kws):
-        """Calculate distances between cells to either find the nearest cell
-        and distance means per bin, or to find cell clusters. Argument "Data"
-        is channel data from a sample."""
-
-        def __get_nearby(ind, row, target, maxDist, rmv_self=False, **kws):
-            """Within an iterator, find all cells near the current cell, to be
-            passed either to find nearest cell or to determine clustering."""
+        """Calculate cell-to-cell distances or find clusters."""
+        def __get_nearby(ind, row, target, maxDist, rmv_self=False):
+            """Within an iterator, find all cells near the current cell."""
             point = CG3dPoint(row.x, row.y, row.z)
             # When finding nearest in the same channel, remove the current
             # cell from the frame, otherwise nearest cell would be itself.
@@ -920,10 +893,9 @@ class Sample(Group):
             return None
 
         def __find_clusters():
-            """Finding of cluster 'seeds', and merging them to create full
-            clusters."""
+            """Find cluster 'seeds' and merge to create full clusters."""
             def __merge(Seeds):
-                """Merging of seeds that share cells."""
+                """Merge seeds that share cells."""
                 r = sum(Seeds, [])  # List of all cells
                 # Create map object containing a set for each cell ID:
                 r = map(lambda x: set([x]), set(r))
@@ -943,7 +915,7 @@ class Sample(Group):
             clusterSeed = {}  # For storing cluster 'seeds'
             for i, row in XYpos.iterrows():  # Iterate over all cells
                 # Find nearby cells
-                nearby = __get_nearby(i, row, XYpos, maxDist, **kws)
+                nearby = __get_nearby(i, row, XYpos, maxDist)
                 # If nearby cells, make a list of their IDs and add to seeds
                 if nearby is not None:
                     if nearby.shape[0] > 1:
@@ -960,7 +932,7 @@ class Sample(Group):
             return Clusters
 
         def __find_nearest():
-            """For iterating the passed data to determine nearby cells."""
+            """Iterate passed data to determine nearby cells."""
             maxDist = kws.get('Dist')  # distance used for subsetting target
             # If distances are found on other channel:
             if 'targetXY' in locals():
@@ -979,8 +951,7 @@ class Sample(Group):
             pointData = pd.DataFrame(columns=cols, index=XYpos.index)
             # Iterate over each cell (row) in the data
             for i, row in XYpos.iterrows():
-                nearby = __get_nearby(i, row, target, maxDist, rmv_self=rmv,
-                                      **kws)
+                nearby = __get_nearby(i, row, target, maxDist, rmv_self=rmv)
                 if nearby is not None:
                     nearest = nearby.Dist.idxmin()
                     pointData.loc[i, cols] = nearby.loc[nearest].values
@@ -1045,6 +1016,7 @@ class Sample(Group):
         system.saveToFile(NewData, self.path, OW_name, append=False)
 
     def Count_clusters(self, Data, name):
+        """Count total clustered cells per bin."""
         # Find bins of the clustered cells to find counts per bin
         idx = Data.loc[:, 'ClusterID'].notna().index
         binnedData = Data.loc[Data.dropna(subset=['ClusterID']).index,
@@ -1072,8 +1044,9 @@ def DropOutlier(Data):
     """Drop outliers from a dataframe."""
     with warnings.catch_warnings():  # Ignore warnings regarding empty bins
         warnings.simplefilter('ignore', category=RuntimeWarning)
-        Mean = np.nanmean(Data.values)
+        mean = np.nanmean(Data.values)
         std = np.nanstd(Data.values)
-        Data = Data.applymap(lambda x: x if np.abs(x - Mean) <=
+        Data = Data.applymap(lambda x: x if np.abs(x - mean) <=
                              (Sett.dropSTD * std) else np.nan)
+        # test  = Data.applymap(lambda x: x if np.abs(x - mean) <= (Sett.dropSTD * std) else np.nan)
     return Data

@@ -1,10 +1,13 @@
 # -*- coding: utf-8 -*-
 """
+Run file for Longitudinal Analysis of Midgut.
+
 Created on Wed Mar  6 12:42:28 2019
 @author: Arto I. Viitanen
+
 Dependencies: Anaconda-included packages (Python 3.7), Shapely, pycg3d
 
-Dependencies:
+Installation:
     1. install Anaconda3 distribution (https://www.anaconda.com/distribution/)
     2. add Shapely-package:
         Windows:
@@ -60,7 +63,8 @@ For more extensive instructions, see user manual.
 from settings import settings as Sett
 
 
-def main(LAM_logger):
+def main():
+    """Perform LAM-analysis based on settings.py."""
     import system
     import analysis
     import process
@@ -106,19 +110,20 @@ def main(LAM_logger):
     # Creation of plots from various data (excluding statistical plots)
     plots = [Sett.Create_Channel_Plots, Sett.Create_AddData_Plots,
              Sett.Create_Channel_PairPlots, Sett.Create_Heatmaps,
-             Sett.Create_Distribution_Plots, Sett.Create_Cluster_Plots]
+             Sett.Create_Distribution_Plots, Sett.Create_Cluster_Plots,
+             Sett.Create_ChanVSAdd_Plots, Sett.Create_AddVSAdd_Plots]
     if Sett.Create_Plots and any(plots):
         SampleGroups.create_plots()
 
 
-def MAIN_catch_exit():
+def MAIN_catch_exit(LAM_logger=None):
     """Run main() while catching system exit and keyboard interrupt for log."""
-    # Get premade logger
     import logger as lg
-    LAM_logger = lg.get_logger(__name__)
+    if LAM_logger is None:  # If no logger given, get one
+        LAM_logger = lg.get_logger(__name__)
     try:
         print("START ANALYSIS")
-        main(LAM_logger)  # run analysis
+        main()  # run analysis
     # Catch and log possible exits from the analysis
     except KeyboardInterrupt:
         lg.logprint(LAM_logger, 'STOPPED: keyboard interrupt', 'e')
@@ -144,4 +149,4 @@ if __name__ == '__main__':
         import logger as lg
         LAM_logger = lg.setup_logger(__name__)
         lg.print_settings(LAM_logger)  # print settings of analysis to log
-        MAIN_catch_exit()
+        MAIN_catch_exit(LAM_logger)
