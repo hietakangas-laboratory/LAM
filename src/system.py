@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 """
+LAM-module for controlling system paths and reading / writing.
+
 Created on Wed Mar  6 12:42:28 2019
 @author: Arto I. Viitanen
 
@@ -21,7 +23,7 @@ except AttributeError:
 
 class paths:
     """Handle required system paths."""
-    
+
     def __init__(self, workdir):
         """Creation of output folders."""
         try:
@@ -152,7 +154,7 @@ def start():
 
 class store:
     """Store important variables for the analysis."""
-    
+
     samplegroups = []  # All samplegroup in analysis
     channels = []  # All channels in analysis
     samples = []  # All samples in analysis

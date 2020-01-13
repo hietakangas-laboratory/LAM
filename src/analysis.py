@@ -443,7 +443,7 @@ class Samplegroups:
     def read_channel(self, path, groups, drop=False, name_sep=1):
         """Read channel data and concatenate sample group info into DF."""
         Data = system.read_data(path, header=0, test=False)
-        plotData = pd.DataFrame()
+        readData = pd.DataFrame()
         # Loop through given groups and give an identification variable for
         # each sample belonging to the group.
         for grp in groups:
@@ -453,14 +453,14 @@ class Samplegroups:
             if Sett.Drop_Outliers and drop:  # conditionally drop outliers
                 temp = DropOutlier(temp)
             temp['Sample Group'] = grp  # Giving of sample group identification
-            if plotData.empty:
-                plotData = temp
+            if readData.empty:
+                readData = temp
             else:
-                plotData = pd.concat([plotData, temp])
+                readData = pd.concat([readData, temp])
         # Finding the name of the data under analysis from its filepath
         name = '_'.join(str(path.stem).split('_')[name_sep:])
         center = self._center  # Getting the bin to which samples are centered
-        return plotData, name, center
+        return readData, name, center
 
     def Joint_looper(self, paths1, paths2=None, savepath=pl.PurePath()):
         """Create joint-plots of channels and additional data."""
@@ -1048,5 +1048,4 @@ def DropOutlier(Data):
         std = np.nanstd(Data.values)
         Data = Data.applymap(lambda x: x if np.abs(x - mean) <=
                              (Sett.dropSTD * std) else np.nan)
-        # test  = Data.applymap(lambda x: x if np.abs(x - mean) <= (Sett.dropSTD * std) else np.nan)
     return Data

@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 """
+LAM-module for handling all statistical calculations.
+
 Created on Wed Mar  6 12:42:28 2019
 @author: Arto I. Viitanen
 
@@ -104,7 +106,7 @@ class statistics:
         statData = pd.DataFrame(index=Data.index, columns=statCols)
         if Sett.windowed:
             for ind, __ in self.ctrlData.iloc[Sett.trail:-Sett.lead,
-                                         :].iterrows():
+                                              :].iterrows():
                 sInd = ind - Sett.trail
                 eInd = ind + Sett.lead
                 ctrlVals = self.ctrlData.iloc[sInd:eInd, :].values.flatten()

@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 """
+LAM-module for vector creation, and data collection and projection.
+
 Created on Wed Mar  6 12:42:28 2019
 @author: Arto I. Viitanen
 
@@ -31,12 +33,15 @@ except AttributeError:
 
 
 def Create_Samples(PATHS):
+    """Create vectors for the samples."""
     lg.logprint(LAM_logger, 'Begin vector creation.', 'i')
+    # Test that resize-setting is in step of 0.1:
     resize = Sett.SkeletonResize
     if Sett.SkeletonVector and dl.Decimal(str(resize)) % dl.Decimal(str(0.10))\
             != dl.Decimal('0.0'):
         msg = 'Resizing not in step of 0.1'
         print("WARNING: {}".format(msg))
+        # Round setting down to nearest 0.1.
         Sett.SkeletonResize = math.floor(resize*10) / 10
         msg2 = 'SkeletonResize changed to {}'.format(Sett.SkeletonResize)
         print("-> {}".format(msg2))
@@ -57,33 +62,41 @@ def Create_Samples(PATHS):
 
 
 def Project(PATHS):
+    """Project features onto the vector."""
     lg.logprint(LAM_logger, 'Begin channel projection and counting.', 'i')
     print("\n---Projecting and counting channels---")
+    # Loop through all directories in the root directory
     for path in [p for p in Sett.workdir.iterdir() if p.is_dir() and p.stem
                  != 'Analysis Data']:
+        # Initialize sample variables
         sample = get_sample(path, PATHS, process=False, project=True)
         print("{}  ...".format(sample.name))
+        # Find anchoring points of the sample
         sample.MP, sample.secMP = sample.get_MPs(Sett.MPname, Sett.useMP,
                                                  Sett.useSecMP,
                                                  Sett.secMP, PATHS.datadir)
-        # Collection of data for each channel
+        # Collection of data for each channel of the sample
         for path2 in [p for p in sample.channelpaths if Sett.MPname
                       != str(p).split('_')[-2]]:
             channel = get_channel(path2, sample, Sett.AddData, PATHS.datadir)
+            # If no variance in found additional data, it is discarded.
             if channel.datafail:
                 datatypes = ', '.join(channel.datafail)
                 info = "No variance, data discarded"
                 msg = "-> {} - {}: {}".format(info, channel.name, datatypes)
                 print(msg)
-            sample.data = sample.project_channel(channel, PATHS.datadir)
+            # Project features of channel onto vector
+            sample.data = sample.project_channel(channel)
             channelName = str(path2.stem)
+            # Count occurrences in each bin
             if channelName not in ["MPs"]:
                 sample.find_counts(channel.name, PATHS.datadir)
     lg.logprint(LAM_logger, 'All channels projected and counted.', 'i')
 
 
 def Get_Counts(PATHS):
-    try:
+    """Handle data to anchor samples and find cell counts."""
+    try:  # Test that MPs are found for the sample
         MPs = system.read_data(next(PATHS.datadir.glob('MPs.csv')),
                                header=0, test=False)
     except FileNotFoundError:
@@ -127,11 +140,12 @@ def Get_Counts(PATHS):
             lg.logprint(LAM_logger, msg, 'c')
             print("ERROR: {}".format(msg))
         return
-    else:
+    else:  # The total length of needed matrix when using 'Count'
         store.totalLength = int(len(Sett.projBins) + MPdiff)
-    if Sett.process_counts:
+    if Sett.process_counts:  # Begin anchoring of data
         lg.logprint(LAM_logger, 'Begin normalization of channels.', 'i')
         print('\n---Normalizing sample data---')
+        # Get combined channel files of all samples
         countpaths = PATHS.datadir.glob('All_*')
         for path in countpaths:
             name = str(path.stem).split('_')[1]
@@ -149,43 +163,52 @@ def Get_Counts(PATHS):
 
 
 class get_sample:
+    """Collect sample data and process for analysis."""
+
     def __init__(self, path, PATHS, process=True, project=False):
         self.name = str(path.stem)
         self.sampledir = PATHS.samplesdir.joinpath(self.name)
         self.group = self.name.split('_')[0]
+        # Add sample and group to storing variables
         if self.name not in store.samples:
             store.samples.append(self.name)
         if self.group not in store.samplegroups:
             store.samplegroups.append(self.group)
             store.samplegroups = sorted(store.samplegroups)
+        # Make folder for storing data and find data-containing files
         if self.sampledir.exists() is False:
             pl.Path.mkdir(self.sampledir)
         self.channelpaths = list([p for p in path.iterdir() if p.is_dir()])
         self.channels = [str(p).split('_')[(-2)] for p in self.channelpaths]
+        self.vectData = None
+        self.MP = None
+        self.secMP = None
+        self.data = None
         if process is False and project is True:
             # If the samples are not to be processed, the vector data is
             # gathered from the csv-file in the sample's directory
             # ("./Analysis Data/Samples/")
-            for channel in self.channels:
+            for channel in self.channels:  # Store all found channel names
                 if channel.lower() not in [c.lower() for c in store.channels]:
                     store.channels.append(channel)
-            try:
+            try:  # Find sample's vector file and read it
                 tempVect = pd.read_csv(self.sampledir.joinpath('Vector.csv'))
                 Vect = list(zip(tempVect.loc[:, 'X'], tempVect.loc[:, 'Y']))
                 self.vector = gm.LineString(Vect)
                 self.vectorLength = self.vector.length
                 lenS = pd.Series(self.vectorLength, name=self.name)
                 system.saveToFile(lenS, PATHS.datadir, 'Length.csv')
-            except FileNotFoundError:
+            except FileNotFoundError:  # If vector file not found
                 msg = 'Vector.csv NOT found for {}'.format(self.name)
                 lg.logprint(LAM_logger, msg, 'e')
                 print('ERROR: {}'.format(msg))
-            except AttributeError:
+            except AttributeError:  # If vector file is faulty
                 msg = 'Faulty vector for {}'.format(self.name)
                 lg.logprint(LAM_logger, msg, 'w')
                 print('ERROR: Faulty vector for {}'.format(msg))
 
     def get_vectData(self, channel):
+        """Get channel data that is used for vector creation."""
         try:
             namer = str("_{}_".format(channel))
             namerreg = re.compile(namer, re.I)
@@ -198,39 +221,43 @@ class get_sample:
             lg.logprint(LAM_logger, msg, 'w')
             print('-> {}'.format(msg))
             vectData = None
-        finally:
-            return vectData
+        return vectData
 
     def create_vector(self, creationBins, datadir, Skeletonize, resize, BDiter,
                       SigmaGauss):
-        """For creating the vector from the running median of the
-        DAPI-positions."""
+        """Handle data for vector creation."""
+        # Extract point coordinates of the vector:
         positions = self.vectData
         X, Y = positions.loc[:, 'Position X'], positions.loc[:, 'Position Y']
-        if Skeletonize:
+        if Skeletonize:  # Create skeleton vector
             vector, binaryArray, skeleton, lineDF = self.SkeletonVector(
                 X, Y, resize, BDiter, SigmaGauss)
             if vector is None:
                 return
-        else:
+        else:  # Alternatively create median vector
             vector, lineDF = self.MedianVector(X, Y, creationBins)
             binaryArray, skeleton = None, None
+        # Simplification of vector points
         vector = vector.simplify(Sett.simplifyTol)
+        # Save total length of vector
         length = pd.Series(vector.length, name=self.name)
         system.saveToFile(length, datadir, 'Length.csv')
+        # Save vector file
         system.saveToFile(lineDF, self.sampledir, 'Vector.csv', append=False)
+        # Create plots of created vector
         create_plot = plotter(self, self.sampledir)
         create_plot.vector(self.name, vector, X, Y, binaryArray, skeleton)
 
     def SkeletonVector(self, X, Y, resize, BDiter, SigmaGauss):
+        """Create vector by skeletonization of image-transformed positions."""
         def resize_minmax(minv, maxv):
+            """Resize x- and y-coordinates for binarization."""
             rminv = math.floor(minv * resize / 10) * 10
             rmaxv = math.ceil(maxv * resize / 10) * 10
             return rminv, rmaxv
 
         def _binarize():
-            """Transformation of coordinates into binary image and subsequent
-            dilation and smoothing."""
+            """Transform XY into binary image and perform editing."""
             buffer = 500 * resize
             ylbl = np.arange(int(rminy - buffer),
                              int(rmaxy + (buffer + 1)), 10)
@@ -243,7 +270,7 @@ class get_sample:
                 y = round(coord[1] * resize / 10) * 10
                 x = (round(coord[0] * resize / 10) * 10)
                 BA.at[y, x] = 1
-            if BDiter > 0:  # binary dilations
+            if BDiter > 0:  # binary dilations, if used
                 struct1 = mp.generate_binary_structure(2, 2)
                 try:
                     BA = mp.binary_dilation(BA, structure=struct1,
@@ -252,11 +279,11 @@ class get_sample:
                     msg = 'BDiter in settings has to be an integer.'
                     lg.logprint(LAM_logger, msg, 'e')
                     print("TypeError: {}".format(msg))
-            if SigmaGauss > 0:  # Smoothing
+            if SigmaGauss > 0:  # Gaussian smoothing
                 BA = gaussian(BA, sigma=SigmaGauss)
-                BA[BA > 0] = True
-            BA = mp.binary_fill_holes(BA)
-            return BA, BAind, BAcol
+                BA[BA > 0] = True  # Re-binarization
+            BA = mp.binary_fill_holes(BA)  # Fill holes in the sample
+            return BA, list(BAind), list(BAcol)
 
         coords = list(zip(X, Y))
         rminy, rmaxy = resize_minmax(Y.min(), Y.max())
@@ -272,10 +299,12 @@ class get_sample:
         # BEGIN CREATION OF VECTOR FROM SKELETON COORDS
         finder = Sett.find_dist  # Distance for detection of nearby XY
         line = []  # For storing vector
-        start = coordDF.X.idxmin()
+        start = coordDF.X.idxmin()  # Start from smallest x-coord
         sx, sy = coordDF.loc[start, 'X'], coordDF.loc[start, 'Y']
         div = 5
         flag = False
+        # Determining starting point of vector from as near to the end of
+        # sample as possible:
         while not flag:
             nearStart = coordDF[(abs(coordDF.X - sx) <= finder/div) &
                                 (abs(coordDF.Y - sy) <= finder)].index
@@ -283,96 +312,112 @@ class get_sample:
                 div -= 0.1
             else:
                 flag = True
+        # Take mean coordinates of cells near the end to be the starting point
         sx, sy = coordDF.loc[nearStart, 'X'].mean(), coordDF.loc[
             nearStart, 'Y'].mean()
         line.append((sx / resize, sy / resize))
+        # Drop the used coordinates
         coordDF.drop(nearStart, inplace=True)
+        # Continue finding next points until flagged ready:
         flag = False
         while not flag:
             point = gm.Point(sx, sy)
+            # Find pixels near to the current coordinate
             with warnings.catch_warnings():
                 warnings.simplefilter('ignore', category=UserWarning)
                 nearest = coordDF[(abs(coordDF.X - sx) <= finder) &
                                   (abs(coordDF.Y - sy) <= finder)].index
-            if nearest.size == 0:
+            if nearest.size == 0:  # If none near, extend search distance once
                 with warnings.catch_warnings():
                     warnings.simplefilter('ignore', category=UserWarning)
                     nearest = coordDF[(abs(coordDF.X - sx) <= finder * 2) &
                                       (abs(coordDF.Y - sy) <= finder * 2)
                                       ].index
             if nearest.size > 0:
+                # If pixels are found, establish the vector's direction:
                 try:
                     point1, point2 = line[-3], line[-1]
                 except IndexError:
                     point1, point2 = (sx, sy), (sx + (50*resize), sy)
-                shiftx = point2[0] - point1[0]
-                shifty = point2[1] - point1[1]
+                # Create a test point (used to score nearby pixels)
+                shiftx = point2[0] - point1[0]  # shift in x for test
+                shifty = point2[1] - point1[1]  # shift in y for test
                 testP = gm.Point(point2[0]+1.25*shiftx, point2[1]+shifty)
+                # DataFrame for storing relevant info on pixel coordinates
                 distances = pd.DataFrame(np.zeros((nearest.size, 5)),
                                          index=nearest,
                                          columns=['dist', 'distOG', 'penalty',
                                                   'X', 'Y'])
-                for index, row in coordDF.loc[nearest, :].iterrows():
+                # Create scores for each nearby pixel:
+                for index, __ in coordDF.loc[nearest, :].iterrows():
                     x, y = coordDF.X.at[index], coordDF.Y.at[index]
                     point3 = gm.Point(x, y)
-                    dist = testP.distance(point3)  # dist to a tespoint
+                    dist = testP.distance(point3)  # distance to a testpoint
                     distOg = point.distance(point3)  # dist to current coord
                     penalty = (0.75 * distOg) + dist
                     distances.loc[index, :] = [dist, distOg, penalty, x, y]
+                # Find the pixel with the smallest penalty and add to vector:
                 best = distances.penalty.idxmin()
                 x2, y2 = coordDF.X.at[best], coordDF.Y.at[best]
                 line.append((x2 / resize, y2 / resize))
+                # Drop the pixels that are behind current vector coord
                 forfeit = distances[(distances.dist >= distances.distOG)
                                     ].dropna().index
                 best = pd.Index([best], dtype='int64')
                 forfeit = forfeit.append(best)
                 coordDF.drop(forfeit, inplace=True)
+                # Set current location for the next loop
                 sx, sy = x2, y2
-            else:
+            else:  # If none are found nearby after widening search, finished
                 flag = True
-        try:
+        try:  # Create LineString-object from finished vector
             vector = gm.LineString(line)
-            vector = vector.simplify(Sett.simplifyTol)
             linedf = pd.DataFrame(line, columns=['X', 'Y'])
             return vector, binaryArray, skeleton, linedf
-        except ValueError:
+        except ValueError:  # If something went wrong with creation, warn
             msg = 'Faulty vector for {}'.format(self.name)
             lg.logprint(LAM_logger, msg, 'e')
             print("WARNING: Faulty vector. Try different Sett.")
             return None, None, None, None
 
     def MedianVector(self, X, Y, creationBins):
+        """Create vector by calculating median coordinates."""
+        # Divide sample to equidistant points between min & max X-coord:
         bins = np.linspace(X.min(), X.max(), creationBins)
         idx = np.digitize(X, bins, right=True)
         Ymedian = np.zeros(creationBins)
+        # Find median Y-coord at first bin:
         with warnings.catch_warnings():
             warnings.simplefilter('ignore', category=RuntimeWarning)
             startval = np.nanmean(Y[(idx == 1)])
         Ymedian[0] = startval
+        # Then for the rest of the bins
         for b in range(1, creationBins):
             cells = Y[idx == b]
-            if cells.size == 0:
+            if cells.size == 0:  # If no cells at bin, copy previous Y-coord
                 Ymedian[b] = Ymedian[b - 1]
             else:
                 Ymedian[b] = Y[idx == b].min() + (Y[idx == b].max() -
                                                   Y[idx == b].min()) / 2
-
+        # Make into XY-coordinates
         XYmedian = [p for p in tuple(np.stack((bins, Ymedian), axis=1)) if
                     ~np.isnan(p).any()]
+        # Create LineString-object from finished vector
         vector = gm.LineString(XYmedian)
         linedf = pd.DataFrame(XYmedian, columns=['X', 'Y'])
         return vector, linedf
 
     def get_MPs(self, MPname, useMP, useSecMP, secMPname, datadir):
+        """Collect MPs for sample anchoring."""
         MPdata, secMPdata = pd.DataFrame(), pd.DataFrame()
-        if useSecMP:  # If True, get secondary MP
+        if useSecMP:  # If True, get secondary MP (NOT IMPLEMENTED PROPERLY)
             try:
                 secMPdirpath = next(self.channelpaths.pop(i) for i, s in
                                     enumerate(self.channelpaths) if
                                     str('_' + secMPname + '_') in str(s))
                 secMPpath = next(secMPdirpath.glob("*Position.csv"))
                 secMPdata = system.read_data(secMPpath)
-                self.secMPdata = secMPdata.loc[:, ['Position X', 'Position Y']]
+                secMPdata = secMPdata.loc[:, ['Position X', 'Position Y']]
             except (AttributeError, ValueError):
                 print("-> Failed to find secondary MP positions")
         else:  # If samplefolder contains unused secondary MP data, remove path
@@ -390,7 +435,7 @@ class get_sample:
                                  str('_' + MPname + '_') in str(s))
                 MPpath = next(MPdirPath.glob("*Position.csv"))
                 MPdata = system.read_data(MPpath)
-                self.MPdata = MPdata.loc[:, ['Position X', 'Position Y']]
+                MPdata = MPdata.loc[:, ['Position X', 'Position Y']]
             except (StopIteration, ValueError):
                 msg = 'could not find MP position for {}'.format(self.name)
                 lg.logprint(LAM_logger, msg, 'e')
@@ -398,13 +443,13 @@ class get_sample:
             finally:
                 MPbin, secMPbin = None, None
                 MPs = pd.DataFrame()
-                if not self.MPdata.empty:
-                    MPbin = self.project_MPs(self.MPdata, self.vector, datadir,
+                if not MPdata.empty:
+                    MPbin = self.project_MPs(MPdata, self.vector, datadir,
                                              filename="MPs.csv")
                     MP = pd.Series(MPbin, name="MP")
                     MPs = pd.concat([MPs, MP], axis=1)
                 if useSecMP and hasattr(self, "secMPdata"):
-                    secMPbin = self.project_MPs(self.secMPdata, self.vector,
+                    secMPbin = self.project_MPs(secMPdata, self.vector,
                                                 datadir, filename="secMPs.csv")
                     secMP = pd.Series(secMPbin, name="secMP")
                     MPs = pd.concat([MPs, secMP], axis=1)
@@ -435,7 +480,7 @@ class get_sample:
         system.saveToFile(MPbin, datadir, filename)
         return MPbin
 
-    def project_channel(self, channel, datadir):
+    def project_channel(self, channel):
         """For projecting coordinates onto the vector."""
         Positions = channel.data
         XYpos = list(zip(Positions['Position X'], Positions['Position Y']))
@@ -457,6 +502,7 @@ class get_sample:
         return Positions
 
     def find_counts(self, channelName, datadir):
+        """Gather projected features and find bin counts."""
         counts = np.bincount(self.data['DistBin'],
                              minlength=len(Sett.projBins))
         counts = pd.Series(np.nan_to_num(counts), name=self.name)
@@ -465,6 +511,8 @@ class get_sample:
 
 
 class get_channel:
+    """Find and read channel data plus additional data."""
+
     def __init__(self, path, sample, dataKeys, datadir):
         self.sample = sample
         self.datafail = []
@@ -473,11 +521,12 @@ class get_channel:
         self.path = path
         self.pospath = next(self.path.glob("*Position.csv"))
         self.data = self.read_channel(self.pospath)
-        self.data = self.read_additional(dataKeys)
+        self.read_additional(dataKeys)
         if 'ClusterID' in self.data.columns:
             store.clusterPaths.append(self.path)
 
     def read_channel(self, path):
+        """Read channel data into a dataframe."""
         try:
             data = system.read_data(str(path))
             channel = self.name
@@ -489,18 +538,22 @@ class get_channel:
                         'ex')
 
     def read_additional(self, dataKeys):
-
+        """Read relevant additional data of channel."""
         def _testVariance(data):
+            """Test if additional data column contains any variance."""
             for col in data.columns:
                 if data.loc[:, col].nunique() == 1:
                     data.loc[:, col] = np.nan
                     self.datafail.append(col)
 
         def _rename_ID():
+            """Rename filename identification of channel."""
+            # I.e. as defined by settings.channelID
             rename = None
             strings = str(col).split('_')
             if len(strings) > 1:
                 IDstring = strings[-1]
+                key = '_'.join(strings[:-1])
                 if Sett.replaceID:
                     temp = Sett.channelID.get(IDstring)
                     if temp is not None:
@@ -508,30 +561,29 @@ class get_channel:
                 rename = str(key + '-' + IDstring)
             return rename
 
-        newData = self.data
         for key in dataKeys:
             fstring = dataKeys.get(key)[0]
             finder = str('*{}*'.format(fstring))
             paths = list(self.path.glob(finder))
-            addData = pd.DataFrame(newData.loc[:, 'ID'])
+            addData = pd.DataFrame(self.data.loc[:, 'ID'])
             if not paths:
                 print("-> {} {} file not found".format(self.name, key))
                 continue
             elif len(paths) == 1:
                 namer = re.compile('^{}'.format(key), re.I)
                 if (paths[0] == self.pospath and
-                        any(newData.columns.str.contains(namer))):
+                        any(self.data.columns.str.contains(namer))):
                     continue
                 elif (paths[0] == self.pospath and
-                      not any(newData.columns.str.contains(namer))):
+                      not any(self.data.columns.str.contains(namer))):
                     print("'{}' not in AddData-file of {} on channel {}"
                           .format(key, self.sample.name, self.name))
                 tmpData = system.read_data(str(paths[0]))
-                cols = tmpData.columns.map(lambda x: bool(re.match(namer, x))
-                                           or x == 'ID')
+                cols = tmpData.columns.map(lambda x, namer=namer: bool(
+                    re.match(namer, x)) or x == 'ID')
                 tmpData = tmpData.loc[:, cols]
                 addData = pd.merge(addData, tmpData, on='ID')
-            else:
+            else:  # If multiple files, e.g. intensity, get all
                 for path in paths:
                     # Search identifier for column from filename
                     strings = str(path.stem).split(fstring)
@@ -543,38 +595,46 @@ class get_channel:
                         rename = str(col + '_' + IDstring)
                         tmpData.rename(columns={key: rename}, inplace=True)
                     addData = pd.merge(addData, tmpData, on='ID')
+            # Go through all columns and drop invariant data
             for col in [c for c in addData.columns if c != 'ID']:
                 _testVariance(tmpData)
-                rename = _rename_ID()
+                rename = _rename_ID()  # Rename columns if wanted
                 if rename is not None:
                     addData.rename(columns={col: rename}, inplace=True)
-            newData = pd.merge(newData, addData, on='ID')
-        return newData
+            self.data = pd.merge(self.data, addData, on='ID')
 
 
 class normalize:
+    """Anchor sample data into dataframe with all samples."""
+
     def __init__(self, path):
         self.path = pl.Path(path)
         self.channel = str(self.path.stem).split('_')[1]
         self.counts = system.read_data(path, header=0, test=False)
+        self.starts = None
 
     def normalize_samples(self, MPs, arrayLength):
-        """ For inserting sample data into larger matrix, centered with MP."""
+        """For inserting sample data into larger matrix, centered with MP."""
         cols = self.counts.columns
         data = pd.DataFrame(np.zeros((arrayLength, len(cols))), columns=cols)
+        # Create empty series for holding each sample's starting index
         SampleStart = pd.Series(np.full(len(cols), np.nan), index=cols)
         for col in self.counts.columns:
             handle = self.counts.loc[:, col].values
-            mp = MPs.loc[0, col]
-            insert, insx = relate_data(handle, mp, store.center, arrayLength)
+            MP = MPs.loc[0, col]
+            # Insert sample's count data into larger, anchored dataframe:
+            insert, insx = relate_data(handle, MP, store.center, arrayLength)
             data[col] = insert
+            # Save starting index of the sample
             SampleStart.at[col] = insx
+        # Save anchored data
         filename = str('Norm_{}.csv'.format(self.channel))
         data = data.sort_index(axis=1)
         system.saveToFile(data, self.path.parent, filename, append=False)
         return SampleStart, data
 
     def averages(self, NormCounts):
+        """Find bin averages of channels."""
         samples = NormCounts.columns.tolist()
         Groups = set({s.casefold(): s.split('_')[0] for s in samples}.values())
         cols = ["{}_All".format(g) for g in Groups]
@@ -583,13 +643,14 @@ class normalize:
             namer = "{}_".format(grp)
             grpData = NormCounts.loc[:, NormCounts.columns.str.startswith(
                 namer)]
+            # Calculate group averages
             Avgs.loc[:, "{}_All".format(grp)] = grpData.mean(axis=1)
+        # Save average data
         filename = str('ChanAvg_{}.csv'.format(self.channel))
         system.saveToFile(Avgs, self.path.parent, filename, append=False)
 
     def Avg_AddData(self, PATHS, dataNames, TotalLen):
-
-    # TODO Make area and volume plots only for some channels + datafile naming
+        """Find bin averages of additional data."""
         samples = self.starts.index
         for sample in samples:
             sampleDir = PATHS.samplesdir.joinpath(sample)
@@ -616,18 +677,17 @@ class normalize:
 
 
 def relate_data(data, MP=0, center=50, TotalLength=100):
-    """Sets the passed data into the context of all samples, i.e. places the
-    data into an empty array with the exact length required to fit all
-    samples"""
+    """Place sample data in context of all data, i.e. anchoring."""
     try:
         length = data.shape[0]
     except AttributeError:
         length = len(data)
+    # Insert smaller input data into larger DF defined by TotalLength
     insx = int(center - MP)
     end = int(insx + length)
-    insert = np.full(TotalLength, np.nan)
-    data = np.where(data == np.nan, 0, data)
-    try:
+    insert = np.full(TotalLength, np.nan)  # Bins outside input data are NaN
+    data = np.where(data == np.nan, 0, data)  # Set all NaN in input to 0
+    try:  # Insertion
         insert[insx:end] = data
     except ValueError:
         msg = "relate_data() call from {} line {}".format(

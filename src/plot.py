@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
-
 """
+LAM-module for plot creation.
+
 Created on Wed Mar  6 12:42:28 2019
 @author: Arto I. Viitanen
 

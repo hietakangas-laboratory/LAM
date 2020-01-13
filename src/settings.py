@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 """
+LAM-module for user-defined settings.
+
 Created on Wed Mar  6 12:42:28 2019
 @author: Arto I. Viitanen
 
@@ -10,12 +12,13 @@ import pathlib as pl
 
 class settings:
     """ A class for holding all user-end settings for the analysis."""
+
     # ####################### PRIMARY SETTINGS #######################
     GUI = True  # Use graphical user interface (True / False)
 
     # DEFINE PATH TO ANALYSIS FOLDER:
     # (Use input r'PATH' where PATH is your path)
-    workdir = pl.Path(r'C:\\')
+    workdir = pl.Path(r'E:\Code_folder\R1_R2')
     # Whether to gather raw data and create vectors. If False, expects to find
     # pre-created datafiles in the Analysis Data directory, i.e. a previous
     # full run has been made, and there has been no edits to the data files.
@@ -46,7 +49,7 @@ class settings:
     find_dist = 40
     BDiter = 2          # Binary dilation iterations (set to 0 if not needed)
     SigmaGauss = 0.4    # Sigma for gaussian smoothing (set to 0 if not needed)
-    simplifyTol = 10    # Tolerance for vector simplification.
+    simplifyTol = 25    # Tolerance for vector simplification.
     # Number of bins used for vector creation when using the median vector
     # creation. Increasing bin number too much may lead to stair-like vector;
     # increasing 'simplifyTol' can correct the steps.

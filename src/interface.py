@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 """
+LAM-module for the creation of graphical user interface.
+
 Created on Wed Mar  6 12:42:28 2019
 @author: Arto I. Viitanen
 
@@ -830,7 +832,7 @@ class Additional_data(tk.Toplevel):
         self.unitIn = tk.Entry(self.frame, text=setUnit.get(), bg='white',
                                textvariable=setUnit, bd=2, relief='sunken')
         self.unitIn.grid(row=1, column=5, columnspan=2, pady=(0, 10))
-        
+
         # buttons
         self.Add_b = tk.Button(self.frame, text='Add',
                                font=('Arial', 10, 'bold'),
@@ -910,7 +912,7 @@ class Additional_data(tk.Toplevel):
                     child.configure(state='normal')
 
     def add_data(self):
-        """Handling of data input to the additional data table."""
+        """Addition of data input to the additional data table."""
         if setLbl.get() not in self.addDict.keys():
             i = self.rowN
             row = self.rowN+2
@@ -935,7 +937,7 @@ class Additional_data(tk.Toplevel):
             print("Delete old label of same name before adding.")
 
     def rmv_data(self, i):
-        """Handling of data removal from the additional data table."""
+        """Remove data from the additional data table."""
         for widget in self.frame.grid_slaves():
             if int(widget.grid_info()["row"]) == i+2 and int(
                     widget.grid_info()["column"]) == 0:
@@ -949,7 +951,7 @@ class Additional_data(tk.Toplevel):
                 widget.grid_forget()
 
     def save_setts(self, event=None):
-        """Saving of data when exiting other window."""
+        """Save settings when exiting Other-window."""
         Sett.AddData = self.addDict
         Sett.replaceID = self.repID.get()
         if Sett.replaceID:
@@ -1105,7 +1107,7 @@ class Plot_Settings(tk.Toplevel):
             self.ylimIn.configure(state='normal')
 
     def save_setts(self, event=None):
-        """Saving of settings when plot-window is exited"""
+        """Save settings when Plot-window is exited."""
         Sett.Drop_Outliers = self.DropV.get()
         Sett.dropSTD = self.setSTD.get()
         Sett.plot_jitter = self.JitterV.get()
@@ -1129,9 +1131,10 @@ class Plot_Settings(tk.Toplevel):
         """Destroy window without saving."""
         self.window.destroy()
 
+
 class Stat_Settings(tk.Toplevel):
     """Container for statistics-window settings."""
-    
+
     def __init__(self, master):
         self.window = tk.Toplevel(master)
         self.window.grab_set()

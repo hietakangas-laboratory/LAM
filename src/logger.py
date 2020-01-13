@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 """
+LAM-module for establishing logging.
+
 Created on Wed Mar  6 12:42:28 2019
 @author: Arto I. Viitanen
 
@@ -10,12 +12,15 @@ import logging
 import time
 # A list of logger names used by the modules. Used for clearing of handlers.
 loggers = ['run', 'process', 'analysis', 'interface', 'plot', 'system']
-
+# Needed variables
+logFile = ""
+ctime = time.strftime("%d%b%y_%H%M%S")
+log_created = False
 
 def setup_logger(name=None, new=True):
     """
-    Sets up variables for the logger when run starts.
-    
+    Set up variables for the logger when run starts.
+
     Args:
         name - the calling module.
         new - create new logger
@@ -29,6 +34,8 @@ def setup_logger(name=None, new=True):
         logger = get_logger(name)  # Call for logger-object creation
         log_created = True  # Create variable to indicate log has been created
         return logger
+    return
+
 
 def get_logger(name):
     """Get module-specific logger."""
@@ -41,8 +48,9 @@ def get_logger(name):
         loggers.append(name)
     return logger
 
+
 def _get_handler():
-    """Create message handler in conjunction with get_logger()"""
+    """Create message handler in conjunction with get_logger()."""
     # Create format for log messages
     Formatter = logging.Formatter(
             "%(asctime)s — %(name)s — %(levelname)s — %(message)s")
@@ -52,6 +60,7 @@ def _get_handler():
     file_handler.setLevel(logging.DEBUG)  # Set logs of all level to be shown
     return file_handler
 
+
 def Close():
     """Close all created loggers."""
     for lgr in loggers:
@@ -59,6 +68,7 @@ def Close():
         for handler in logger.handlers:
             handler.close()
         logger.handlers = []
+
 
 def Update():
     """Update current loggers."""
@@ -76,7 +86,7 @@ def log_Shutdown():
 def logprint(self, msg="Missing", logtype='e'):
     """
     Prints information of different level to the log file.
-    
+
     Args:
         msg - message to log
         logtype - type of log
