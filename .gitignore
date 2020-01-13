@@ -5,3 +5,5 @@ LAM install.txt
 .spyproject
 
 __pycache__
+
+src/.pylint.d

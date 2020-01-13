@@ -140,8 +140,8 @@ def Get_Counts(PATHS):
             lg.logprint(LAM_logger, msg, 'c')
             print("ERROR: {}".format(msg))
         return
-    else:  # The total length of needed matrix when using 'Count'
-        store.totalLength = int(len(Sett.projBins) + MPdiff)
+    # The total length of needed matrix when using 'Count'
+    store.totalLength = int(len(Sett.projBins) + MPdiff)
     if Sett.process_counts:  # Begin anchoring of data
         lg.logprint(LAM_logger, 'Begin normalization of channels.', 'i')
         print('\n---Normalizing sample data---')
