@@ -80,6 +80,9 @@ def main():
             return
     if Sett.process_counts:
         process.Project(systemPaths)
+    print(store.samples)
+    print(store.channels)
+    print(store.samplegroups)
     # After all samples have been collected/created, find their respective MP
     # bins and normalize (anchor) cell count data. If MP's are not used, the
     # samples are anchored at bin == 0.
@@ -134,7 +137,7 @@ def MAIN_catch_exit(LAM_logger=None):
         lg.log_Shutdown()
     finally:
         print('\nCOMPLETED\n')
-        lg.logprint(LAM_logger, 'Completed', 'i')
+        lg.logprint(LAM_logger, 'Finished', 'i')
         lg.Close()
 
 

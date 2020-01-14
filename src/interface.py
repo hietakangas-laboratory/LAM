@@ -620,6 +620,7 @@ class base_GUI(tk.Toplevel):
         import logger as lg
         import logging
         if hasattr(lg, 'log_created'):
+            # Close old loggers and create new:
             lg.Close()
             lg.Update()
             LAM_logger = logging.getLogger(__name__)
@@ -669,39 +670,43 @@ class base_GUI(tk.Toplevel):
     def Detect_Channels(self):
         """Detect channels and groups found at current set path."""
         workdir = pl.Path(self.folder_path.get())
-        chans = []
-        groups = []
+        global DetChans, DetGroups
+        DetChans = []
+        DetGroups = []
         # Loop found sample directories
         for samplepath in [p for p in workdir.iterdir() if p.is_dir() and
                            'Analysis Data' not in p.name]:
             try:  # Get groups from folder names
                 group = str(samplepath.name).split('_')[0]
-                if group not in groups:
-                    groups.append(group)
+                if group not in DetGroups:
+                    DetGroups.append(group)
             except IndexError:
                 pass
             # Loop through channels of found samples
             for channelpath in [p for p in samplepath.iterdir() if p.is_dir()]:
                 try:
                     channel = str(channelpath.name).split('_')[-2]
-                    if channel not in chans:
-                        chans.append(channel)
+                    if channel not in DetChans:
+                        DetChans.append(channel)
                 except IndexError:
                     pass
         # Change text variables to contain new groups and channels
-        if chans:
+        if DetChans:
             chanstring = tk.StringVar(value="Detected channels: {}".format(
-                                            ', '.join(sorted(chans))))
+                                            ', '.join(sorted(DetChans))))
         else:
             chanstring = tk.StringVar(value='No detected channels!')
-        if groups:
+        if DetGroups:
             grpstring = tk.StringVar(value="Detected groups: {}".format(
-                                            ', '.join(sorted(groups))))
+                                            ', '.join(sorted(DetGroups))))
         else:
             grpstring = tk.StringVar(value='No detected groups!')
         # Set new text variables to be shown
         self.DetGroups.set(grpstring.get())
         self.DetChans.set(chanstring.get())
+        from system import store
+        store.samplegroups = DetGroups
+        store.channels = DetChans
 
 
 class Skel_settings(tk.Frame):

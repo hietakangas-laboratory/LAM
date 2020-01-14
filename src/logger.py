@@ -41,7 +41,7 @@ def get_logger(name):
     """Get module-specific logger."""
     logger = logging.getLogger(name)  # Create logger
     if not logger.handlers:
-        logger.addHandler(_get_handler())  # Get andler that passes messages
+        logger.addHandler(_get_handler())  # Get handler that passes messages
     logger.propagate = False  # No propagation as modules call individually
     logger.setLevel(logging.DEBUG)  # Set logs of all level to be shown
     if name not in loggers:

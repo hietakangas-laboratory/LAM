@@ -147,6 +147,7 @@ def start():
         raise SystemExit
     else:  # Otherwise create paths and directories
         PATHS = paths(Sett.workdir)
+        # Find all samples, if exist
         store.samples = [p.name for p in PATHS.samplesdir.iterdir() if
                          p.is_dir()]
         return PATHS

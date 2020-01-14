@@ -172,6 +172,7 @@ class get_sample:
         # Add sample and group to storing variables
         if self.name not in store.samples:
             store.samples.append(self.name)
+            store.samples = sorted(store.samples)
         if self.group not in store.samplegroups:
             store.samplegroups.append(self.group)
             store.samplegroups = sorted(store.samplegroups)
@@ -212,8 +213,9 @@ class get_sample:
         try:
             namer = str("_{}_".format(channel))
             namerreg = re.compile(namer, re.I)
-            dirPath = [self.channelpaths[i] for i, s in enumerate(
-                            self.channelpaths) if namerreg.search(str(s))][0]
+            dirPath = [self.channelpaths[i] for i, s in
+                       enumerate(self.channelpaths) 
+                       if namerreg.search(str(s))][0]
             vectPath = next(dirPath.glob('*Position.csv'))
             vectData = system.read_data(vectPath)
         except FileNotFoundError:
@@ -251,21 +253,29 @@ class get_sample:
     def SkeletonVector(self, X, Y, resize, BDiter, SigmaGauss):
         """Create vector by skeletonization of image-transformed positions."""
         def resize_minmax(minv, maxv):
-            """Resize x- and y-coordinates for binarization."""
+            """
+            Rounds x- and y-coordinates for binarization.
+            
+            Takes min and max values found in feature coordinates and rounds
+            them appropriately to provide indexes for the smaller, resized
+            binary array. The new indexes allow changing array values from
+            zeroes to ones based on feature coords.
+            """
             rminv = math.floor(minv * resize / 10) * 10
             rmaxv = math.ceil(maxv * resize / 10) * 10
             return rminv, rmaxv
 
         def _binarize():
             """Transform XY into binary image and perform editing."""
+            # Create DF indices (X&Y-coords) with a buffer for operations:
             buffer = 500 * resize
             ylbl = np.arange(int(rminy - buffer),
                              int(rmaxy + (buffer + 1)), 10)
             xlbl = np.arange(int(rminx - buffer),
                              int(rmaxx + (buffer + 1)), 10)
+            # Create binary array with the created indices
             BA = pd.DataFrame(np.zeros((len(ylbl), len(xlbl))),
                               index=np.flip(ylbl, 0), columns=xlbl)
-            BAind, BAcol = BA.index, BA.columns
             for coord in coords:  # Transform coords into binary array
                 y = round(coord[1] * resize / 10) * 10
                 x = (round(coord[0] * resize / 10) * 10)
@@ -282,8 +292,10 @@ class get_sample:
             if SigmaGauss > 0:  # Gaussian smoothing
                 BA = gaussian(BA, sigma=SigmaGauss)
                 BA[BA > 0] = True  # Re-binarization
-            BA = mp.binary_fill_holes(BA)  # Fill holes in the sample
-            return BA, list(BAind), list(BAcol)
+            # Fill holes in the sample, e.g. ruptured locations with no micro-
+            # scopy features.
+            BA = mp.binary_fill_holes(BA)
+            return BA, list(ylbl), list(xlbl)
 
         coords = list(zip(X, Y))
         rminy, rmaxy = resize_minmax(Y.min(), Y.max())
@@ -377,7 +389,7 @@ class get_sample:
         except ValueError:  # If something went wrong with creation, warn
             msg = 'Faulty vector for {}'.format(self.name)
             lg.logprint(LAM_logger, msg, 'e')
-            print("WARNING: Faulty vector. Try different Sett.")
+            print("WARNING: Faulty vector. Try different settings")
             return None, None, None, None
 
     def MedianVector(self, X, Y, creationBins):
