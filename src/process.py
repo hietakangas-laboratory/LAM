@@ -21,9 +21,8 @@ import shapely.geometry as gm
 from skimage.morphology import skeletonize
 from skimage.filters import gaussian
 # LAM modules
-from settings import settings as Sett
+from settings import store as store, settings as Sett
 from plot import plotter
-from system import store
 import logger as lg
 import system
 try:
@@ -71,10 +70,8 @@ def Project(PATHS):
         # Initialize sample variables
         sample = get_sample(path, PATHS, process=False, project=True)
         print("{}  ...".format(sample.name))
-        # Find anchoring points of the sample
-        sample.MP, sample.secMP = sample.get_MPs(Sett.MPname, Sett.useMP,
-                                                 Sett.useSecMP,
-                                                 Sett.secMP, PATHS.datadir)
+        # Find anchoring point of the sample
+        sample.MP = sample.get_MPs(Sett.MPname, Sett.useMP, PATHS.datadir)
         # Collection of data for each channel of the sample
         for path2 in [p for p in sample.channelpaths if Sett.MPname
                       != str(p).split('_')[-2]]:
@@ -183,7 +180,6 @@ class get_sample:
         self.channels = [str(p).split('_')[(-2)] for p in self.channelpaths]
         self.vectData = None
         self.MP = None
-        self.secMP = None
         self.data = None
         if process is False and project is True:
             # If the samples are not to be processed, the vector data is
@@ -419,27 +415,8 @@ class get_sample:
         linedf = pd.DataFrame(XYmedian, columns=['X', 'Y'])
         return vector, linedf
 
-    def get_MPs(self, MPname, useMP, useSecMP, secMPname, datadir):
+    def get_MPs(self, MPname, useMP, datadir):
         """Collect MPs for sample anchoring."""
-        MPdata, secMPdata = pd.DataFrame(), pd.DataFrame()
-        if useSecMP:  # If True, get secondary MP (NOT IMPLEMENTED PROPERLY)
-            try:
-                secMPdirpath = next(self.channelpaths.pop(i) for i, s in
-                                    enumerate(self.channelpaths) if
-                                    str('_' + secMPname + '_') in str(s))
-                secMPpath = next(secMPdirpath.glob("*Position.csv"))
-                secMPdata = system.read_data(secMPpath)
-                secMPdata = secMPdata.loc[:, ['Position X', 'Position Y']]
-            except (AttributeError, ValueError):
-                print("-> Failed to find secondary MP positions")
-        else:  # If samplefolder contains unused secondary MP data, remove path
-            secMPbin = None
-            try:
-                rmv = next(s for s in self.channelpaths if
-                           str('_' + secMPname + '_') in str(s))
-                self.channelpaths.remove(rmv)
-            except StopIteration:
-                pass
         if useMP:
             try:  # Get primary MP
                 MPdirPath = next(self.channelpaths.pop(i) for i, s in
@@ -453,24 +430,20 @@ class get_sample:
                 lg.logprint(LAM_logger, msg, 'e')
                 print("-> Failed to find MP positions")
             finally:
-                MPbin, secMPbin = None, None
+                MPbin = None
                 MPs = pd.DataFrame()
                 if not MPdata.empty:
                     MPbin = self.project_MPs(MPdata, self.vector, datadir,
                                              filename="MPs.csv")
-                    MP = pd.Series(MPbin, name="MP")
-                    MPs = pd.concat([MPs, MP], axis=1)
-                if useSecMP and hasattr(self, "secMPdata"):
-                    secMPbin = self.project_MPs(secMPdata, self.vector,
-                                                datadir, filename="secMPs.csv")
-                    secMP = pd.Series(secMPbin, name="secMP")
-                    MPs = pd.concat([MPs, secMP], axis=1)
-                MPs.to_csv(self.sampledir.joinpath("MPs.csv"), index=False)
+                    MPs = pd.concat([MPs, pd.Series(MPbin.iat[0], name='MP')])
+                    # MP = pd.Series(MPbin, name="MP")
+                    # MPs = pd.concat([MPs, MP], axis=1)
+                # MPs.to_csv(self.sampledir.joinpath("MPs.csv"), index=False)
         else:  # Sets measurement point values to zero when MP's are not used
             MPbin = pd.Series(0, name=self.name)
             system.saveToFile(MPbin, datadir, "MPs.csv")
             system.saveToFile(MPbin, self.sampledir, "MPs.csv", append=False)
-        return MPbin, secMPbin
+        return MPbin
 
     def project_MPs(self, Positions, vector, datadir, filename="some.csv"):
         """For the projection of spot coordinates onto the vector."""

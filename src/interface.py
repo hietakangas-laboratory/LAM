@@ -619,7 +619,7 @@ class base_GUI(tk.Toplevel):
             Sett.Cl_Vol_inclusion = 0
         import logger as lg
         import logging
-        if hasattr(lg, 'log_created'):
+        if lg.log_created == True:
             # Close old loggers and create new:
             lg.Close()
             lg.Update()
@@ -704,7 +704,7 @@ class base_GUI(tk.Toplevel):
         # Set new text variables to be shown
         self.DetGroups.set(grpstring.get())
         self.DetChans.set(chanstring.get())
-        from system import store
+        from settings import store
         store.samplegroups = DetGroups
         store.channels = DetChans
 

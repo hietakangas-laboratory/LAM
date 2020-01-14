@@ -29,7 +29,7 @@ def setup_logger(name=None, new=True):
     global logFile, ctime, log_created
     ctime = time.strftime("%d%b%y_%H%M%S")  # Start time for the run
     from settings import settings as Sett
-    logFile = Sett.workdir.joinpath("log_{}.txt".format(ctime))  # filepath
+    logFile = str(Sett.workdir.joinpath("log_{}.txt".format(ctime)))  # filepath
     if new is True:
         logger = get_logger(name)  # Call for logger-object creation
         log_created = True  # Create variable to indicate log has been created

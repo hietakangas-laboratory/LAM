@@ -61,6 +61,8 @@ For more extensive instructions, see user manual.
 """
 # LAM module
 from settings import settings as Sett
+# Standard
+import sys
 
 
 def main():
@@ -68,7 +70,7 @@ def main():
     import system
     import analysis
     import process
-    from system import store
+    from settings import store
     systemPaths = system.start()
     # If sample processing set to True, create vectors, collect and project
     # data etc. Otherwise continue to plotting and group-wise operations.
@@ -80,9 +82,6 @@ def main():
             return
     if Sett.process_counts:
         process.Project(systemPaths)
-    print(store.samples)
-    print(store.channels)
-    print(store.samplegroups)
     # After all samples have been collected/created, find their respective MP
     # bins and normalize (anchor) cell count data. If MP's are not used, the
     # samples are anchored at bin == 0.
@@ -127,6 +126,8 @@ def MAIN_catch_exit(LAM_logger=None):
     try:
         print("START ANALYSIS")
         main()  # run analysis
+        lg.logprint(LAM_logger, 'Completed', 'i')
+        print('\nCOMPLETED\n')
     # Catch and log possible exits from the analysis
     except KeyboardInterrupt:
         lg.logprint(LAM_logger, 'STOPPED: keyboard interrupt', 'e')
@@ -135,10 +136,7 @@ def MAIN_catch_exit(LAM_logger=None):
         lg.logprint(LAM_logger, 'SYSTEM EXIT\n', 'ex')
         print("System Exit")
         lg.log_Shutdown()
-    finally:
-        print('\nCOMPLETED\n')
-        lg.logprint(LAM_logger, 'Finished', 'i')
-        lg.Close()
+        sys.exit(0)
 
 
 if __name__ == '__main__':
@@ -153,3 +151,4 @@ if __name__ == '__main__':
         LAM_logger = lg.setup_logger(__name__)
         lg.print_settings(LAM_logger)  # print settings of analysis to log
         MAIN_catch_exit(LAM_logger)
+        lg.Close()

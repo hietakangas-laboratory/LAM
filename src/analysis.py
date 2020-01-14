@@ -19,9 +19,8 @@ import seaborn as sns
 # LAM imports
 import system
 import process
-from settings import settings as Sett
+from settings import store, settings as Sett
 from statsMWW import statistics, Total_Stats
-from system import store
 from plot import plotter
 import logger as lg
 with warnings.catch_warnings():
@@ -635,7 +634,7 @@ class Samplegroups:
 
         # Create stats of control vs. other groups if stat_versus set to True
         if Sett.stat_versus:
-            lg.logprint(LAM_logger, 'Calculating versus statistics', 'i')
+            lg.logprint(LAM_logger, '-> Versus statistics', 'i')
             print('-Versus-')
             # Finding control and other groups
             control = Sett.cntrlGroup
@@ -673,11 +672,11 @@ class Samplegroups:
                         # Create statistical plots
                         Stats.Create_Plots(Stats.statData, ylabel,
                                            palette=self._grpPalette)
-            lg.logprint(LAM_logger, 'Versus statistics done', 'i')
+            lg.logprint(LAM_logger, '--> Versus done', 'i')
 
         # Create stats of total cell numbers if stat_total set to True
         if Sett.stat_total:
-            lg.logprint(LAM_logger, 'Calculating total statistics', 'i')
+            lg.logprint(LAM_logger, '-> Total statistics', 'i')
             print('-Totals-')
             # Find the data file, initialize class, and count stats
             datapaths = self._dataDir.glob('Total*.csv')
@@ -688,11 +687,15 @@ class Samplegroups:
                 if TCounts.dataerror:
                     continue
                 TCounts.stats()
+                for key in TCounts.errorVars.keys():
+                    msg = "Value Error between control and {} in".format(key)
+                    errVars = ', '.join(TCounts.errorVars.get(key))
+                    lg.logprint(LAM_logger,'{} {}'.format(msg, errVars), 'e')
                 # If wanted, create plots of the stats
                 if Sett.Create_Plots and Sett.Create_Statistics_Plots:
                     TCounts.Create_Plots()
-            lg.logprint(LAM_logger, 'Total statistics done', 'i')
-        lg.logprint(LAM_logger, 'Statistics done', 'i')
+            lg.logprint(LAM_logger, '--> Totals done', 'i')
+        lg.logprint(LAM_logger, 'All statistics done', 'i')
 
     def Get_Totals(self):
         """Count sample & channel -specific cell totals."""

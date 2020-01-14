@@ -14,7 +14,7 @@ import pandas as pd
 import pathlib as pl
 # LAM modules
 import logger as lg
-from settings import settings as Sett
+from settings import store, settings as Sett
 try:
     LAM_logger = lg.get_logger(__name__)
 except AttributeError:
@@ -151,15 +151,3 @@ def start():
         store.samples = [p.name for p in PATHS.samplesdir.iterdir() if
                          p.is_dir()]
         return PATHS
-
-
-class store:
-    """Store important variables for the analysis."""
-
-    samplegroups = []  # All samplegroup in analysis
-    channels = []  # All channels in analysis
-    samples = []  # All samples in analysis
-    binNum = len(Sett.projBins)  # Number of used bins
-    totalLength = 0  # The length of DataFrame after all samples are anchored
-    center = 0  # The index of the anchoring point within the DataFrame
-    clusterPaths = []

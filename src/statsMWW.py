@@ -157,6 +157,7 @@ class Total_Stats:
 
     def __init__(self, path, groups, plotDir, statsdir, palette=None):
         self.dataerror = False
+        self.errorVars = {}
         self.plotDir = plotDir
         self.statsDir = statsdir
         self.filename = path.stem
@@ -165,8 +166,7 @@ class Total_Stats:
             self.dataerror = True
         self.groups = groups
         self.channels = self.data.index.tolist()
-        self.ctrlGrp = Sett.cntrlGroup
-        self.tstGroups = [g for g in groups if g != self.ctrlGrp]
+        self.tstGroups = [g for g in groups if g != Sett.cntrlGroup]
         self.palette = palette
         self.savename = ""
         self.statData = None
@@ -174,7 +174,7 @@ class Total_Stats:
     def stats(self):
         """Calculate statistics of one variable between two groups."""
         grpData = self.data.groupby(['Sample Group'])
-        ctrlData = grpData.get_group(self.ctrlGrp)
+        ctrlData = grpData.get_group(Sett.cntrlGroup)
         cols = ['U Score', 'P Two-sided', 'Reject Two-sided']
         mcols = pd.MultiIndex.from_product([self.tstGroups, cols],
                                            names=['Sample Group',
@@ -192,10 +192,27 @@ class Total_Stats:
                 tVals = tstData.loc[(tstData.Variable == var),
                                     tstData.columns.difference(
                                         ['Sample Group', 'Variable'])]
-                stat, pval = ss.mannwhitneyu(cVals.to_numpy().flatten(),
-                                             tVals.to_numpy().flatten(),
-                                             alternative='two-sided')
-                reject = bool(pval < Sett.alpha)
+                # if np.unique(np.vstack((cVals.to_numpy(),
+                #                         tVals.to_numpy()))).size > 1:
+                try:
+                    stat, pval = ss.mannwhitneyu(cVals.to_numpy().flatten(),
+                                                 tVals.to_numpy().flatten(),
+                                                 alternative='two-sided')
+                    reject = bool(pval < Sett.alpha)
+                # else:
+                except ValueError as e:
+                    if str(e) == 'All numbers are identical in mannwhitneyu':
+                        msg = 'Identical {}-values between control and {}'\
+                            .format(var, grp)
+                    else:
+                        msg = 'ValueError for {}'.format(var)
+                    print('WARNING: {}'.format(msg))
+                    if grp not in self.errorVars.keys():
+                        self.errorVars.update({grp: [var]})
+                    else:
+                        self.errorVars[grp].append(var)
+                    continue
+                    # stat, pval, reject = np.nan, np.nan, False
                 TotalStats.loc[var, (grp, cols)] = [stat, pval, reject]
         self.savename = self.filename + ' Stats.csv'
         system.saveToFile(TotalStats, self.statsDir, self.savename,
@@ -207,7 +224,7 @@ class Total_Stats:
         plotData = self.data
         ctrlN = int(len(self.groups) / 2)
         order = self.tstGroups
-        order.insert(ctrlN, self.ctrlGrp)
+        order.insert(ctrlN, Sett.cntrlGroup)
         plot_maker = plotter(plotData, self.plotDir, center=0,
                              title=self.filename, palette=self.palette,
                              color='b')

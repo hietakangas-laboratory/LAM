@@ -62,10 +62,6 @@ class settings:
     useMP = True
     # The name of the file used for normalizing between samples, i.e. anchoring
     MPname = "MP"
-    # Include secondary measurement point. Used to see e.g. proportional change
-    useSecMP = False    # SECMP NOT PROPERLY IMPLEMENTED
-    # Name of secondary measurement point
-    secMP = 'R45'       # SECMP NOT PROPERLY IMPLEMENTED
 
     # ---DATA GATHERING--- #
     header_row = 2  # On which row does the data have its header (start = 0)
@@ -181,3 +177,19 @@ class settings:
     # (xkcd colors: 'https://xkcd.com/color/rgb/')
     palette_colors = ['orange yellow', 'aqua marine', 'tomato', 'dark lime',
                       'tan brown', 'red violet', 'dusty green', 'sandy brown']
+
+
+class store:
+    """
+    Store important variables for the analysis.
+    
+    VARIABLES FOR LAM INTERNAL USE!
+    """
+
+    samplegroups = []  # All samplegroup in analysis
+    channels = []  # All channels in analysis
+    samples = []  # All samples in analysis
+    binNum = len(settings.projBins)  # Number of used bins
+    totalLength = 0  # The length of DataFrame after all samples are anchored
+    center = 0  # The index of the anchoring point within the DataFrame
+    clusterPaths = []
