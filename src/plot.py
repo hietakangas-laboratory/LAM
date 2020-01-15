@@ -326,7 +326,7 @@ class plotter:
         data = kws.pop('data')
         values = kws.get('value_str')
         try:
-            color = palette.get(data[kws.get('hue')].iloc[0])
+            color = palette[data[kws.get('hue')].iloc[0]]
             sns.distplot(a=data[values], hist=True, rug=True, norm_hist=True,
                          color=color, axlabel=kws.get('xlabel'), ax=axes)
         # In case of missing or erroneous data, linalgerror can be raised
@@ -358,7 +358,7 @@ class plotter:
         key = data.iat[(0, 0)]
         sns.jointplot(data=data, x=data.loc[:, kws.get('X')],
                       y=data.loc[:, kws.get('Y')], kind='kde',
-                      color=palette.get(key), ax=axes, space=0,
+                      color=palette[key], ax=axes, space=0,
                       joint_kws={'shade_lowest': False})
 
     def catPlot(self, palette, fliers=True, **kws):
@@ -421,8 +421,7 @@ class plotter:
         # Make sure that data is in float format
         plotData['Value'] = plotData['Value'].astype('float64')
         # Assign variable indication the order of plotting
-        plotData['Ord'] = plotData.loc[:, 'Sample Group'].apply(lambda x:
-                                                                order.index(x))
+        plotData['Ord'] = plotData.loc[:, 'Sample Group'].apply(order.index)
         plotData.sort_values(by=['Ord', 'Variable'], axis=0, inplace=True)
         g = sns.catplot('Sample Group', 'Value', data=plotData,
                         col='Variable', palette=self.palette, kind='violin',
@@ -438,6 +437,7 @@ class plotter:
                                    .contains('Reject')
                                    ].where(statRow).dropna()
             rejectN = np.count_nonzero(rejects.to_numpy())
+            ax.set_ylim(bottom=0)
             if rejectN > 0:  # If any rejected H0
                 # Raise y-limit of axis to fit significance plots
                 __, ytop = ax.get_ylim()
@@ -458,8 +458,6 @@ class plotter:
                     # Define plot location for stars and plot
                     x = line[0] + offset
                     ax.text(x, y, pStr)
-        for ax in g.axes.flat:
-            ax.set_ylim(bottom=0)
         plt.suptitle(self.title, weight='bold', y=1.02)
         filepath = self.savepath.joinpath(self.title + self.ext)
         g.savefig(str(filepath), format=self.format)
