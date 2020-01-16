@@ -9,6 +9,7 @@ Created on Wed Mar  6 12:42:28 2019
 # Standard libraries
 import inspect
 import shutil
+from tkinter import simpledialog as sd
 # Other packages
 import pandas as pd
 import pathlib as pl
@@ -42,7 +43,7 @@ class paths:
                 if files:
                     flag = 1
                     while flag:
-                        ans = input(msg)
+                        ans = sd.askstring(title="Dialog", prompt=msg)
                         if ans == "y" or ans == "Y":
                             flag = 0
                             shutil.rmtree(self.datadir)

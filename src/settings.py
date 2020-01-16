@@ -177,6 +177,7 @@ class settings:
     # (xkcd colors: 'https://xkcd.com/color/rgb/')
     palette_colors = ['orange yellow', 'aqua marine', 'tomato', 'dark lime',
                       'tan brown', 'red violet', 'dusty green', 'sandy brown']
+    non_stdout = False  # Redirect stdout to a window when using executable
 
 
 class store:

@@ -9,6 +9,7 @@ Created on Wed Mar  6 12:42:28 2019
 # LAM modules
 from run import MAIN_catch_exit
 from settings import settings as Sett
+import sys
 # Standard libraries
 import copy
 import tkinter as tk
@@ -24,6 +25,7 @@ class base_GUI(tk.Toplevel):
     def __init__(self, master=None):
         master.title("LAM-v1.0")
         self.master = master
+        self.master.grab_set()
         self.master.bind('<Escape>', self.func_destroy)
         self.master.bind('<Return>', self.RUN_button)
 
@@ -46,7 +48,7 @@ class base_GUI(tk.Toplevel):
                          pady=(0, 0), sticky="new")
         self.distf.grid(row=13, rowspan=8, columnspan=6, sticky="new",
                         pady=(0, 0))
-        self.bottomf.grid(row=20, columnspan=6, sticky="sew", pady=(0, 2))
+        self.bottomf.grid(row=20, rowspan=2, columnspan=6, sticky="sew", pady=(0, 2))
         col_count, row_count = self.master.grid_size()
         for col in range(col_count):
             self.master.grid_columnconfigure(col, minsize=45)
@@ -132,36 +134,44 @@ class base_GUI(tk.Toplevel):
         self.HeadIn.grid(row=2, column=2, columnspan=3)
 
         # BOTTOM BUTTONS
+        self.r_stdout = tk.BooleanVar(value=Sett.non_stdout)
+        self.r_stdoutC = tk.Checkbutton(self.bottomf, text="Redirect stdout",
+                                        variable=self.r_stdout, 
+                                        relief='groove',
+                                        bd=1, command=self.redirect_stdout)
+        self.r_stdoutC.grid(row=0, column=4, columnspan=4)
         self.Run_b = tk.Button(self.bottomf, text='Run\n<Enter>',
                                font=('Arial', 10, 'bold'),
                                command=self.RUN_button)
         self.Run_b.configure(height=2, width=7, bg='lightgreen',
                              fg="darkgreen")
-        self.Run_b.grid(row=0, column=4, columnspan=1, padx=(75, 25),
+        self.Run_b.grid(row=1, column=4, columnspan=1, padx=(75, 25),
                         sticky='es')
         self.quitbutton = tk.Button(self.bottomf, text="Quit",
                                     font=('Arial', 9, 'bold'),
                                     command=self.func_destroy)
         self.quitbutton.configure(height=1, width=5, fg="red")
-        self.quitbutton.grid(row=0, column=5, sticky='es')
+        self.quitbutton.grid(row=1, column=5, sticky='es')
 
         self.additbutton = tk.Button(self.bottomf, text="Other",
                                      font=('Arial', 9, 'bold'),
                                      command=self.Open_AddSettings)
         self.additbutton.configure(height=2, width=7)
-        self.additbutton.grid(row=0, column=0, columnspan=1, padx=(0, 5),
+        self.additbutton.grid(row=1, column=0, columnspan=1, padx=(0, 5),
                               sticky='ws')
         self.plotbutton = tk.Button(self.bottomf, text="Plots",
                                     font=('Arial', 9, 'bold'),
                                     command=self.Open_PlotSettings)
         self.plotbutton.configure(height=2, width=7)
-        self.plotbutton.grid(row=0, column=1, columnspan=1, padx=(0, 5),
+        self.plotbutton.grid(row=1, column=1, columnspan=1, padx=(0, 5),
                              sticky='ws')
         self.statsbutton = tk.Button(self.bottomf, text="Stats",
                                      font=('Arial', 9, 'bold'),
                                      command=self.Open_StatSettings)
         self.statsbutton.configure(height=2, width=7)
-        self.statsbutton.grid(row=0, column=2, columnspan=1, sticky='ws')
+        self.statsbutton.grid(row=1, column=2, columnspan=1, sticky='ws')
+        # self.stdout_win = None
+        self.redirect_stdout()
 
         # RIGHT FRAME / PLOTTING
         # header
@@ -541,6 +551,7 @@ class base_GUI(tk.Toplevel):
     def RUN_button(self, event=None):
         """Relevant changes when Run-button is pressed + run initialization."""
         Sett.workdir = pl.Path(self.folder_path.get())
+        ko = int(Sett.workdir)
         Sett.process_samples = SampleV.get()
         Sett.process_counts = CountV.get()
         Sett.process_dists = DistV.get()
@@ -619,7 +630,7 @@ class base_GUI(tk.Toplevel):
             Sett.Cl_Vol_inclusion = 0
         import logger as lg
         import logging
-        if lg.log_created == True:
+        if lg.log_created is True:
             # Close old loggers and create new:
             lg.Close()
             lg.Update()
@@ -634,6 +645,14 @@ class base_GUI(tk.Toplevel):
                                                                     ChStr[0])
             lg.logprint(LAM_logger, msg, 'w')
         MAIN_catch_exit()
+
+    def redirect_stdout(self):
+        import redirect as rd
+        Sett.non_stdout = self.r_stdout.get()
+        if Sett.non_stdout:
+            self.stdout_win = rd.text_window(self.master, self.r_stdout)
+        else:
+            self.stdout_win.func_destroy()
 
     def show_VSett(self, name):
         """Change shown vector settings based on type."""

@@ -10,6 +10,7 @@ Created on Wed Mar  6 12:42:28 2019
 import re
 import warnings
 from itertools import product, combinations, chain
+from tkinter import simpledialog as sd
 # Other packages
 import numpy as np
 import pathlib as pl
@@ -596,7 +597,7 @@ class Samplegroups:
                         for i, grp in enumerate(store.samplegroups):
                             print('{}: {}'.format(i, grp))
                         msg = "Select the number of control group: "
-                        ans = int(input(msg))
+                        ans = int(sd.askstring(title="Dialog", prompt=msg))
                         if 0 <= ans <= len(store.samplegroups):
                             # Change control based on input
                             Sett.cntrlGroup = store.samplegroups[ans]
