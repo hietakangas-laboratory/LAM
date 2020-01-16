@@ -671,6 +671,7 @@ class base_GUI(tk.Toplevel):
         """Destroy GUI."""
         import logger as lg
         lg.log_Shutdown()
+        self.stdout_win.func_destroy()
         self.master.destroy()
 
     def Open_AddSettings(self):

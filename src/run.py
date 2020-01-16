@@ -81,6 +81,8 @@ def main():
                     Sett.Create_Plots, Sett.statistics]):
             return
     if Sett.process_counts:
+        if not Sett.process_samples:
+            process.vector_test(systemPaths.samplesdir)
         process.Project(systemPaths)
     # After all samples have been collected/created, find their respective MP
     # bins and normalize (anchor) cell count data. If MP's are not used, the
@@ -137,6 +139,10 @@ def MAIN_catch_exit(LAM_logger=None):
         print("System Exit")
         lg.log_Shutdown()
         sys.exit(0)
+    except AssertionError:
+        msg = 'STOPPED: No vectors found for samples.'
+        print(msg)
+        lg.logprint(LAM_logger, msg, 'c')
 
 
 if __name__ == '__main__':

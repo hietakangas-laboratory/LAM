@@ -58,6 +58,13 @@ def Create_Samples(PATHS):
                              Sett.SkeletonVector, Sett.SkeletonResize,
                              Sett.BDiter, Sett.SigmaGauss)
     lg.logprint(LAM_logger, 'Vectors created.', 'i')
+    
+    
+def vector_test(path):
+    paths = [p for p in path.iterdir() if (p.is_dir and p.glob("vector.csv"))]
+    vectors = [p.name for p in paths for v in p.iterdir() if v.name == "vector.csv"]
+    if len(vectors) == 0:
+        raise AssertionError
 
 
 def Project(PATHS):
