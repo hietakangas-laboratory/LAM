@@ -18,14 +18,14 @@ class settings:
 
     # DEFINE PATH TO ANALYSIS FOLDER:
     # (Use input r'PATH' where PATH is your path)
-    workdir = pl.Path(r'E:\Code_folder\R1_R2')
+    workdir = pl.Path(r'C:')
     # Whether to gather raw data and create vectors. If False, expects to find
     # pre-created datafiles in the Analysis Data directory, i.e. a previous
     # full run has been made, and there has been no edits to the data files.
     process_samples = False  # CLEARS DATA FILES-DIRECTORY
     # Whether to project, count and normalize data. If set to False, expect all
     # data to be in place. Can be used to e.g. create additional plots faster.
-    process_counts = False
+    process_counts = True
     # Whether to compute average distances and clusters.
     process_dists = False
     # Set True/False to set all plotting functionalities ON/OFF
@@ -43,7 +43,7 @@ class settings:
     # Make vector by creating binary image and then skeletonizing. If False,
     # vector is created by finding middle point between smallest and largest
     # Y-axis position in bin.
-    SkeletonVector = True
+    SkeletonVector = False
     SkeletonResize = 0.7    # Binary image resize. Keep at steps of ten.
     # Find distance (XY-coord system) in skeleton vector creation
     find_dist = 40
@@ -79,7 +79,7 @@ class settings:
                }
     # If set to true, replaces the above mentioned (AddData) ID numbers with an
     # alternative moniker as defined in channelID
-    replaceID = True
+    replaceID = False
     channelID = {"Ch=1": "Pros",
                  "Ch=2": "GFP",
                  "Ch=3": "SuH",
@@ -95,7 +95,7 @@ class settings:
     # found within the channel undergoing analysis.
     Find_Distances = True
     Distance_Channels = ["GFP"]  # , "DAPI"]
-    use_target = True
+    use_target = False
     target_chan = "Pros"
     # The maximum distance the nearest cell will be looked at. Increase is
     # computationally expensive, depending on the size of the dataset and the
@@ -136,8 +136,8 @@ class settings:
     # ---PLOTTING OPTIONS--- #
     Create_Channel_Plots = False
     Create_AddData_Plots = False     # Plots also nearest distance & clusters
-    Create_Channel_PairPlots = False
-    Create_Heatmaps = False
+    Create_Channel_PairPlots = True
+    Create_Heatmaps = True
     Create_Distribution_Plots = False
     Create_Statistics_Plots = True  # requires statistics to be True
     Create_Cluster_Plots = False
@@ -177,7 +177,7 @@ class settings:
     # (xkcd colors: 'https://xkcd.com/color/rgb/')
     palette_colors = ['orange yellow', 'aqua marine', 'tomato', 'dark lime',
                       'tan brown', 'red violet', 'dusty green', 'sandy brown']
-    non_stdout = False  # Redirect stdout to a window when using executable
+    non_stdout = True  # Redirect stdout to a window when using executable
 
 
 class store:

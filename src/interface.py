@@ -551,7 +551,6 @@ class base_GUI(tk.Toplevel):
     def RUN_button(self, event=None):
         """Relevant changes when Run-button is pressed + run initialization."""
         Sett.workdir = pl.Path(self.folder_path.get())
-        ko = int(Sett.workdir)
         Sett.process_samples = SampleV.get()
         Sett.process_counts = CountV.get()
         Sett.process_dists = DistV.get()
