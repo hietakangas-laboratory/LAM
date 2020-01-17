@@ -58,12 +58,27 @@ def Create_Samples(PATHS):
                              Sett.SkeletonVector, Sett.SkeletonResize,
                              Sett.BDiter, Sett.SigmaGauss)
     lg.logprint(LAM_logger, 'Vectors created.', 'i')
-    
-    
+
+
 def vector_test(path):
-    paths = [p for p in path.iterdir() if (p.is_dir and p.glob("vector.csv"))]
-    vectors = [p.name for p in paths for v in p.iterdir() if v.name == "vector.csv"]
-    if len(vectors) == 0:
+    """Test that vector-files are found."""
+    paths = [p for p in path.iterdir() if p.is_dir()]
+    miss_vector = []
+    for samplepath in paths:
+        try:
+            test = next(samplepath.glob("Vector.csv"))
+            del test
+        except StopIteration:
+            miss_vector.append(samplepath.name)
+            continue
+    if len(miss_vector) == 0:
+        return
+    else:
+        msg = "Missing vector-files."
+        print("CRITICAL: {}".format(msg))
+        lg.logprint(LAM_logger, msg, 'c')
+        for smpl in miss_vector:
+            print("-> {}".format(smpl))
         raise AssertionError
 
 
@@ -197,7 +212,8 @@ class get_sample:
                     store.channels.append(channel)
             try:  # Find sample's vector file and read it
                 tempVect = pd.read_csv(self.sampledir.joinpath('Vector.csv'))
-                Vect = list(zip(tempVect.loc[:, 'X'], tempVect.loc[:, 'Y']))
+                Vect = list(zip(tempVect.loc[:, 'X'].astype('float'),
+                                tempVect.loc[:, 'Y'].astype('float')))
                 self.vector = gm.LineString(Vect)
                 self.vectorLength = self.vector.length
                 lenS = pd.Series(self.vectorLength, name=self.name)
