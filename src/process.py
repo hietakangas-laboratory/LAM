@@ -66,7 +66,7 @@ def vector_test(path):
     miss_vector = []
     for samplepath in paths:
         try:
-            test = next(samplepath.glob("Vector.csv"))
+            test = next(samplepath.glob("Vector.*"))
             del test
         except StopIteration:
             miss_vector.append(samplepath.name)
@@ -118,7 +118,7 @@ def Get_Counts(PATHS):
     try:  # Test that MPs are found for the sample
         MPs = system.read_data(next(PATHS.datadir.glob('MPs.csv')),
                                header=0, test=False)
-    except FileNotFoundError:
+    except (FileNotFoundError, StopIteration):
         msg = "MPs.csv NOT found!"
         print("ERROR: {}".format(msg))
         lg.logprint(LAM_logger, msg, 'c')
@@ -211,22 +211,33 @@ class get_sample:
                 if channel.lower() not in [c.lower() for c in store.channels]:
                     store.channels.append(channel)
             try:  # Find sample's vector file and read it
-                tempVect = pd.read_csv(self.sampledir.joinpath('Vector.csv'))
+                vectorp = next(self.sampledir.glob('Vector.*'))
+                if vectorp.name == "Vector.csv":
+                    tempVect = pd.read_csv(vectorp)
+                # If vector is user-generated with ImageJ line tools:
+                elif vectorp.name == "Vector.txt":
+                    tempVect = pd.read_csv(vectorp, sep="\t", header=None)
+                    tempVect.columns = ["X", "Y"]
                 Vect = list(zip(tempVect.loc[:, 'X'].astype('float'),
                                 tempVect.loc[:, 'Y'].astype('float')))
                 self.vector = gm.LineString(Vect)
                 self.vectorLength = self.vector.length
                 lenS = pd.Series(self.vectorLength, name=self.name)
                 system.saveToFile(lenS, PATHS.datadir, 'Length.csv')
-            except FileNotFoundError:  # If vector file not found
-                msg = 'Vector.csv NOT found for {}'.format(self.name)
+            # If vector file not found
+            except (FileNotFoundError, StopIteration):
+                msg = 'Vector-file NOT found for {}'.format(self.name)
                 lg.logprint(LAM_logger, msg, 'e')
                 print('ERROR: {}'.format(msg))
             except AttributeError:  # If vector file is faulty
                 msg = 'Faulty vector for {}'.format(self.name)
                 lg.logprint(LAM_logger, msg, 'w')
                 print('ERROR: Faulty vector for {}'.format(msg))
-
+            except ValueError:
+                msg = 'Vector data file in wrong format: {}'.format(self.name)
+                lg.logprint(LAM_logger, msg, 'ex')
+                print('CRITICAL: {}'.format(msg))
+                
     def get_vectData(self, channel):
         """Get channel data that is used for vector creation."""
         try:

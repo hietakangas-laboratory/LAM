@@ -9,7 +9,6 @@ Created on Wed Mar  6 12:42:28 2019
 # LAM modules
 from run import MAIN_catch_exit
 from settings import settings as Sett
-import sys
 # Standard libraries
 import copy
 import tkinter as tk
