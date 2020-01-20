@@ -452,7 +452,7 @@ class get_sample:
     def get_MPs(self, MPname, useMP, datadir):
         """Collect MPs for sample anchoring."""
         if useMP:
-            try:  # Get primary MP
+            try:  # Get MP
                 MPdirPath = next(self.channelpaths.pop(i) for i, s in
                                  enumerate(self.channelpaths) if
                                  str('_' + MPname + '_') in str(s))
@@ -492,8 +492,11 @@ class get_sample:
         Positions["NormDist"] = [vector.project(x, normalized=True) for x in
                                  Positions["VectPoint"]]
         # Find the bins that the points fall into
-        Positions["DistBin"] = np.digitize(Positions.loc[:, "NormDist"],
-                                           Sett.projBins, right=True)
+        # Determine bins of each feature
+        edges = np.linspace(0, 1, len(Sett.projBins)+1)
+        labels = np.arange(0, len(Sett.projBins))
+        Positions["DistBin"] = pd.cut(Positions["NormDist"], edges,
+                                      labels=labels)
         MPbin = pd.Series(Positions.loc[:, "DistBin"], name=self.name)
         # Save the obtained data:
         system.saveToFile(MPbin, datadir, filename)
@@ -512,9 +515,12 @@ class get_sample:
         # Find normalized distance (0->1)
         Positions["NormDist"] = [self.vector.project(x, normalized=True) for x
                                  in Positions["VectPoint"]]
-        # Find the bins that the points fall into
-        Positions["DistBin"] = np.digitize(Positions.loc[:, "NormDist"],
-                                           Sett.projBins, right=True)
+        # Determine bins of each feature
+        edges = np.linspace(0, 1, len(Sett.projBins)+1)
+        labels = np.arange(0, len(Sett.projBins))
+        Positions["DistBin"] = pd.cut(Positions["NormDist"], labels=labels,
+                                      bins=edges, include_lowest=True
+                                      ).astype('int')
         # Save the obtained data:
         ChString = str('{}.csv'.format(channel.name))
         system.saveToFile(Positions, self.sampledir, ChString, append=False)
@@ -718,3 +724,37 @@ def relate_data(data, MP=0, center=50, TotalLength=100):
             lg.logprint(LAM_logger, msg, 'i')
         raise SystemExit
     return insert, insx
+
+def find_existing(PATHS):
+    """Find or create MPs when not projecting during 'Count'."""
+    MPs = pd.DataFrame(columns=store.samples)
+    for smpl in store.samples:
+        smplpath = PATHS.samplesdir.joinpath(smpl)
+        # FIND MP
+        if Sett.useMP:
+            MPDF = pd.read_csv(smplpath.joinpath('MPs.csv'))
+            MP = MPDF.iat[0, 0]
+        else:
+            MP = 0
+        MPs.loc[0, smpl] = MP
+        # FIND CHANNEL COUNTS
+        for path in [p for p in smplpath.iterdir() if p.suffix == '.csv' and
+                     p.stem not in ['Vector', 'MPs']]:
+            data = pd.read_csv(path)
+            counts = np.bincount(data['DistBin'], minlength=len(Sett.projBins))
+            counts = pd.Series(np.nan_to_num(counts), name=smpl)
+            ChString = str('All_{}.csv'.format(path.stem))
+            system.saveToFile(counts, PATHS.datadir, ChString)
+    MPs.to_csv(PATHS.datadir.joinpath('MPs.csv'))
+    samples = MPs.columns.tolist()
+    Groups = set({s.casefold(): s.split('_')[0] for s in samples}.values())
+    store.samplegroups = sorted(Groups)
+    
+    
+    # def find_counts(self, channelName, datadir):
+    #     """Gather projected features and find bin counts."""
+        # counts = np.bincount(self.data['DistBin'],
+        #                       minlength=len(Sett.projBins))
+        # counts = pd.Series(np.nan_to_num(counts), name=self.name)
+        # ChString = str('All_{}.csv'.format(channelName))
+        # system.saveToFile(counts, datadir, ChString)

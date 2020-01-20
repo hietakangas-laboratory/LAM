@@ -37,6 +37,9 @@ class settings:
     # -#-#-#-#-#-#-#-# VECTOR CREATION & PROJECTION #-#-#-#-#-#-#-#-#- #
     # The channel based on which the vector is created
     vectChannel = "DAPI"
+    # Whether to do projection when using count. If False, expects projection
+    # data to be found in channel files of './Analysis Data/Samples/'.
+    project = False
     # Number of bins used for projection unto vector (the third value).
     projBins = np.linspace(0, 1, 100)
 

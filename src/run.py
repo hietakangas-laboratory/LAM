@@ -80,10 +80,12 @@ def main():
         if not any([Sett.process_counts, Sett.process_dists,
                     Sett.Create_Plots, Sett.statistics]):
             return
-    if Sett.process_counts:
+    if Sett.process_counts and Sett.project:
         if not Sett.process_samples:
             process.vector_test(systemPaths.samplesdir)
         process.Project(systemPaths)
+    elif Sett.process_counts and not Sett.project:
+        process.find_existing(systemPaths)
     # After all samples have been collected/created, find their respective MP
     # bins and normalize (anchor) cell count data. If MP's are not used, the
     # samples are anchored at bin == 0.
