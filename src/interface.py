@@ -14,7 +14,6 @@ import copy
 import tkinter as tk
 from tkinter import filedialog
 # Other packages
-import numpy as np
 import pathlib as pl
 
 
@@ -47,7 +46,8 @@ class base_GUI(tk.Toplevel):
                          pady=(0, 0), sticky="new")
         self.distf.grid(row=13, rowspan=8, columnspan=6, sticky="new",
                         pady=(0, 0))
-        self.bottomf.grid(row=20, rowspan=2, columnspan=6, sticky="sew", pady=(0, 2))
+        self.bottomf.grid(row=19, rowspan=2, columnspan=6, sticky="new",
+                          pady=(15, 2))
         col_count, row_count = self.master.grid_size()
         for col in range(col_count):
             self.master.grid_columnconfigure(col, minsize=45)
@@ -77,13 +77,14 @@ class base_GUI(tk.Toplevel):
         self.lblChannels.grid(row=2, column=1, columnspan=8, pady=(0, 0))
 
         # MIDDLE FRAME / PRIMARY SETTINGS BOX
-        global SampleV, CountV, DistV, PlotV, StatsV, MPV, setMP, setHead
+        global SampleV, CountV, DistV, PlotV, StatsV, MPV, setMP, setHead, Proj
         SampleV = tk.BooleanVar(value=Sett.process_samples)
         CountV = tk.BooleanVar(value=Sett.process_counts)
         DistV = tk.BooleanVar(value=Sett.process_dists)
         PlotV = tk.BooleanVar(value=Sett.Create_Plots)
         StatsV = tk.BooleanVar(value=Sett.statistics)
         MPV = tk.BooleanVar(value=Sett.useMP)
+        Proj = tk.BooleanVar(value=Sett.useMP)
         self.pSample = tk.Checkbutton(self.midf, text="Process",
                                       variable=SampleV, relief='groove', bd=4,
                                       font=('Arial', 8, 'bold'),
@@ -111,11 +112,14 @@ class base_GUI(tk.Toplevel):
         self.pDists.grid(row=0, column=2, columnspan=1, padx=(2, 2))
         self.pPlots.grid(row=0, column=3, columnspan=1, padx=(2, 2))
         self.pStats.grid(row=0, column=4, columnspan=1, padx=(2, 2))
-        # Measurement point & file header settings
+        # Projection, Measurement point & file header settings
+        self.pProj = tk.Checkbutton(self.midf, text="Project", variable=Proj,
+                                  relief='groove', bd=3, font=('Arial', 8))
+        self.pProj.grid(row=1, column=0, columnspan=1, padx=(2, 2))
         self.pMP = tk.Checkbutton(self.midf, text="Use MP ", variable=MPV,
-                                  relief='groove', bd=4, font=('Arial', 8),
+                                  relief='groove', bd=3, font=('Arial', 8),
                                   command=self.MP_check)
-        self.pMP.grid(row=1, column=0, columnspan=2, padx=(2, 2))
+        self.pMP.grid(row=1, column=1, columnspan=1, padx=(2, 2))
         self.lblMP = tk.Label(self.midf, text='MP label:', bd=1,
                               font=('Arial', 8))
         self.lblMP.grid(row=1, column=2)
@@ -138,38 +142,38 @@ class base_GUI(tk.Toplevel):
                                         variable=self.r_stdout, 
                                         relief='groove',
                                         bd=1, command=self.redirect_stdout)
-        self.r_stdoutC.grid(row=0, column=4, columnspan=4)
+        self.r_stdoutC.grid(row=0, column=4, columnspan=4, sticky='n')
         self.Run_b = tk.Button(self.bottomf, text='Run\n<Enter>',
                                font=('Arial', 10, 'bold'),
                                command=self.RUN_button)
         self.Run_b.configure(height=2, width=7, bg='lightgreen',
                              fg="darkgreen")
         self.Run_b.grid(row=1, column=4, columnspan=1, padx=(75, 25),
-                        sticky='es')
+                        pady=(0, 0), sticky='ne')
         self.quitbutton = tk.Button(self.bottomf, text="Quit",
                                     font=('Arial', 9, 'bold'),
                                     command=self.func_destroy)
         self.quitbutton.configure(height=1, width=5, fg="red")
-        self.quitbutton.grid(row=1, column=5, sticky='es')
+        self.quitbutton.grid(row=1, column=5, pady=(0, 0), sticky='nes')
 
         self.additbutton = tk.Button(self.bottomf, text="Other",
                                      font=('Arial', 9, 'bold'),
                                      command=self.Open_AddSettings)
         self.additbutton.configure(height=2, width=7)
         self.additbutton.grid(row=1, column=0, columnspan=1, padx=(0, 5),
-                              sticky='ws')
+                              pady=(0, 0), sticky='nw')
         self.plotbutton = tk.Button(self.bottomf, text="Plots",
                                     font=('Arial', 9, 'bold'),
                                     command=self.Open_PlotSettings)
         self.plotbutton.configure(height=2, width=7)
         self.plotbutton.grid(row=1, column=1, columnspan=1, padx=(0, 5),
-                             sticky='ws')
+                             pady=(0, 0), sticky='nw')
         self.statsbutton = tk.Button(self.bottomf, text="Stats",
                                      font=('Arial', 9, 'bold'),
                                      command=self.Open_StatSettings)
         self.statsbutton.configure(height=2, width=7)
-        self.statsbutton.grid(row=1, column=2, columnspan=1, sticky='ws')
-        # self.stdout_win = None
+        self.statsbutton.grid(row=1, column=2, columnspan=1, pady=(0, 0),
+                              sticky='nw')
         self.redirect_stdout()
 
         # RIGHT FRAME / PLOTTING
@@ -249,7 +253,7 @@ class base_GUI(tk.Toplevel):
         self.lbl5 = tk.Label(self.Up_leftf, text='Bin #: ', bd=1,
                              font=('Arial', 10))
         self.lbl5.grid(row=3, column=0)
-        setBin = tk.IntVar(value=len(Sett.projBins))
+        setBin = tk.IntVar(value=Sett.projBins)
         self.binIn = tk.Entry(self.Up_leftf, text=setBin.get(), bg='white',
                               textvariable=setBin, bd=2, relief='sunken')
         self.binIn.grid(row=3, column=1, columnspan=1)
@@ -530,6 +534,7 @@ class base_GUI(tk.Toplevel):
             self.lblMP.configure(state='disable')
             self.MPIn.configure(state='disable')
             self.pMP.configure(state='disable')
+            self.pProj.configure(state='disable')
         else:
             self.binIn.configure(state='normal')
             self.lbl5.configure(state='normal')
@@ -538,6 +543,7 @@ class base_GUI(tk.Toplevel):
             self.MPIn.configure(state='normal')
             self.lblHead.configure(state='normal')
             self.HeadIn.configure(state='normal')
+            self.pProj.configure(state='normal')
         self.run_check()
 
     def browse_button(self):
@@ -557,8 +563,10 @@ class base_GUI(tk.Toplevel):
         Sett.statistics = StatsV.get()
         if not Sett.process_counts:
             Sett.useMP = False
+            Sett.project = False
         else:
             Sett.useMP = MPV.get()
+            Sett.project = Proj.get()
         Sett.MPname = setMP.get()
         Sett.header_row = setHead.get()
         Sett.Create_Channel_Plots = Pchans.get()
@@ -571,7 +579,7 @@ class base_GUI(tk.Toplevel):
         Sett.Create_ChanVSAdd_Plots = PVSchan.get()
         Sett.Create_AddVSAdd_Plots = PVSadd.get()
         Sett.vectChannel = setCh.get()
-        Sett.projBins = np.linspace(0, 1, setBin.get())
+        Sett.projBins = setBin.get()
         if not VType.get():
             Sett.SkeletonVector = False
             Sett.simplifyTol = SimpTol.get()

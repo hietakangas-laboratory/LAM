@@ -4,25 +4,50 @@ Run file for Longitudinal Analysis of Midgut.
 
 Created on Wed Mar  6 12:42:28 2019
 @author: Arto I. Viitanen
+-------------------------------------------------------------------------------
 
-Dependencies: Anaconda-included packages (Python 3.7), Shapely, pycg3d
+Dependencies:
+------------
+matplotlib (3.1.1), numpy (1.16.5), pandas (0.25.1), pathlib2
+(2.3.5), pycg3d (0.0.1), scipy (1.3.1), seaborn (0.9.0), shapely (1.6.4),
+scikit-image (0.15.0), statsmodels (0.9.0)
 
 Installation:
+------------
+The master folder should contain environment.yml that can be used to create
+Anaconda environment for LAM-use. For a Python environment, requirements.txt is
+included.
+
+- Anaconda env:
+    conda env create -n <yourenvname> -f <path\to\environment.yml>
+    conda activate <yourenvname>
+    
+- Python env:
+    1.	python -m venv <yourenvname>
+        •	Linux:
+            source <yourenvname>/bin/activate
+        •	Windows:
+            <yourenvname>\Scripts\activate.bat
+    2.	pip install -r <path-to-requirements.txt>
+        •	On Windows you need to install Shapely separately (see below).
+        You can either remove shapely from the requirements.txt or add ‘#’ in
+        front of the line to pass it, in order to install all other necessary
+        dependencies.
+
+- Anaconda base environment:
     1. install Anaconda3 distribution (https://www.anaconda.com/distribution/)
     2. add Shapely-package:
+        open Anaconda prompt and write following command:
         Windows:
-            get Shapely .whl from
-                "https://www.lfd.uci.edu/~gohlke/pythonlibs/#shapely"
-            then write following command(s) in Anaconda prompt:
-                (0.) pip install wheel          (should be in Anaconda)
-                1. pip install <path-to-the-downloaded-whl-file>
+            conda install shapely –c conda-forge
         OS X & Linux:
-            open Anaconda prompt and write following command:
-                pip install shapely
+            pip install shapely
     3. add pycg3d-package:
         Open Anaconda Prompt, write command:
             pip install pycg3d
 
+Usage:
+-----
 Script for longitudinal analysis of Drosophila midgut images. To run the
 script, change the work directory in either Sett.py or the GUI to the directory
 containing the directories for each individual sample.
@@ -84,11 +109,11 @@ def main():
         if not Sett.process_samples:
             process.vector_test(systemPaths.samplesdir)
         process.Project(systemPaths)
+    # If performing 'Count' without projection, only calculate counts:
     elif Sett.process_counts and not Sett.project:
         process.find_existing(systemPaths)
     # After all samples have been collected/created, find their respective MP
-    # bins and normalize (anchor) cell count data. If MP's are not used, the
-    # samples are anchored at bin == 0.
+    # bins and normalize (anchor) cell count data.
     process.Get_Counts(systemPaths)
     # Storing of descriptive data of analysis, i.e. channels/samples/groups
     systemPaths.save_AnalysisInfo(store.samples, store.samplegroups,
@@ -114,11 +139,7 @@ def main():
     if Sett.statistics:
         SampleGroups.Get_Statistics()
     # Creation of plots from various data (excluding statistical plots)
-    plots = [Sett.Create_Channel_Plots, Sett.Create_AddData_Plots,
-             Sett.Create_Channel_PairPlots, Sett.Create_Heatmaps,
-             Sett.Create_Distribution_Plots, Sett.Create_Cluster_Plots,
-             Sett.Create_ChanVSAdd_Plots, Sett.Create_AddVSAdd_Plots]
-    if Sett.Create_Plots and any(plots):
+    if Sett.Create_Plots:
         SampleGroups.create_plots()
 
 

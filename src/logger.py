@@ -147,7 +147,7 @@ def print_settings(self):
         if Sett.process_counts:  # Count settings
             file.write("--- Count Settings ---\n")
             file.write(MPmsg)
-            file.write("Number of bins: {}\n".format(len(Sett.projBins)))
+            file.write("Number of bins: {}\n".format(Sett.projBins))
             file.write("-Additional data-\n")
             addD = Sett.AddData
             addtypes = ', '.join(["{}".format(key)for key in sorted(list(

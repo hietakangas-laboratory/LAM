@@ -40,8 +40,8 @@ class settings:
     # Whether to do projection when using count. If False, expects projection
     # data to be found in channel files of './Analysis Data/Samples/'.
     project = False
-    # Number of bins used for projection unto vector (the third value).
-    projBins = np.linspace(0, 1, 100)
+    # Number of bins used for projection unto vector.
+    projBins = 100
 
     # Make vector by creating binary image and then skeletonizing. If False,
     # vector is created by finding middle point between smallest and largest
@@ -103,7 +103,7 @@ class settings:
     # The maximum distance the nearest cell will be looked at. Increase is
     # computationally expensive, depending on the size of the dataset and the
     # density of cells.
-    maxDist = 30    # Radius around the cell
+    maxDist = 30    # Radius around a cell
     # Whether to look only at cells of certain size. Default is to include
     # cells smaller than Vol_inclusion. If cells of greater volume are wanted,
     # designate incl_type to be 'greater'. Otherwise, it can be left empty.
@@ -114,7 +114,7 @@ class settings:
     # Whether to compute clusters
     Find_Clusters = True
     Cluster_Channels = ["GFP"]  # , "Pros"]
-    Cl_maxDist = 20         # Radius around the cell
+    Cl_maxDist = 10         # Radius around a cell
     Cl_Vol_inclusion = 0    # Set to zero if not wanted.
     Cl_incl_type = ""       # Same as above in Find_Distances
     Cl_min = 3
@@ -193,7 +193,7 @@ class store:
     samplegroups = []  # All samplegroup in analysis
     channels = []  # All channels in analysis
     samples = []  # All samples in analysis
-    binNum = len(settings.projBins)  # Number of used bins
+    binNum = settings.projBins  # Number of used bins
     totalLength = 0  # The length of DataFrame after all samples are anchored
     center = 0  # The index of the anchoring point within the DataFrame
     clusterPaths = []

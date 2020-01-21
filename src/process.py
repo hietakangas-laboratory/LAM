@@ -160,7 +160,7 @@ def Get_Counts(PATHS):
             print("ERROR: {}".format(msg))
         return
     # The total length of needed matrix when using 'Count'
-    store.totalLength = int(len(Sett.projBins) + MPdiff)
+    store.totalLength = int(Sett.projBins + MPdiff)
     if Sett.process_counts:  # Begin anchoring of data
         lg.logprint(LAM_logger, 'Begin normalization of channels.', 'i')
         print('\n---Normalizing sample data---')
@@ -493,8 +493,8 @@ class get_sample:
                                  Positions["VectPoint"]]
         # Find the bins that the points fall into
         # Determine bins of each feature
-        edges = np.linspace(0, 1, len(Sett.projBins)+1)
-        labels = np.arange(0, len(Sett.projBins))
+        edges = np.linspace(0, 1, Sett.projBins+1)
+        labels = np.arange(0, Sett.projBins)
         Positions["DistBin"] = pd.cut(Positions["NormDist"], edges,
                                       labels=labels)
         MPbin = pd.Series(Positions.loc[:, "DistBin"], name=self.name)
@@ -516,8 +516,8 @@ class get_sample:
         Positions["NormDist"] = [self.vector.project(x, normalized=True) for x
                                  in Positions["VectPoint"]]
         # Determine bins of each feature
-        edges = np.linspace(0, 1, len(Sett.projBins)+1)
-        labels = np.arange(0, len(Sett.projBins))
+        edges = np.linspace(0, 1, Sett.projBins+1)
+        labels = np.arange(0, Sett.projBins)
         Positions["DistBin"] = pd.cut(Positions["NormDist"], labels=labels,
                                       bins=edges, include_lowest=True
                                       ).astype('int')
@@ -529,7 +529,7 @@ class get_sample:
     def find_counts(self, channelName, datadir):
         """Gather projected features and find bin counts."""
         counts = np.bincount(self.data['DistBin'],
-                             minlength=len(Sett.projBins))
+                             minlength=Sett.projBins)
         counts = pd.Series(np.nan_to_num(counts), name=self.name)
         ChString = str('All_{}.csv'.format(channelName))
         system.saveToFile(counts, datadir, ChString)
@@ -685,7 +685,7 @@ class normalize:
                 sampleData = data.loc[:, data.columns.str.contains(
                     str(dataType))]
                 binnedData = data.loc[:, 'DistBin']
-                bins = np.arange(1, len(Sett.projBins) + 1)
+                bins = np.arange(1, Sett.projBins+1)
                 for col in sampleData:
                     avgS = pd.Series(np.full(TotalLen, np.nan), name=sample)
                     with warnings.catch_warnings():
@@ -695,7 +695,7 @@ class normalize:
                             binnedData == i, col]) for i in bins]
                         insert = [0 if np.isnan(v) else v for v in insert]
                     strt = int(self.starts.at[sample])
-                    end = int(strt + len(Sett.projBins))
+                    end = int(strt + Sett.projBins)
                     avgS[strt:end] = insert
                     filename = str('Avg_{}_{}.csv'.format(self.channel, col))
                     system.saveToFile(avgS, PATHS.datadir, filename)
@@ -726,7 +726,7 @@ def relate_data(data, MP=0, center=50, TotalLength=100):
     return insert, insx
 
 def find_existing(PATHS):
-    """Find or create MPs when not projecting during 'Count'."""
+    """Get MPs and count old projections when not projecting during 'Count'."""
     MPs = pd.DataFrame(columns=store.samples)
     for smpl in store.samples:
         smplpath = PATHS.samplesdir.joinpath(smpl)
@@ -741,20 +741,17 @@ def find_existing(PATHS):
         for path in [p for p in smplpath.iterdir() if p.suffix == '.csv' and
                      p.stem not in ['Vector', 'MPs']]:
             data = pd.read_csv(path)
-            counts = np.bincount(data['DistBin'], minlength=len(Sett.projBins))
-            counts = pd.Series(np.nan_to_num(counts), name=smpl)
-            ChString = str('All_{}.csv'.format(path.stem))
-            system.saveToFile(counts, PATHS.datadir, ChString)
+            try:
+                counts = np.bincount(data['DistBin'], minlength=Sett.projBins)
+                counts = pd.Series(np.nan_to_num(counts), name=smpl)
+                ChString = str('All_{}.csv'.format(path.stem))
+                system.saveToFile(counts, PATHS.datadir, ChString)
+            except ValueError:  # If channel has not been projected
+                print("Missing projection data: {} - {}".format(path.stem,
+                                                                smpl))
+                print("-> Set project=True and perform Count")
+                continue
     MPs.to_csv(PATHS.datadir.joinpath('MPs.csv'))
     samples = MPs.columns.tolist()
     Groups = set({s.casefold(): s.split('_')[0] for s in samples}.values())
     store.samplegroups = sorted(Groups)
-    
-    
-    # def find_counts(self, channelName, datadir):
-    #     """Gather projected features and find bin counts."""
-        # counts = np.bincount(self.data['DistBin'],
-        #                       minlength=len(Sett.projBins))
-        # counts = pd.Series(np.nan_to_num(counts), name=self.name)
-        # ChString = str('All_{}.csv'.format(channelName))
-        # system.saveToFile(counts, datadir, ChString)

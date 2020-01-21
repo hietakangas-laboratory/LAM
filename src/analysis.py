@@ -369,7 +369,14 @@ class Samplegroups:
                 msg = 'No normalized cluster count files found (ClNorm_*)'
                 print('WARNING: {}'.format(msg))
                 lg.logprint(LAM_logger, msg, 'w')
-
+        
+        # If no plots handled by this method are True, return
+        plots = [Sett.Create_Channel_Plots, Sett.Create_AddData_Plots,
+                 Sett.Create_Channel_PairPlots, Sett.Create_Heatmaps,
+                 Sett.Create_Distribution_Plots, Sett.Create_Cluster_Plots,
+                 Sett.Create_ChanVSAdd_Plots, Sett.Create_AddVSAdd_Plots]
+        if not any(plots):
+            return
         # Conditional function calls to create each of the plots.
         lg.logprint(LAM_logger, 'Begin plotting.', 'i')
         print("\n---Creating plots---")
