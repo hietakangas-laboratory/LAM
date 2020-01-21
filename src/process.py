@@ -305,7 +305,7 @@ class get_sample:
                              int(rmaxx + (buffer + 1)), 10)
             # Create binary array with the created indices
             BA = pd.DataFrame(np.zeros((len(ylbl), len(xlbl))),
-                              index=np.flip(ylbl, 0), columns=xlbl)
+                              index=np.flip(ylbl), columns=xlbl)
             for coord in coords:  # Transform coords into binary array
                 y = round(coord[1] * resize / 10) * 10
                 x = (round(coord[0] * resize / 10) * 10)
@@ -325,7 +325,7 @@ class get_sample:
             # Fill holes in the sample, e.g. ruptured locations with no micro-
             # scopy features.
             BA = mp.binary_fill_holes(BA)
-            return BA, list(ylbl), list(xlbl)
+            return BA, list(np.flip(ylbl)), list(xlbl)
 
         coords = list(zip(X, Y))
         rminy, rmaxy = resize_minmax(Y.min(), Y.max())
