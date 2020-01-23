@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""
+r"""
 Run file for Longitudinal Analysis of Midgut.
 
 Created on Wed Mar  6 12:42:28 2019
@@ -21,7 +21,7 @@ included.
 - Anaconda env:
     conda env create -n <yourenvname> -f <path\to\environment.yml>
     conda activate <yourenvname>
-    
+
 - Python env:
     1.	python -m venv <yourenvname>
         •	Linux:
@@ -119,9 +119,7 @@ def main():
     systemPaths.save_AnalysisInfo(store.samples, store.samplegroups,
                                   store.channels)
     # After samples have been counted and normalized
-    SampleGroups = analysis.Samplegroups(store.samplegroups, store.channels,
-                                         store.totalLength, store.center,
-                                         systemPaths)
+    SampleGroups = analysis.Samplegroups(systemPaths)
 # TODO add cluster counting (maybe save channel paths to csv when
 # finding clusters) ???
 #        if store.clusterPaths: # Collect clustering data from existing files
@@ -145,8 +143,8 @@ def main():
 
 def MAIN_catch_exit(LAM_logger=None):
     """Run main() while catching system exit and keyboard interrupt for log."""
-    import logger as lg
     if LAM_logger is None:  # If no logger given, get one
+        import logger as lg
         LAM_logger = lg.get_logger(__name__)
     try:
         print("START ANALYSIS")

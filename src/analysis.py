@@ -37,21 +37,18 @@ class Samplegroups:
     """Holds and handles all sample groups, i.e. every sample of analysis."""
 
     # Initiation of variables shared by all samples.
-    _groups, _chanPaths, _samplePaths, _addData, _channels = [], [], [], [], []
+    _groups, _chanPaths, _samplePaths, _addData = [], [], [], []
     _plotDir, _dataDir, _statsDir = pl.Path('./'), pl.Path('./'), pl.Path('./')
     _grpPalette = {}
     _AllMPs = None
-    _AllStarts = None
     _length = 0
     _center = None
 
-    def __init__(self, groups=None, channels=None, length=0, center=None,
-                 PATHS=None, child=False):
+    def __init__(self, PATHS=None, child=False):
         # Creation of variables related to all samples, that are later passed
         # on to child classes.
         if not child:
-            Samplegroups._groups = sorted(groups)
-            Samplegroups._channels = channels
+            Samplegroups._groups = sorted(store.samplegroups)
             Samplegroups._chanPaths = list(PATHS.datadir.glob('Norm_*'))
             Samplegroups._samplePaths = [p for p in PATHS.samplesdir.iterdir()
                                          if p.is_dir()]
@@ -61,19 +58,17 @@ class Samplegroups:
             Samplegroups._dataDir = PATHS.datadir
             Samplegroups._statsDir = PATHS.statsdir
             # Total length of needed data matrix of all anchored samples
-            Samplegroups._length = length
+            Samplegroups._length = store.totalLength
             # Get MPs of all samples
             MPpath = PATHS.datadir.joinpath('MPs.csv')
             Samplegroups._AllMPs = system.read_data(MPpath, header=0,
                                                     test=False)
             # If anchor point index is defined, find the start index of samples
-            if center is not None:
-                Samplegroups._center = center
-                Samplegroups._AllStarts = Samplegroups._AllMPs.applymap(
-                                                    lambda x: int(center - x))
+            if store.center is not None:
+                Samplegroups._center = store.center
             # Assign color for each sample group
             groupcolors = sns.xkcd_palette(Sett.palette_colors)
-            for i, grp in enumerate(groups):
+            for i, grp in enumerate(Samplegroups._groups):
                 Samplegroups._grpPalette.update({grp: groupcolors[i]})
             lg.logprint(LAM_logger, 'Sample groups established.', 'i')
 
@@ -369,7 +364,7 @@ class Samplegroups:
                 msg = 'No normalized cluster count files found (ClNorm_*)'
                 print('WARNING: {}'.format(msg))
                 lg.logprint(LAM_logger, msg, 'w')
-        
+
         # If no plots handled by this method are True, return
         plots = [Sett.Create_Channel_Plots, Sett.Create_AddData_Plots,
                  Sett.Create_Channel_PairPlots, Sett.Create_Heatmaps,
@@ -532,8 +527,8 @@ class Samplegroups:
                         'i')
             print('\n---Finding nearest cells for group {}---'.format(grp))
             SampleGroup = Group(grp)
-            for path in SampleGroup._groupPaths:  # Get one sample of the group
-                Smpl = Sample(path, SampleGroup.group)
+            for path in SampleGroup.groupPaths:  # Get one sample of the group
+                Smpl = Sample(path, SampleGroup)
                 print('{}  ...'.format(Smpl.name))
                 # Find distances between nuclei within the sample
                 Smpl.DistanceMean(Sett.maxDist)
@@ -548,8 +543,8 @@ class Samplegroups:
                         'i')
             print('\n---Finding clusters for group {}---'.format(grp))
             SampleGroup = Group(grp)
-            for path in SampleGroup._groupPaths:  # Get one sample of the group
-                Smpl = Sample(path, SampleGroup.group)
+            for path in SampleGroup.groupPaths:  # Get one sample of the group
+                Smpl = Sample(path, SampleGroup)
                 print('{}  ...'.format(Smpl.name))
                 paths = Smpl.Clusters(Sett.Cl_maxDist)  # Find clusters
                 del paths
@@ -698,7 +693,7 @@ class Samplegroups:
                 for key in TCounts.errorVars.keys():
                     msg = "Value Error between control and {} in".format(key)
                     errVars = ', '.join(TCounts.errorVars.get(key))
-                    lg.logprint(LAM_logger,'{} {}'.format(msg, errVars), 'e')
+                    lg.logprint(LAM_logger, '{} {}'.format(msg, errVars), 'e')
                 # If wanted, create plots of the stats
                 if Sett.Create_Plots and Sett.Create_Statistics_Plots:
                     TCounts.Create_Plots()
@@ -773,10 +768,6 @@ class Samplegroups:
 class Group(Samplegroups):
     """For storing sample group-specific data."""
 
-    _color = 'b'
-    _groupPaths = None
-    _MPs = None
-
     def __init__(self, group, child=False):
         super().__init__(child=True)  # Inherit from samplegroups-class
         self.group = group  # group
@@ -790,9 +781,6 @@ class Group(Samplegroups):
                                 p.name)]
             self.MPs = self._AllMPs.loc[:, self._AllMPs.columns.str.contains(
                                         self.namer)]
-            Group._color = (self.color)
-            Group._groupPaths = self.groupPaths
-            Group._MPs = self.MPs
 
 
 class Sample(Group):
@@ -807,8 +795,8 @@ class Sample(Group):
         self.channelPaths = [p for p in path.iterdir() if p.suffix == '.csv' if
                              p.stem not in ['vector', 'MPs']]
         # Sample's group-specific color, and it's anchoring bin.
-        self.color = Group._color
-        self.MP = self._MPs.loc[0, self.name]
+        self.color = grp.color
+        self.MP = grp.MPs.loc[0, self.name]
 
     def DistanceMean(self, dist=25):
         """Prepare and handle data for cell-to-cell distances."""

@@ -114,7 +114,7 @@ class base_GUI(tk.Toplevel):
         self.pStats.grid(row=0, column=4, columnspan=1, padx=(2, 2))
         # Projection, Measurement point & file header settings
         self.pProj = tk.Checkbutton(self.midf, text="Project", variable=Proj,
-                                  relief='groove', bd=3, font=('Arial', 8))
+                                    relief='groove', bd=3, font=('Arial', 8))
         self.pProj.grid(row=1, column=0, columnspan=1, padx=(2, 2))
         self.pMP = tk.Checkbutton(self.midf, text="Use MP ", variable=MPV,
                                   relief='groove', bd=3, font=('Arial', 8),
@@ -139,7 +139,7 @@ class base_GUI(tk.Toplevel):
         # BOTTOM BUTTONS
         self.r_stdout = tk.BooleanVar(value=Sett.non_stdout)
         self.r_stdoutC = tk.Checkbutton(self.bottomf, text="Redirect stdout",
-                                        variable=self.r_stdout, 
+                                        variable=self.r_stdout,
                                         relief='groove',
                                         bd=1, command=self.redirect_stdout)
         self.r_stdoutC.grid(row=0, column=4, columnspan=4, sticky='n')
@@ -653,12 +653,14 @@ class base_GUI(tk.Toplevel):
         MAIN_catch_exit()
 
     def redirect_stdout(self):
+        """Change stdout direction based on r_stdout check box."""
         import redirect as rd
         Sett.non_stdout = self.r_stdout.get()
         if Sett.non_stdout:
             self.stdout_win = rd.text_window(self.master, self.r_stdout)
         else:
-            self.stdout_win.func_destroy()
+            if hasattr(self, 'stdout_win'):
+                self.stdout_win.func_destroy()
 
     def show_VSett(self, name):
         """Change shown vector settings based on type."""
@@ -678,7 +680,8 @@ class base_GUI(tk.Toplevel):
         """Destroy GUI."""
         import logger as lg
         lg.log_Shutdown()
-        self.stdout_win.func_destroy()
+        if hasattr(self, 'stdout_win'):
+            self.stdout_win.func_destroy()
         self.master.destroy()
 
     def Open_AddSettings(self):

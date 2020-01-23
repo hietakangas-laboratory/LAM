@@ -6,12 +6,11 @@ Created on Wed Mar  6 12:42:28 2019
 @author: Arto I. Viitanen
 
 """
-import numpy as np
 import pathlib as pl
 
 
 class settings:
-    """ A class for holding all user-end settings for the analysis."""
+    """A class for holding all user-end settings for the analysis."""
 
     # ####################### PRIMARY SETTINGS #######################
     GUI = True  # Use graphical user interface (True / False)
@@ -50,13 +49,13 @@ class settings:
     SkeletonResize = 0.7    # Binary image resize. Keep at steps of ten.
     # Find distance (XY-coord system) in skeleton vector creation
     find_dist = 40
-    BDiter = 2          # Binary dilation iterations (set to 0 if not needed)
-    SigmaGauss = 0.4    # Sigma for gaussian smoothing (set to 0 if not needed)
+    BDiter = 0          # Binary dilation iterations (set to 0 if not needed)
+    SigmaGauss = 0.3    # Sigma for gaussian smoothing (set to 0 if not needed)
     simplifyTol = 25    # Tolerance for vector simplification.
     # Number of bins used for vector creation when using the median vector
     # creation. Increasing bin number too much may lead to stair-like vector;
     # increasing 'simplifyTol' can correct the steps.
-    medianBins = 70
+    medianBins = 100
     # -#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#- #
 
     # ---MEASUREMENT POINTS--- #
@@ -103,7 +102,7 @@ class settings:
     # The maximum distance the nearest cell will be looked at. Increase is
     # computationally expensive, depending on the size of the dataset and the
     # density of cells.
-    maxDist = 30    # Radius around a cell
+    maxDist = 25    # Radius around a cell
     # Whether to look only at cells of certain size. Default is to include
     # cells smaller than Vol_inclusion. If cells of greater volume are wanted,
     # designate incl_type to be 'greater'. Otherwise, it can be left empty.
@@ -112,7 +111,7 @@ class settings:
 
     # ---CLUSTERS--- #
     # Whether to compute clusters
-    Find_Clusters = True
+    Find_Clusters = False
     Cluster_Channels = ["GFP"]  # , "Pros"]
     Cl_maxDist = 10         # Radius around a cell
     Cl_Vol_inclusion = 0    # Set to zero if not wanted.
@@ -149,7 +148,7 @@ class settings:
     Create_ChanVSAdd_Plots = False  # Pairs of channel and additional data
     Create_AddVSAdd_Plots = False  # Pairs of additional data
     # Create plots of all possible pair combinations of the following:
-    vs_channels = ['DAPI', 'Pros', 'SuH', 'GFP']
+    vs_channels = ['DAPI', 'GFP']
     vs_adds = ['Intensity Mean']
 
     # Whether to drop outliers from plots ONLY
@@ -186,7 +185,7 @@ class settings:
 class store:
     """
     Store important variables for the analysis.
-    
+
     VARIABLES FOR LAM INTERNAL USE!
     """
 

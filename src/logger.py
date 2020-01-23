@@ -17,11 +17,13 @@ logFile = ""
 ctime = time.strftime("%d%b%y_%H%M%S")
 log_created = False
 
+
 def setup_logger(name=None, new=True):
     """
     Set up variables for the logger when run starts.
 
     Args:
+    ----
         name - the calling module.
         new - create new logger
     """
@@ -29,8 +31,9 @@ def setup_logger(name=None, new=True):
     global logFile, ctime, log_created
     ctime = time.strftime("%d%b%y_%H%M%S")  # Start time for the run
     from settings import settings as Sett
-    logFile = str(Sett.workdir.joinpath("log_{}.txt".format(ctime)))  # filepath
-    if new is True:
+    # filepath:
+    logFile = str(Sett.workdir.joinpath("log_{}.txt".format(ctime)))
+    if new is True:  # If setting up new logger
         logger = get_logger(name)  # Call for logger-object creation
         log_created = True  # Create variable to indicate log has been created
         return logger
@@ -85,9 +88,10 @@ def log_Shutdown():
 
 def logprint(self, msg="Missing", logtype='e'):
     """
-    Prints information of different level to the log file.
+    Print information of different levels to the log file.
 
     Args:
+    ----
         msg - message to log
         logtype - type of log
             i = info, w = warning, d = debug, c = critical, e = error,

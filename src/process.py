@@ -237,14 +237,14 @@ class get_sample:
                 msg = 'Vector data file in wrong format: {}'.format(self.name)
                 lg.logprint(LAM_logger, msg, 'ex')
                 print('CRITICAL: {}'.format(msg))
-                
+
     def get_vectData(self, channel):
         """Get channel data that is used for vector creation."""
         try:
             namer = str("_{}_".format(channel))
             namerreg = re.compile(namer, re.I)
             dirPath = [self.channelpaths[i] for i, s in
-                       enumerate(self.channelpaths) 
+                       enumerate(self.channelpaths)
                        if namerreg.search(str(s))][0]
             vectPath = next(dirPath.glob('*Position.csv'))
             vectData = system.read_data(vectPath)
@@ -284,8 +284,8 @@ class get_sample:
         """Create vector by skeletonization of image-transformed positions."""
         def resize_minmax(minv, maxv):
             """
-            Rounds x- and y-coordinates for binarization.
-            
+            Round x- and y-coordinates for binarization.
+
             Takes min and max values found in feature coordinates and rounds
             them appropriately to provide indexes for the smaller, resized
             binary array. The new indexes allow changing array values from
@@ -338,6 +338,7 @@ class get_sample:
             *np.where(skeleton == 1))]
         # Dataframe from skeleton coords
         coordDF = pd.DataFrame(skelValues, columns=['Y', 'X'])
+
         # BEGIN CREATION OF VECTOR FROM SKELETON COORDS
         finder = Sett.find_dist  # Distance for detection of nearby XY
         line = []  # For storing vector
@@ -433,7 +434,7 @@ class get_sample:
             warnings.simplefilter('ignore', category=RuntimeWarning)
             startval = np.nanmean(Y[(idx == 1)])
         Ymedian[0] = startval
-        # Then for the rest of the bins
+        # Then find median for the rest of the bins
         for b in range(1, creationBins):
             cells = Y[idx == b]
             if cells.size == 0:  # If no cells at bin, copy previous Y-coord
@@ -441,7 +442,7 @@ class get_sample:
             else:
                 Ymedian[b] = Y[idx == b].min() + (Y[idx == b].max() -
                                                   Y[idx == b].min()) / 2
-        # Make into XY-coordinates
+        # Change bins and their medians into XY-coordinates
         XYmedian = [p for p in tuple(np.stack((bins, Ymedian), axis=1)) if
                     ~np.isnan(p).any()]
         # Create LineString-object from finished vector
@@ -724,6 +725,7 @@ def relate_data(data, MP=0, center=50, TotalLength=100):
             lg.logprint(LAM_logger, msg, 'i')
         raise SystemExit
     return insert, insx
+
 
 def find_existing(PATHS):
     """Get MPs and count old projections when not projecting during 'Count'."""
