@@ -45,6 +45,7 @@ class text_window(tk.Toplevel):
         self.scroll.pack(side='right', fill='y')
         self.orig_out = sys.stdout
         self.orig_err = sys.stderr
+        # Redirect stderr and stdout to the same window:
         sys.stdout = StdoutRedirector(self.text_area)
         sys.stderr = StdoutRedirector(self.text_area)
         self.recheck = check_val
@@ -58,19 +59,19 @@ class text_window(tk.Toplevel):
         self.recheck.set(False)
 
 
-class IORedirector(object):
-    """A general class for redirecting I/O to this Text widget."""
+class IORedirector:
+    """Redirect I/O to GUI widget."""
 
     def __init__(self, text_area):
         self.text_area = text_area
 
 
 class StdoutRedirector(IORedirector):
-    """A class for redirecting stdout to this Text widget."""
+    """Redirect text to IORedirector."""
 
-    def write(self, str):
+    def write(self, string):
         """Write to stdout."""
-        self.text_area.insert(text_window.index, str)
+        self.text_area.insert(text_window.index, string)
         self.text_area.update_idletasks()
         text_window.index += 1.0
         self.text_area.see("end")

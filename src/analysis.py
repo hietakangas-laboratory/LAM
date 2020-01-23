@@ -546,25 +546,8 @@ class Samplegroups:
             for path in SampleGroup.groupPaths:  # Get one sample of the group
                 Smpl = Sample(path, SampleGroup)
                 print('{}  ...'.format(Smpl.name))
-                paths = Smpl.Clusters(Sett.Cl_maxDist)  # Find clusters
-                del paths
-#                allpaths.append(paths)
-#        paths = pd.DataFrame(allpaths)
-#        paths.to_csv(self._plotDir.parent.joinpath("ClusterPaths.csv"),
-#                     index=False)
+                Smpl.Clusters(Sett.Cl_maxDist)  # Find clusters
         lg.logprint(LAM_logger, 'Clusters calculated', 'i')
-
-    # def Read_Clusters(self):  # ???
-    #     """Not Implemented."""
-    #     for grp in store.samplegroups:
-    #         namer = "{}_".format(grp)
-    #         paths = [store.clusterPaths.pop(p) for p in store.clusterPaths if
-    #                  p.parts[-2].startswith(namer)]
-    #         group = Group(child=True)
-    #         for path in paths:
-    #             sample = Sample(path.parent, group)
-    #             Data = system.read_data(path, header=0)
-    #             sample.Count_clusters(Data, path.stem)
 
     def Get_Statistics(self):
         """Handle data for group-wise statistical analysis."""
@@ -849,7 +832,6 @@ class Sample(Group):
                 msg = "No file for channel {}".format(path.stem)
                 lg.logprint(LAM_logger, "{}: {}".format(self.name, msg), 'w')
                 print("-> {}".format(msg))
-                return
             # Discard earlier versions of found clusters, if present
             Data = Data.loc[:, ~Data.columns.str.contains('ClusterID')]
             Data.name = path.stem  # The name of the clustering channel
@@ -857,7 +839,6 @@ class Sample(Group):
             self.find_distances(Data, volIncl=Sett.Cl_Vol_inclusion,
                                 compare=Sett.Cl_incl_type, clusters=True,
                                 **kws)
-        return clustChans
 
     def find_distances(self, Data, volIncl=200, compare='smaller',
                        clusters=False, **kws):

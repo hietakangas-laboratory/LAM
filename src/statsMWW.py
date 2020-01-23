@@ -32,19 +32,17 @@ class statistics:
         self.center = control._center
         self.length = control._length
         self.title = '{} VS. {}'.format(self.ctrlGroup, self.tstGroup)
-        self.dataDir = control._dataDir
         self.statsDir = control._statsDir
         self.plotDir = control._plotDir.joinpath("Stat Plots")
         self.plotDir.mkdir(exist_ok=True)
-        self.chanPaths = self.dataDir.glob('Norm_*')  # Cell counts
-        self.avgPaths = self.dataDir.glob('Avg_*')  # Additional data avgs
-        self.clPaths = self.dataDir.glob('ClNorm_*')  # Cluster data
+        self.chanPaths = control._dataDir.glob('Norm_*')  # Cell counts
+        self.avgPaths = control._dataDir.glob('Avg_*')  # Additional data avgs
+        self.clPaths = control._dataDir.glob('ClNorm_*')  # Cluster data
         self.palette = {control: control.color, group2.group: group2.color}
         # Statistics and data
         self.statData = None
         self.ctrlData = None
         self.tstData = None
-        self.order = [self.ctrlGroup, self.tstGroup]
         self.error = False
         self.channel = ""
 
@@ -148,7 +146,7 @@ class statistics:
                'title_y': 1, 'fliersize': {'fliersize': '1'}}
         if Sett.windowed:
             kws.update({'windowed': True})
-        plot_maker.order = self.order
+        plot_maker.order = [self.ctrlGroup, self.tstGroup]
         plot_maker.plot_Data(plotter.catPlot, plot_maker.savepath, **kws)
 
 
@@ -165,7 +163,6 @@ class Total_Stats:
         if self.data is None or self.data.empty:  # Test that data is fine
             self.dataerror = True
         self.groups = groups
-        self.channels = self.data.index.tolist()
         self.tstGroups = [g for g in groups if g != Sett.cntrlGroup]
         self.palette = palette
         self.savename = ""

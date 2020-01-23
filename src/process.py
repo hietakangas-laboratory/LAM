@@ -21,7 +21,7 @@ import shapely.geometry as gm
 from skimage.morphology import skeletonize
 from skimage.filters import gaussian
 # LAM modules
-from settings import store as store, settings as Sett
+from settings import store, settings as Sett
 from plot import plotter
 import logger as lg
 import system
@@ -106,9 +106,9 @@ def Project(PATHS):
                 print(msg)
             # Project features of channel onto vector
             sample.data = sample.project_channel(channel)
-            channelName = str(path2.stem)
+            channel_name = str(path2.stem)
             # Count occurrences in each bin
-            if channelName not in ["MPs"]:
+            if channel_name not in ["MPs"]:
                 sample.find_counts(channel.name, PATHS.datadir)
     lg.logprint(LAM_logger, 'All channels projected and counted.', 'i')
 
@@ -173,11 +173,11 @@ def Get_Counts(PATHS):
             # sample's MP is anchored to one row, with bin-respective (index)
             # cell counts in each element of a sample (column) to allow
             # relative comparison.
-            ChCounts = normalize(path)
-            ChCounts.starts, NormCounts = ChCounts.normalize_samples(
+            ch_counts = normalize(path)
+            ch_counts.starts, norm_counts = ch_counts.normalize_samples(
                 MPs, store.totalLength)
-            ChCounts.averages(NormCounts)
-            ChCounts.Avg_AddData(PATHS, Sett.AddData, store.totalLength)
+            ch_counts.averages(norm_counts)
+            ch_counts.Avg_AddData(PATHS, Sett.AddData, store.totalLength)
         lg.logprint(LAM_logger, 'Channels normalized.', 'i')
 
 
@@ -512,7 +512,7 @@ class get_sample:
         points = gm.MultiPoint(XYpos)
         # Find point of projection on the vector.
         Positions["VectPoint"] = [self.vector.interpolate(self.vector.project(
-                                gm.Point(x))) for x in points]
+            gm.Point(x))) for x in points]
         # Find normalized distance (0->1)
         Positions["NormDist"] = [self.vector.project(x, normalized=True) for x
                                  in Positions["VectPoint"]]

@@ -6,15 +6,15 @@ Created on Wed Mar  6 12:42:28 2019
 @author: Arto I. Viitanen
 
 """
-# LAM modules
-from run import MAIN_catch_exit
-from settings import settings as Sett
 # Standard libraries
 import copy
 import tkinter as tk
-from tkinter import filedialog
 # Other packages
 import pathlib as pl
+# LAM modules
+from run import MAIN_catch_exit
+from settings import settings as Sett
+from tkinter import filedialog
 
 
 class base_GUI(tk.Toplevel):

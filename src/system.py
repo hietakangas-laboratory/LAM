@@ -44,10 +44,10 @@ class paths:
                     flag = 1
                     while flag:
                         ans = sd.askstring(title="Dialog", prompt=msg)
-                        if ans == "y" or ans == "Y":
+                        if ans in ("y", "Y"):
                             flag = 0
                             shutil.rmtree(self.datadir)
-                        elif ans == "n" or ans == "N":
+                        elif ans in ("n", "N"):
                             flag = 0
                             print('Analysis terminated')
                             raise KeyboardInterrupt
@@ -97,18 +97,17 @@ def read_data(filepath, header=Sett.header_row, test=True, index_col=False):
                                 inspect.stack()[1][1], inspect.stack()[1][2]))
         print('File {} not found at {}'.format(filepath.name,
                                                str(filepath.parent)))
-        return
+        return None
     except (AttributeError, pd.errors.EmptyDataError) as err:
         if isinstance(err, pd.errors.EmptyDataError):
             msg = "{} is empty. Skipped.".format(filepath.name)
             print("ERROR: {}".format(msg))
             lg.logprint(LAM_logger, msg, 'e')
             return None
-        else:
-            msg = "Data or columns may be faulty in {}".format(filepath.name)
-            print("WARNING: {}".format(msg))
-            lg.logprint(LAM_logger, msg, 'w')
-            return data
+        msg = "Data or columns may be faulty in {}".format(filepath.name)
+        print("WARNING: {}".format(msg))
+        lg.logprint(LAM_logger, msg, 'w')
+        return data
     return data
 
 
@@ -146,9 +145,9 @@ def start():
         lg.logprint(LAM_logger, 'All primary settings are False', 'e')
         print("\nAll primary settings are set to False.\n\nExiting ...")
         raise SystemExit
-    else:  # Otherwise create paths and directories
-        PATHS = paths(Sett.workdir)
-        # Find all samples, if exist
-        store.samples = [p.name for p in PATHS.samplesdir.iterdir() if
-                         p.is_dir()]
-        return PATHS
+    # Otherwise create paths and directories
+    PATHS = paths(Sett.workdir)
+    # Find all samples, if exist
+    store.samples = [p.name for p in PATHS.samplesdir.iterdir() if
+                     p.is_dir()]
+    return PATHS

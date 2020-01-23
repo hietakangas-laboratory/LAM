@@ -74,7 +74,7 @@ On some experiments the size proportions of different regions may alter, e.g.
 when comparing starved and fully-fed midguts, more accurate results can be
 obtained by dividing the image/data into multiple analyses. A typical way to do
 this is to run separate analyses for R1-2, R3, and R4-5. Alternatively, a user-
-defined coordinate (MP = measurement point) at a distinguishable point can be
+defined coordinate (MP = measurement point) at a distinGUIshable point can be
 used to anchor the individual samples for comparison, e.g. points at R2/3-
 border are lined, with each sample having variable numbers of bins on either
 side. The variation however likely leads to a compounding error as distance
@@ -84,10 +84,10 @@ separate directory that contains position.csv for a single coordinate, the MP.
 
 For more extensive instructions, see user manual.
 """
-# LAM module
-from settings import settings as Sett
 # Standard
 import sys
+# LAM module
+from settings import settings as Sett
 
 
 def main():
@@ -96,34 +96,30 @@ def main():
     import analysis
     import process
     from settings import store
-    systemPaths = system.start()
+    system_paths = system.start()
     # If sample processing set to True, create vectors, collect and project
     # data etc. Otherwise continue to plotting and group-wise operations.
     if Sett.process_samples:
-        process.Create_Samples(systemPaths)
+        process.Create_Samples(system_paths)
         # If only creating vectors, return from main()
         if not any([Sett.process_counts, Sett.process_dists,
                     Sett.Create_Plots, Sett.statistics]):
             return
     if Sett.process_counts and Sett.project:
         if not Sett.process_samples:
-            process.vector_test(systemPaths.samplesdir)
-        process.Project(systemPaths)
+            process.vector_test(system_paths.samplesdir)
+        process.Project(system_paths)
     # If performing 'Count' without projection, only calculate counts:
     elif Sett.process_counts and not Sett.project:
-        process.find_existing(systemPaths)
+        process.find_existing(system_paths)
     # After all samples have been collected/created, find their respective MP
     # bins and normalize (anchor) cell count data.
-    process.Get_Counts(systemPaths)
+    process.Get_Counts(system_paths)
     # Storing of descriptive data of analysis, i.e. channels/samples/groups
-    systemPaths.save_AnalysisInfo(store.samples, store.samplegroups,
-                                  store.channels)
+    system_paths.save_AnalysisInfo(store.samples, store.samplegroups,
+                                   store.channels)
     # After samples have been counted and normalized
-    SampleGroups = analysis.Samplegroups(systemPaths)
-# TODO add cluster counting (maybe save channel paths to csv when
-# finding clusters) ???
-#        if store.clusterPaths: # Collect clustering data from existing files
-#            SampleGroups.Read_Clusters()
+    SampleGroups = analysis.Samplegroups(system_paths)
     # Finding of nearest cells and distances
     if Sett.Find_Distances and Sett.process_dists:
         SampleGroups.Get_DistanceMean()
@@ -170,12 +166,12 @@ if __name__ == '__main__':
     if Sett.GUI:  # Create GUI if using it
         import tkinter as tk
         import interface
-        root = tk.Tk()
-        gui = interface.base_GUI(root)
-        root.mainloop()
+        ROOT = tk.Tk()
+        GUI = interface.base_GUI(ROOT)
+        ROOT.mainloop()
     else:  # Otherwise create logger and start the analysis
-        import logger as lg
-        LAM_logger = lg.setup_logger(__name__)
-        lg.print_settings(LAM_logger)  # print settings of analysis to log
-        MAIN_catch_exit(LAM_logger)
-        lg.Close()
+        import logger
+        LOG = logger.setup_logger(__name__)
+        logger.print_settings(LOG)  # print settings of analysis to log
+        MAIN_catch_exit(LOG)
+        logger.Close()
