@@ -524,6 +524,8 @@ class get_sample:
                                       ).astype('int')
         # Save the obtained data:
         ChString = str('{}.csv'.format(channel.name))
+        Positions["VectPoint"] = Positions["VectPoint"].apply(
+            lambda x: tuple([x.x, x.y]))
         system.saveToFile(Positions, self.sampledir, ChString, append=False)
         return Positions
 
