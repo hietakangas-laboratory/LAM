@@ -138,7 +138,7 @@ def main():
 
 
 def MAIN_catch_exit(LAM_logger=None):
-    """Run main() while catching system exit and keyboard interrupt for log."""
+    """Run main() while catching exceptions for logging."""
     if LAM_logger is None:  # If no logger given, get one
         import logger as lg
         LAM_logger = lg.get_logger(__name__)
