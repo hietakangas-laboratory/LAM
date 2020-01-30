@@ -152,7 +152,6 @@ def Get_Counts(PATHS):
             store.totalLength = temp.shape[0]  # Length of anchored matrices
             path = PATHS.datadir.joinpath("All_{}.csv".format(chan))
             temp = system.read_data(path, test=False, header=0)
-            store.binNum = temp.shape[0]  # Length of sample matrix
         except AttributeError:
             msg = "Cannot determine length of sample matrix\n" +\
                     "-> Must perform 'Count' before continuing."

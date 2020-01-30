@@ -278,9 +278,13 @@ class plotter:
 
     def pairPlot(self, **kws):
         """Creation of pair plots."""
-        # Missing values changed to 0 (required for plot)
+        # Drop bins where no values exists in any channel. Then change missing
+        # values to 0 (required for plot)
         data = self.data.sort_values(by="Sample Group").drop(
-            'Longitudinal Position', axis=1).replace(np.nan, 0)
+            'Longitudinal Position', axis=1)
+        data = data.dropna(how='all',
+                           subset=data.columns[data.columns !='Sample Group']
+                           ).replace(np.nan, 0)
         grpOrder = data["Sample Group"].unique().tolist()  # Plot order
         colors = [self.palette.get(k) for k in grpOrder]
         # Create color variables for scatter edges
@@ -288,11 +292,12 @@ class plotter:
         for color in colors:
             edgeC.append(tuple([0.7 * v for v in color]))
         # Settings for plotting:
-        pkws = {'x_ci': None, 'order': 4, 'truncate': True, 'x_jitter': 0.49,
-                'y_jitter': 0.49,
+        pkws = {'x_ci': None, 'order': 2, 'truncate': True,
                 'scatter_kws': {'linewidth': 0.05, 's': 25, 'alpha': 0.4,
                                 'edgecolors': edgeC},
                 'line_kws': {'alpha': 0.7, 'linewidth': 1.5}}
+        if Sett.plot_jitter:
+            pkws.update({'x_jitter': 0.49, 'y_jitter': 0.49})
         dkws = {'linewidth': 2}
         with warnings.catch_warnings():
             warnings.simplefilter('ignore', category=RuntimeWarning)

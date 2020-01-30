@@ -6,18 +6,31 @@ from ij import IJ
 """
 README
 
-Copy all aurox images inside a single folder (e.g. stitching). Inside each
-aurox image folder there should only be the *.properties.csv file and the
-*ome.tiff files.
+Copy all aurox images inside a single folder (e.g. stitching). Inside each aurox image folder there should only be the 
+*.positions.csv file and the *ome.tiff files (*companion.ome file can stay also -Arto).
 
-Usage example 
-For Mac
-./Fiji.app/Contents/MacOS/ImageJ-macosx --ij2 --headless --console --run
-    ./stitcher-grandma-pro.py 'root_dir_path="./stitching"'
+USAGE
+Open command line and use the following command:
+<1> --ij2 --headless --console --run <2> "root_dir_path='<3>'"
 
-For Windows (notice that " and ' are swaped)
-./Fiji.app/ImageJ-win64.exe --ij2 --headless --console --run
-    ./stitcher-grandma-pro.py "root_dir_path='./stitching'"
+with replacing <x> with following FULL PATHS
+<1> Path to fiji exe-file
+<2> Path to this python file
+<3> Path to the directory containing sub-directories with image files
+
+e.g.
+C:\hyapp\fiji-win64-1.51u\Fiji.app\ImageJ-win64.exe --ij2 --headless --console --run C:\Users\artoviit\Downloads\stitcher-grandma-pro-2.0.py "root_dir_path='D:\Arto Viitanen\Microscopy\20.11.2018'"
+
+
+SEE BELOW FOR COMMAND ON MAC
+
+#Old usage example 
+#For Mac
+#./Fiji.app/Contents/MacOS/ImageJ-macosx --ij2 --headless --console --run ./stitcher-grandma-pro.py 'root_dir_path="./stitching"'
+#
+#For Windows (notice that " and ' are swaped)
+#./Fiji.app/ImageJ-win64.exe --ij2 --headless --console --run ./stitcher-grandma-pro.py "root_dir_path='./stitching'"
+
 """
 
 def calculate_overlap(dir_path):
@@ -28,7 +41,11 @@ def calculate_overlap(dir_path):
     abs_dirpath = os.path.abspath(dir_path)
     print(abs_dirpath)
     # Calculate overlap
-    IJ.run("Grid/Collection stitching", "type=[Positions from file] order=[Defined by TileConfiguration] directory=[%s] layout_file=TileConfiguration.txt fusion_method=[Do not fuse images (only write TileConfiguration)] regression_threshold=0.30 max/avg_displacement_threshold=2.50 absolute_displacement_threshold=3.50 compute_overlap computation_parameters=[Save memory (but be slower)] image_output=[Fuse and display]" % abs_dirpath)
+    IJ.run("Grid/Collection stitching", "type=[Positions from file] order=[Defined by TileConfiguration] \
+           directory=[%s] layout_file=TileConfiguration.txt fusion_method=[Do not fuse images (only write \
+           TileConfiguration)] regression_threshold=0.30 max/avg_displacement_threshold=2.50 \
+    absolute_displacement_threshold=3.50 compute_overlap computation_parameters=[Save memory (but be slower)] \
+    image_output=[Fuse and display]" % abs_dirpath)
 
 
 def linear_blending(dir_path):
@@ -78,7 +95,7 @@ def create_tile_configuration(tiff_files_names, tiff_img_positions, dir):
         Create file TileConfiguration.txt
     """
 
-    tile_conf_path = './%s/TileConfiguration.txt' % dir
+    tile_conf_path = '%s/TileConfiguration.txt' % dir
     with open(tile_conf_path, 'w') as f:
         write_header(f)
         
@@ -89,13 +106,13 @@ def create_tile_configuration(tiff_files_names, tiff_img_positions, dir):
             mult_const = 3.10
             h = abs(int(pos[1])) * mult_const
             w = abs(int(pos[2])) * mult_const
-            f.write('%s     ;    ;    (    %s,    %s,    0.0    )\n' % (name,
-                                                                        h, w) ) 
+            f.write('%s     ;    ;    (    %s,    %s,    0.0    )\n' % (name, h, w) ) 
 
 
 def set_tile_configuration_z_axis_to_zero(dir):
     """
         Set
+        TODO clean this function
     """
 
     configuration_name = '%s/TileConfiguration.registered.txt' % dir
@@ -114,8 +131,7 @@ def set_tile_configuration_z_axis_to_zero(dir):
                     name = name.strip()
                     position_list = positions.strip()[1:-1].split(',')    
                     
-                    fw.write('%s     ;    ;    (    %s,    %s,    0.0    )\n' %
-                             (name, position_list[0], position_list[1]) ) 
+                    fw.write('%s     ;    ;    (    %s,    %s,    0.0    )\n' % (name, position_list[0], position_list[1]) ) 
                     #
 
                 line = f.readline()
@@ -141,8 +157,7 @@ def process_aurox_image(dir_path, dir_name):
     tiff_img_positions = read_positions(dir_path, dir_name)
 
     print('Creating TileConfiguration.txt')
-    create_tile_configuration(tiff_files_names, tiff_img_positions,
-                              aurox_dir_path)
+    create_tile_configuration(tiff_files_names, tiff_img_positions, aurox_dir_path)
 
     print('Calculating overlap')
     calculate_overlap(aurox_dir_path)

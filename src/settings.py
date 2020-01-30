@@ -192,7 +192,6 @@ class store:
     samplegroups = []  # All samplegroup in analysis
     channels = []  # All channels in analysis
     samples = []  # All samples in analysis
-    binNum = settings.projBins  # Number of used bins
     totalLength = 0  # The length of DataFrame after all samples are anchored
     center = 0  # The index of the anchoring point within the DataFrame
     clusterPaths = []
