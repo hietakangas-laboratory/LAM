@@ -216,22 +216,22 @@ class Samplegroups:
                    'height': 3.5, 'aspect': 1, 'title_y': 1}
             plot_maker.plot_Data(plotter.pairPlot, self._plotDir, **kws)
 
-        def __nearestDist():
-            """Create plots of average distance to nearest cell."""
-            # Find files containing calculated average distances
-            paths = self._dataDir.glob('Avg_DistanceMeans_*')
-            savepath = self._plotDir
-            # Loop the found files
-            for path in paths:
-                # Read data file, create plotter, update keywords, and plot
-                plotData, name, cntr = self.read_channel(path, self._groups)
-                plot_maker = plotter(plotData, self._plotDir, center=cntr,
-                                     title=name, palette=self._grpPalette)
-                kws = {'centerline': plot_maker.MPbin, 'ylabel': 'Distance',
-                       'title': plot_maker.title, 'xlen': self._length,
-                       'title_y': 0.95}
-                kws.update(basekws)
-                plot_maker.plot_Data(plotter.linePlot, savepath, **kws)
+        # def __nearestDist(): # !!!
+        #     """Create plots of average distance to nearest cell."""
+        #     # Find files containing calculated average distances
+        #     paths = self._dataDir.glob('Avg_DistanceMeans_*')
+        #     savepath = self._plotDir
+        #     # Loop the found files
+        #     for path in paths:
+        #         # Read data file, create plotter, update keywords, and plot
+        #         plotData, name, cntr = self.read_channel(path, self._groups)
+        #         plot_maker = plotter(plotData, self._plotDir, center=cntr,
+        #                              title=name, palette=self._grpPalette)
+        #         kws = {'centerline': plot_maker.MPbin, 'ylabel': 'Distance',
+        #                'title': plot_maker.title, 'xlen': self._length,
+        #                'title_y': 0.95}
+        #         kws.update(basekws)
+        #         plot_maker.plot_Data(plotter.linePlot, savepath, **kws)
 
         def __distributions():
             """Create density distribution plots of different data types."""

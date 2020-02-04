@@ -117,7 +117,7 @@ class plotter:
                     pStr = "*\n*"
                     color = colors[2]
                 elif value <= Sett.alpha:
-                    if value <= 0.5:
+                    if value <= 0.05:
                         pStr = "*"
                     else:
                         pStr = ""
@@ -409,7 +409,7 @@ class plotter:
                 pStr = "**"
                 offset = 0.42
             elif value <= Sett.alpha:
-                if value <= 0.5:
+                if value <= 0.05:
                     pStr = "*"
                 else:
                     pStr = ""
