@@ -12,6 +12,7 @@ from settings import settings as Sett
 import logger as lg
 # Standard libraries
 import warnings
+from random import shuffle
 # Packages
 import matplotlib.pyplot as plt
 import numpy as np
@@ -177,7 +178,7 @@ class plotter:
             if 'windowed' in kws:
                 comment = "Window: lead {}, trail {}".format(Sett.lead,
                                                              Sett.trail)
-                ax.text(0, tytop*1.02, comment)
+                ax.annotate(comment, (0, tytop*1.02), ha='center')
             # Get colors for fills
             LScolors = sns.color_palette('Reds', n_colors=4)
             GRcolors = sns.color_palette('Blues', n_colors=4)
@@ -193,16 +194,16 @@ class plotter:
                         ax.fill_between(xaxis, yaxis, color=color, alpha=0.2,
                                         zorder=0)
                     if Sett.stars:
-                        plt.text(index, yheight, pStr,
-                                 fontdict={'fontsize': 14})
+                        plt.annotate(pStr, (index, yheight), fontsize=14,
+                                     ha='center')
                 if row[6] is True:  # ctrl is lesser
                     pStr, color = __marker(row[4], GRcolors)
                     if Sett.fill:
                         ax.fill_between(xaxis, yaxis, color=color, alpha=0.2,
                                         zorder=0)
                     if Sett.stars:
-                        plt.text(index, yheight, pStr,
-                                 fontdict={'fontsize': 14})
+                        plt.annotate(pStr, (index, yheight), fontsize=14,
+                                     ha='center')
 
         def __add(centerline=True):
             """Label, tick, and centerline creation/altering."""
@@ -283,7 +284,7 @@ class plotter:
         data = self.data.sort_values(by="Sample Group").drop(
             'Longitudinal Position', axis=1)
         data = data.dropna(how='all',
-                           subset=data.columns[data.columns !='Sample Group']
+                           subset=data.columns[data.columns != 'Sample Group']
                            ).replace(np.nan, 0)
         grpOrder = data["Sample Group"].unique().tolist()  # Plot order
         colors = [self.palette.get(k) for k in grpOrder]
@@ -404,20 +405,16 @@ class plotter:
         def __marker(value):
             if value <= 0.001:
                 pStr = "***"
-                offset = 0.38
             elif value <= 0.01:
                 pStr = "**"
-                offset = 0.42
             elif value <= Sett.alpha:
                 if value <= 0.05:
                     pStr = "*"
                 else:
                     pStr = ""
-                offset = 0.47
             else:
                 pStr = ""
-                offset = 0
-            return pStr, offset
+            return pStr
 
         # Melt data to long form and drop missing observation points
         plotData = pd.melt(self.data, id_vars=['Sample Group', 'Variable'],
@@ -459,10 +456,9 @@ class plotter:
                     ax.hlines(y=y, xmin=line[0], xmax=line[1], color='dimgrey')
                     # Locate P-value and get significance stars
                     Pvalue = statRow.loc[(grp, 'P Two-sided')]
-                    pStr, offset = __marker(Pvalue)
+                    pStr = __marker(Pvalue)
                     # Define plot location for stars and plot
-                    x = line[0] + offset
-                    ax.text(x, y, pStr)
+                    ax.annotate(pStr, (line[0]+.5, y), ha='center')
         plt.suptitle(self.title, weight='bold', y=1.02)
         filepath = self.savepath.joinpath(self.title + self.ext)
         g.savefig(str(filepath), format=self.format)
@@ -477,6 +473,7 @@ class plotter:
         # Create unique color for each cluster
         IDs = pd.unique(plotData.loc[:, "ClusterID"])
         colors = sns.color_palette("hls", len(IDs))
+        shuffle(colors)
         palette = {}
         for ind, ID in enumerate(IDs):
             palette.update({ID: colors[ind]})
@@ -484,7 +481,7 @@ class plotter:
         baseData = self.data[self.data["ClusterID"].isnull()]
         # Initialization of figure
         figure, ax = plt.subplots(figsize=(13, 4.75))
-        kws = dict(linewidth=0)
+        kws = dict(linewidth=0.1)
         # Plot background
         ax.scatter(baseData.loc[:, "Position X"],
                    baseData.loc[:, "Position Y"], s=1.5, c='xkcd:tan')
