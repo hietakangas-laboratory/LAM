@@ -582,8 +582,10 @@ class Samplegroups:
                         for i, grp in enumerate(store.samplegroups):
                             print('{}: {}'.format(i, grp))
                         msg = "Select the number of control group: "
-                        ans = int(sd.askstring(title="Dialog", prompt=msg))
-                        if 0 <= ans <= len(store.samplegroups):
+                        ans = sd.askinteger(title="Dialog", prompt=msg)
+                        if ans is None:
+                            raise KeyboardInterrupt
+                        elif 0 <= ans <= len(store.samplegroups):
                             # Change control based on input
                             Sett.cntrlGroup = store.samplegroups[ans]
                             print("Control group set as '{}'.\n".format(
@@ -611,6 +613,11 @@ class Samplegroups:
                 ylabel = "Count"
             return ylabel
 
+        if len(self._groups) <= 1:
+            print("Statistics require multiple sample groups. Stats passed.")
+            lg.logprint(LAM_logger, 'Stats passed. Not enough sample groups',
+                        'i')
+            return
         lg.logprint(LAM_logger, 'Calculation of statistics', 'i')
         if Sett.Create_Plots and Sett.Create_Statistics_Plots:
             print('\n---Calculating and plotting statistics---')
