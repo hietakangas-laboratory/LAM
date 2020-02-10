@@ -17,7 +17,6 @@ import pathlib as pl
 from pycg3d.cg3d_point import CG3dPoint
 from pycg3d import utils
 import seaborn as sns
-from scipy.spatial import distance
 # LAM imports
 import system
 import process
@@ -75,296 +74,6 @@ class Samplegroups:
 
     def create_plots(self):
         """Handle data for the creation of most plots."""
-        # Base keywords utilized in plots.
-        basekws = {'id_str': 'Sample Group', 'hue': 'Sample Group',
-                   'row': 'Sample Group', 'height': 5, 'aspect': 3,
-                   'var_str': 'Longitudinal Position', 'flierS': 2,
-                   'title_y': 0.95, 'sharey': True,
-                   'gridspec': {'hspace': 0.3}}
-
-        def _select(paths, adds=True):
-            """Find different types of data for versus plot."""
-            retPaths = []
-            # Find target names from settings
-            if adds:
-                targets = Sett.vs_adds
-            else:
-                targets = Sett.vs_channels
-            for trgt in targets:  # For each target, find corresponding file
-                if adds:  # File name dependent on data type
-                    namer = "^Avg_.*_{}.*".format(trgt)
-                else:
-                    namer = "^Norm_{}.*".format(trgt)
-                reg = re.compile(namer, re.I)
-                selected = [p for p in paths if reg.search(str(p.stem))]
-                retPaths.extend(selected)  # Add found paths to list
-            return retPaths
-
-        def __base(paths, func, ylabel='Cell Count', name_sep=1,
-                   **kws):
-            """
-            General plotting for LAM, i.e. variable on y-axis, and bins on x.
-
-            Args:
-            ----
-            Name_sep : int
-                the start of data's name when file name is split by '_', e.g.
-                name_sep=1 would name the data as DAPI when file name is
-                'Avg_DAPI'.
-            """
-            savepath = self._plotDir
-            # For each data file to be plotted:
-            for path in paths:
-                # Find whether outliers are to be dropped
-                dropB = Sett.Drop_Outliers
-                # Read data from file and the pass it on to the plotter-class
-                plotData, name, cntr = self.read_channel(path, self._groups,
-                                                         drop=dropB,
-                                                         name_sep=name_sep)
-                plot_maker = plotter(plotData, self._plotDir, center=cntr,
-                                     title=name, palette=self._grpPalette)
-                # Give additional keywords for plotting
-                kws2 = {'centerline': plot_maker.MPbin, 'value_str': ylabel,
-                        'title': plot_maker.title, 'xlen': self._length,
-                        'ylabel': ylabel}
-                kws2.update(basekws)  # update to include the base keywords
-                # If no given y-label, get name from file name / settings:
-                if ylabel is None:  # Find labels for additional data
-                    addName = plot_maker.title.split('-')[0].split('_')[1]
-                    if "DistanceMeans" in addName:
-                        newlabel = "Distance"
-                    else:
-                        temp = Sett.AddData.get(addName)
-                        if temp is None:
-                            newlabel = 'Cell Count'
-                        else:
-                            newlabel = temp[1]
-                    kws2.update({'ylabel': newlabel, 'value_str': newlabel})
-                kws2.update(kws)  # Update with kws passed to this function
-                plot_maker.plot_Data(func, savepath, **kws2)  # Plotting
-
-        def __heat(paths, samples=False):
-            """Create heatmaps of cell counts for each sample group."""
-            savepath = self._plotDir
-            fullData = pd.DataFrame()
-            # Loop through the given channels and read the data file. Each
-            # channel is concatenated to one dataframe for easier plotting.
-            for path in paths:
-                plotData, name, cntr = self.read_channel(path, self._groups)
-                # change each sample's group to be contained in its index
-                # within the dataframe.
-                if not samples:
-                    plotData.index = plotData.loc[:, 'Sample Group']
-                plotData.drop(labels='Sample Group', axis=1, inplace=True)
-                # Channel-variable is added for identification
-                plotData.loc[:, 'Channel'] = name
-                fullData = pd.concat([fullData, plotData], axis=0, copy=False)
-            # The plotting can't handle NaN's, so they are changed to zero.
-            fullData = fullData.replace(np.nan, 0)
-            if not samples:
-                name = "All Channels Heatmaps"
-            else:
-                name = "All Samples Channel Heatmaps"
-            # Initialize plotting-class, create kws, and plot all channel data.
-            plot_maker = plotter(fullData, self._plotDir, center=cntr,
-                                 title=name, palette=None)
-            kws = {'height': 3, 'aspect': 5, 'sharey': False, 'row': 'Channel',
-                   'title_y': 0.93, 'center': plot_maker.MPbin,
-                   'xlen': self._length, 'gridspec': {'hspace': 0.5}}
-            if samples:  # MAke height of plot dependant on sample size
-                val = fullData.index.unique().size / 2
-                kws.update({'height': val})
-            plot_maker.plot_Data(plotter.Heatmap, savepath, **kws)
-
-        def __versus(paths1, paths2=None, folder=None):
-            """Creation of bivariant jointplots."""
-            if folder:
-                savepath = self._plotDir.joinpath(folder)
-            else:
-                savepath = self._plotDir
-            savepath.mkdir(exist_ok=True)
-            # Pass given paths to a function that pairs each variable
-            self.Joint_looper(paths1, paths2, savepath)
-
-        def __pair():
-            """Create pairplot-grid, i.e. each channel vs each channel."""
-            allData = pd.DataFrame()
-            # Loop through all channels.
-            for path in self._dataDir.glob('ChanAvg_*'):
-                # Find whether to drop outliers and then read data
-                dropB = Sett.Drop_Outliers
-                plotData, __, cntr = self.read_channel(path, self._groups,
-                                                       drop=dropB)
-                # get channel name from path, and add identification ('Sample')
-                channel = str(path.stem).split('_')[1]
-#                plotData['Sample'] = plotData.index
-                # Change data into long form (one observation per row):
-                plotData = pd.melt(plotData, id_vars=['Sample Group'],
-                                   var_name='Longitudinal Position',
-                                   value_name=channel)
-                if allData.empty:
-                    allData = plotData
-                else:  # Merge data so that each row contains all channel
-                    # counts from one bin of one sample
-                    allData = allData.merge(plotData, how='outer', copy=False,
-                                            on=['Sample Group',
-                                                'Longitudinal Position'])
-            name = 'All Channels Pairplots'
-            # Initialize plotter, create plot keywords, and then create plots
-            plot_maker = plotter(allData, self._plotDir, title=name,
-                                 center=cntr, palette=self._grpPalette)
-            kws = {'hue': 'Sample Group', 'kind': 'reg', 'diag_kind': 'kde',
-                   'height': 3.5, 'aspect': 1, 'title_y': 1}
-            plot_maker.plot_Data(plotter.pairPlot, self._plotDir, **kws)
-
-        # def __nearestDist(): # !!!
-        #     """Create plots of average distance to nearest cell."""
-        #     # Find files containing calculated average distances
-        #     paths = self._dataDir.glob('Avg_DistanceMeans_*')
-        #     savepath = self._plotDir
-        #     # Loop the found files
-        #     for path in paths:
-        #         # Read data file, create plotter, update keywords, and plot
-        #         plotData, name, cntr = self.read_channel(path, self._groups)
-        #         plot_maker = plotter(plotData, self._plotDir, center=cntr,
-        #                              title=name, palette=self._grpPalette)
-        #         kws = {'centerline': plot_maker.MPbin, 'ylabel': 'Distance',
-        #                'title': plot_maker.title, 'xlen': self._length,
-        #                'title_y': 0.95}
-        #         kws.update(basekws)
-        #         plot_maker.plot_Data(plotter.linePlot, savepath, **kws)
-
-        def __distributions():
-            """Create density distribution plots of different data types."""
-            savepath = self._plotDir.joinpath('Distributions')
-            savepath.mkdir(exist_ok=True)
-            kws = {'hue': 'Sample Group', 'row': 'Sample Group', 'height': 5,
-                   'sharey': True, 'aspect': 1, 'title_y': 0.95,
-                   'gridspec': {'hspace': 0.4}}
-            ylabel = 'Density'
-            # Channels
-            print("Channels  ...")
-            for path in self._dataDir.glob('All_*'):
-                plotData, name, cntr = self.read_channel(path, self._groups)
-                plot_maker = plotter(plotData, self._plotDir, center=cntr,
-                                     title=name, palette=self._grpPalette)
-                xlabel = 'Cell Count'
-                kws.update({'id_str': 'Sample Group', 'var_str': xlabel,
-                            'ylabel': ylabel, 'value_str': ylabel})
-                plot_maker.plot_Data(plotter.distPlot, savepath, **kws)
-
-            # Additional data
-            for key in Sett.AddData.keys():
-                print("{}  ...".format(key))
-                ban = ['Group', 'Channel']
-                AllVals = pd.DataFrame(columns=[key, 'Group', 'Channel'])
-                paths = [p for s in self._samplePaths for p in s.glob('*.csv')
-                         if p.stem not in ['MPs', 'Vector']]
-                # read and concatenate all found data files:
-                for path in paths:
-                    try:
-                        data = system.read_data(path, header=0, test=False,
-                                                index_col=False)
-                        values = data.loc[:, data.columns.str.contains(key)]
-                        group = str(path.parent.name).split('_')[0]
-                        channel = str(path.stem)
-                        # Assign identification columns
-                        values = values.assign(Group=group, Channel=channel)
-                        for col in values.loc[:, ~values.columns.isin(ban)
-                                              ].columns:
-                            # If no variance, drop data
-                            if values.loc[:, col].nunique() == 1:
-                                values.loc[:, str(col)] = np.nan
-                        AllVals = pd.concat([AllVals, values], axis=0,
-                                            ignore_index=True, sort=True)
-                    except AttributeError:
-                        msg = 'AttributeError when handling'
-                        print('{} {}'.format(msg, path.name))
-                        lg.logprint(LAM_logger, msg, 'e')
-                # Find unit of data
-                xlabel = Sett.AddData.get(key)[1]
-                kws.update({'id_str': ['Group', 'Channel'], 'ylabel': ylabel,
-                            'var_str': xlabel, 'value_str': ylabel,
-                            'hue': 'Group', 'row': 'Group'})
-                # Go through data columns dropping NaN and plot each
-                for col in AllVals.loc[:, ~AllVals.columns.isin(ban)].columns:
-                    allData = AllVals.loc[:, ['Group', 'Channel',
-                                              col]].dropna()
-                    for plotChan in allData.Channel.unique():
-                        name = "{}_{}".format(plotChan, col)
-                        plotData = allData.loc[allData.Channel == plotChan, :]
-                        plot_maker = plotter(plotData, self._plotDir,
-                                             title=name,
-                                             palette=self._grpPalette)
-                        plot_maker.plot_Data(plotter.distPlot, savepath, **kws)
-
-        def __clusters():
-            """Handle data for cluster plots."""
-            # Find paths to sample-specific data based on found cluster data:
-            # Find cluster channels
-            clchans = [str(p.stem).split('-')[1] for p in
-                       self._dataDir.glob('Clusters-*.csv')]
-
-            # Creation of sample-specific position plots:
-            if clchans:
-                # Find all channels of each sample
-                chanpaths = [c for p in Samplegroups._samplePaths for c in
-                             p.glob('*.csv')]
-                # Find all channel paths relevant to cluster channels
-                clpaths = [p for c in clchans for p in chanpaths if
-                           p.name == "{}.csv".format(c)]
-                # Create directory for cluster plots
-                savepath = self._plotDir.joinpath('Clusters')
-                savepath.mkdir(exist_ok=True)
-                # Create sample-specific position plots:
-                for path in clpaths:
-                    data = system.read_data(path, header=0, test=False)
-                    if 'ClusterID' in data.columns:
-                        name = "{} clusters {}".format(path.parts[-2],
-                                                       path.stem)
-                        plot_maker = plotter(data, savepath, title=name)
-                        plot_maker.clustPlot()
-            else:
-                msg = 'No cluster count files found (Clusters_*)'
-                print('WARNING: {}'.format(msg))
-                lg.logprint(LAM_logger, msg, 'w')
-
-            # Creation of cluster heatmaps:
-            paths = list(self._dataDir.glob('ClNorm_*.csv'))
-            if paths:  # Only if cluster data is found
-                fullData = pd.DataFrame()
-                for path in paths:  # Read all cluster data and concatenate
-                    channel = str(path.stem).split('_')[1]
-                    data = system.read_data(path, header=0, test=False).T
-                    # Alter DF index to contain sample groups
-                    data.index = data.index.map(lambda x: str(x).split('_')[0])
-                    groups = data.index.unique()
-                    for grp in groups:  # for each group:
-                        # find means of each bin
-                        temp = data.loc[data.index == grp, :]
-                        avgs = temp.mean(axis=0, numeric_only=True,
-                                         skipna=True)
-                        # Add channel identification
-                        avgs['Channel'] = channel
-                        avgs.rename(grp, inplace=True)
-                        # Append the averages and channel to full data
-                        fullData = fullData.append(avgs.to_frame().T)
-                # The plotting can't handle NaN's, so they are changed to zero.
-                fullData = fullData.replace(np.nan, 0)
-                # Initialize plotting-class and plot all channel data.
-                name = "All Cluster Heatmaps"
-                cntr = Samplegroups._center
-                # Plotting
-                plot_maker = plotter(fullData, self._plotDir, center=cntr,
-                                     title=name, palette=None)
-                kws = {'height': 3, 'aspect': 5, 'gridspec': {'hspace': 0.5},
-                       'row': 'Channel', 'title_y': 1.05, 'sharey': False,
-                       'center': plot_maker.MPbin, 'xlen': self._length}
-                plot_maker.plot_Data(plotter.Heatmap, savepath.parent, **kws)
-            else:  # When no cluster data is found
-                msg = 'No normalized cluster count files found (ClNorm_*)'
-                print('WARNING: {}'.format(msg))
-                lg.logprint(LAM_logger, msg, 'w')
 
         # If no plots handled by this method are True, return
         plots = [Sett.Create_Channel_Plots, Sett.Create_AddData_Plots,
@@ -853,27 +562,32 @@ class Sample(Group):
         """Calculate cell-to-cell distances or find clusters."""
         def __get_nearby(ind, row, target, maxDist, rmv_self=False):
             """Within an iterator, find all cells near the current cell."""
+            point = CG3dPoint(row.x, row.y, row.z)
             # When finding nearest in the same channel, remove the current
             # cell from the frame, otherwise nearest cell would be itself.
             if rmv_self:
                 target = target.loc[target.index.difference([ind]), :]
-            # Find cells within the accepted limits (Sett.maxDist)
-            nID = target[((abs(target.x - row.x) <= maxDist) &
-                          (abs(target.y - row.y) <= maxDist))].index
-            if nID.size == 0:
-                return None
-            point = np.asarray([row.at['x'], row.at['y'], row.at['z']])
-            point = np.reshape(point, (-1, 3))
-            r_df = pd.DataFrame(index=nID, columns=['XYZ', 'Dist', 'ID'])
-            r_df['Dist'] = distance.cdist(point, target.loc[
-                nID, ['x', 'y', 'z']].to_numpy(), 'euclidean').ravel()
-            r_df = r_df[r_df.Dist <= maxDist]
-            if r_df.empty:
-                return None
-            r_df['XYZ'] = target.loc[nID, ['x', 'y', 'z']].apply(tuple,
-                                                                 axis=1)
-            r_df['ID'] = target.loc[r_df.index, 'ID']
-            return r_df
+                # Find cells within the accepted limits (Sett.maxDist)
+            near = target[((abs(target.x - row.x) <= maxDist) &
+                           (abs(target.y - row.y) <= maxDist) &
+                           (abs(target.z - row.z) <= maxDist))].index
+            if not near.empty:  # Then get distances to nearby cells:
+                cols = ['XYZ', 'Dist', 'ID']
+                nearby = pd.DataFrame(columns=cols)
+                # Loop through the nearby cells
+                for i2, row2 in target.loc[near, :].iterrows():
+                    point2 = CG3dPoint(row2.x, row2.y, row2.z)
+                    # Distance from the first cell to the second
+                    dist = utils.distance(point, point2)
+                    if dist <= maxDist:  # If distance is OK, store data
+                        temp = pd.Series([(row2.x, row2.y, row2.z), dist,
+                                          row2.ID], index=cols, name=i2)
+                        nearby = nearby.append(temp, ignore_index=True)
+                # if there are cells nearby, return data
+                if not nearby.empty:
+                    return nearby
+            # If no nearby cells, return with None
+            return None
 
         def __find_clusters():
             """Find cluster 'seeds' and merge to create full clusters."""
@@ -943,9 +657,7 @@ class Sample(Group):
             # Get bin and distance to nearest cell for each cell, calculate
             # average distance within each bin.
             binnedData = NewData.loc[:, 'DistBin']
-            distances = NewData.loc[:, cols[1]]
-            if self.name == 'fed_fed2': # !!! remove
-                print(distances)
+            distances = NewData.loc[:, cols[1]].astype('float64')
             with warnings.catch_warnings():
                 warnings.simplefilter('ignore', category=RuntimeWarning)
                 means = [np.nanmean(distances[binnedData.values == k]) for k in
