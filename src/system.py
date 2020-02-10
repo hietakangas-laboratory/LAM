@@ -8,6 +8,7 @@ Created on Wed Mar  6 12:42:28 2019
 """
 # Standard libraries
 import inspect
+import re
 import shutil
 from tkinter import simpledialog as sd
 # Other packages
@@ -151,3 +152,30 @@ def start():
     store.samples = [p.name for p in PATHS.samplesdir.iterdir() if
                      p.is_dir()]
     return PATHS
+
+
+def test_vector_ext(dir_path):
+    """Test if vectors exist and ask permission to remove."""
+    # Get all existing sample output folders
+    samples = iter([p for p in dir_path.iterdir() if p.is_dir()])
+    if samples is None:  # if no pre-made samples found, continue analysis
+        return
+    # Loop samples and find any vector file:
+    for smpl in samples:
+        test = any([re.match(re.compile(".*vector.*", re.I), str(p.name)) for p
+                    in smpl.glob('*')])
+        # If a vector file is found, ask permission to remove:
+        if test:
+            flag = 1
+            msg = "Pre-existing vectors will be cleared. Continue? [y/n]"
+            while flag:
+                ans = sd.askstring(title="Dialog", prompt=msg)
+                if ans in ("y", "Y"):
+                    flag = 0
+                    return
+                elif ans in ("n", "N"):
+                    flag = 0
+                    print('Analysis terminated')
+                    raise KeyboardInterrupt
+                else:
+                    print('Command not understood.')

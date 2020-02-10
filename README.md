@@ -1,30 +1,33 @@
 # Longitudinal Analysis of Midgut
 ### ---------------LAM v1.0---------------
 
-Longitudinal Analysis of Midgut (LAM) is a tool for reducing the dimensionality of microscopy
-image–obtained data, and for subsequent quantification of variables and feature counts while
-preserving regional context. LAM’s intended use is to analyze whole Drosophila melanogaster
-midguts or their sub-regions for phenotypical variation due to differing nutrition, altered
-genetics, etc. Key functionality is to provide statistical and comparative analysis of
-variables along the whole length of the midgut for multiple sample groups. Additionally, LAM
-has algorithms for the estimation of feature-to-feature nearest distances and for the detection
-of cell clusters, both of which also retain the regional context. The analysis is performed
-after image processing and feature detection. Consequently, LAM requires coordinate data of
-the features as input.
+Longitudinal Analysis of Midgut (LAM) is a tool for reducing the dimensionality
+of microscopy image–obtained data, and for subsequent quantification of
+variables and feature counts while preserving regional context. LAM’s intended
+use is to analyze whole Drosophila melanogaster midguts or their sub-regions for
+phenotypical variation due to differing nutrition, altered genetics, etc. Key
+functionality is to provide statistical and comparative analysis of variables
+along the whole length of the midgut for multiple sample groups. Additionally,
+LAM has algorithms for the estimation of feature-to-feature nearest distances
+and for the detection of cell clusters, both of which also retain the regional
+context. The analysis is performed after image processing and feature detection.
+Consequently, LAM requires coordinate data of the features as input.
 
 ### Installation
-LAM is used in Python 3.7=> environment. The distribution includes requirements.txt and
-environment.yml that both contain names and version numbers of LAM dependencies.
+LAM is used in Python 3.6=> environment. The distribution includes
+requirements.txt and environment.yml that both contain names and version numbers
+of LAM dependencies.
 
 ### Usage
-LAM is used by executing 'LAM-master\src\run.py', which by default opens up a graphical user
-interface. Refer to 'LAM-master\UserManual.pdf' for additional information.
+LAM is used by executing 'src/run.py', which by default opens up a graphical
+user interface. Refer to 'docs\UserManual.pdf' for additional information.
 
 ### Test data
-The LAM-master\data-directory includes a small test data set of three sample groups with three
-samples each. Note that the sample number is not enough for a proper analysis; in ideal
-circumstances, it is recommended that each sample group should have >=10 samples. Refer to
-'LAM-master\UserManual.pdf' for additional information.
+The 'data/'-directory includes a small test data set of three sample groups with
+three samples each. Note that the sample number is not enough for a proper
+analysis; in ideal circumstances, it is recommended that each sample group
+should have >=10 samples. Refer to 'docs/UserManual.pdf' for additional
+information.
 
 ### Authors
 

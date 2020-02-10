@@ -857,7 +857,7 @@ class Sample(Group):
             # cell from the frame, otherwise nearest cell would be itself.
             if rmv_self:
                 target = target.loc[target.index.difference([ind]), :]
-                # Find cells within the accepted limits (Sett.maxDist)
+            # Find cells within the accepted limits (Sett.maxDist)
             near = target[((abs(target.x - row.x) <= maxDist) &
                            (abs(target.y - row.y) <= maxDist) &
                            (abs(target.z - row.z) <= maxDist))].index
