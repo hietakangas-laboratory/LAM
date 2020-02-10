@@ -17,6 +17,7 @@ import pathlib as pl
 from pycg3d.cg3d_point import CG3dPoint
 from pycg3d import utils
 import seaborn as sns
+from scipy.spatial import distance
 # LAM imports
 import system
 import process
@@ -852,32 +853,25 @@ class Sample(Group):
         """Calculate cell-to-cell distances or find clusters."""
         def __get_nearby(ind, row, target, maxDist, rmv_self=False):
             """Within an iterator, find all cells near the current cell."""
-            point = CG3dPoint(row.x, row.y, row.z)
+            point = np.asarray([row.at['x'], row.at['y'], row.at['z']]).T
             # When finding nearest in the same channel, remove the current
             # cell from the frame, otherwise nearest cell would be itself.
             if rmv_self:
                 target = target.loc[target.index.difference([ind]), :]
-                # Find cells within the accepted limits (Sett.maxDist)
+            # Find cells within the accepted limits (Sett.maxDist)
             near = target[((abs(target.x - row.x) <= maxDist) &
-                           (abs(target.y - row.y) <= maxDist) &
-                           (abs(target.z - row.z) <= maxDist))].index
-            if not near.empty:  # Then get distances to nearby cells:
-                cols = ['XYZ', 'Dist', 'ID']
-                nearby = pd.DataFrame(columns=cols)
-                # Loop through the nearby cells
-                for i2, row2 in target.loc[near, :].iterrows():
-                    point2 = CG3dPoint(row2.x, row2.y, row2.z)
-                    # Distance from the first cell to the second
-                    dist = utils.distance(point, point2)
-                    if dist <= maxDist:  # If distance is OK, store data
-                        temp = pd.Series([(row2.x, row2.y, row2.z), dist,
-                                          row2.ID], index=cols, name=i2)
-                        nearby = nearby.append(temp, ignore_index=True)
-                # if there are cells nearby, return data
-                if not nearby.empty:
-                    return nearby
-            # If no nearby cells, return with None
-            return None
+                            (abs(target.y - row.y) <= maxDist))].index
+            if near.size == 0:
+                return None
+            df_near = target.loc[near, ['x', 'y', 'z']]
+            df_near.loc[:, 'dists'] = distance.cdist(point, df_near.to_numpy(),
+                                                     'euclidean')
+            df_near.where(df_near.dists <= maxDist, np.nan, inplace=True
+                          ).dropna(subset='dists', inplace=True)
+            if df_near.empty:
+                return None
+            df_near['XYZ'] = df_near[['x', 'y', 'z']].apply(tuple())
+            return df_near
 
         def __find_clusters():
             """Find cluster 'seeds' and merge to create full clusters."""
