@@ -100,6 +100,7 @@ def main():
     # If sample processing set to True, create vectors, collect and project
     # data etc. Otherwise continue to plotting and group-wise operations.
     if Sett.process_samples:
+        system.test_vector_ext(system_paths.samplesdir)
         process.Create_Samples(system_paths)
         # If only creating vectors, return from main()
         if not any([Sett.process_counts, Sett.process_dists,

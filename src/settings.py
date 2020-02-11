@@ -24,13 +24,13 @@ class settings:
     process_samples = False  # CLEARS DATA FILES-DIRECTORY
     # Whether to project, count and normalize data. If set to False, expect all
     # data to be in place. Can be used to e.g. create additional plots faster.
-    process_counts = True
+    process_counts = False
     # Whether to compute average distances and clusters.
-    process_dists = False
+    process_dists = True
     # Set True/False to set all plotting functionalities ON/OFF
-    Create_Plots = True     # ON / OFF switch for plots
+    Create_Plots = False     # ON / OFF switch for plots
     # Whether to calculate statistics
-    statistics = True
+    statistics = False
     ##################################################################
 
     # -#-#-#-#-#-#-#-# VECTOR CREATION & PROJECTION #-#-#-#-#-#-#-#-#- #
@@ -96,7 +96,7 @@ class settings:
     # cell is found on the channel defined by target_chan, otherwise they are
     # found within the channel undergoing analysis.
     Find_Distances = True
-    Distance_Channels = ["GFP"]  # , "DAPI"]
+    Distance_Channels = ["DAPI"]
     use_target = False
     target_chan = "Pros"
     # The maximum distance the nearest cell will be looked at. Increase is
@@ -179,7 +179,7 @@ class settings:
     # (xkcd colors: 'https://xkcd.com/color/rgb/')
     palette_colors = ['orange yellow', 'aqua marine', 'tomato', 'dark lime',
                       'tan brown', 'red violet', 'dusty green', 'sandy brown']
-    non_stdout = True  # Redirect stdout to a window when using executable
+    non_stdout = False  # Redirect stdout to a window when using executable
 
 
 class store:

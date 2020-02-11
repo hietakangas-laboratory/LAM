@@ -931,21 +931,19 @@ class Sample(Group):
                 filename = 'Avg_{}_Distance Means.csv'.format(Data.name)
             cols = ['Nearest_XYZ_{}'.format(comment), 'Nearest_Dist_{}'.format(
                     comment), 'Nearest_ID_{}'.format(comment)]
-            pointData = pd.DataFrame(columns=cols, index=XYpos.index)
+            NewData = pd.DataFrame(columns=cols, index=XYpos.index)
             # Iterate over each cell (row) in the data
             for i, row in XYpos.iterrows():
                 nearby = __get_nearby(i, row, target, maxDist, rmv_self=rmv)
                 if nearby is not None:
-                    nearest = nearby.Dist.idxmin()
-                    pointData.loc[i, cols] = nearby.loc[nearest].values
+                    NewData.loc[i, cols] = nearby.loc[nearby.Dist.idxmin()
+                                                      ].to_list()
             # Concatenate the obtained data with the read data.
-            NewData = pd.concat([Data, pointData], axis=1)
+            NewData = pd.concat([Data, NewData], axis=1)
             # Get bin and distance to nearest cell for each cell, calculate
             # average distance within each bin.
             binnedData = NewData.loc[:, 'DistBin']
-            distances = NewData.loc[:, cols[1]]
-            if self.name == 'fed_fed2': # !!! remove
-                print(distances)
+            distances = NewData.loc[:, cols[1]].astype('float64')
             with warnings.catch_warnings():
                 warnings.simplefilter('ignore', category=RuntimeWarning)
                 means = [np.nanmean(distances[binnedData.values == k]) for k in
