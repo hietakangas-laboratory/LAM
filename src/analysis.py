@@ -14,8 +14,6 @@ from tkinter import simpledialog as sd
 # Other packages
 import numpy as np
 import pathlib as pl
-from pycg3d.cg3d_point import CG3dPoint
-from pycg3d import utils
 import seaborn as sns
 from scipy.spatial import distance
 # LAM imports
@@ -100,7 +98,7 @@ class Samplegroups:
                 retPaths.extend(selected)  # Add found paths to list
             return retPaths
 
-        def __base(paths, func, ylabel='Cell Count', name_sep=1,
+        def _base(paths, func, ylabel='Cell Count', name_sep=1,
                    **kws):
             """
             General plotting for LAM, i.e. variable on y-axis, and bins on x.
@@ -131,7 +129,7 @@ class Samplegroups:
                 # If no given y-label, get name from file name / settings:
                 if ylabel is None:  # Find labels for additional data
                     addName = plot_maker.title.split('-')[0].split('_')[1]
-                    if "DistanceMeans" in addName:
+                    if "Distance Means" in addName:
                         newlabel = "Distance"
                     else:
                         temp = Sett.AddData.get(addName)
@@ -143,7 +141,7 @@ class Samplegroups:
                 kws2.update(kws)  # Update with kws passed to this function
                 plot_maker.plot_Data(func, savepath, **kws2)  # Plotting
 
-        def __heat(paths, samples=False):
+        def _heat(paths, samples=False):
             """Create heatmaps of cell counts for each sample group."""
             savepath = self._plotDir
             fullData = pd.DataFrame()
@@ -176,7 +174,7 @@ class Samplegroups:
                 kws.update({'height': val})
             plot_maker.plot_Data(plotter.Heatmap, savepath, **kws)
 
-        def __versus(paths1, paths2=None, folder=None):
+        def _versus(paths1, paths2=None, folder=None):
             """Creation of bivariant jointplots."""
             if folder:
                 savepath = self._plotDir.joinpath(folder)
@@ -186,7 +184,7 @@ class Samplegroups:
             # Pass given paths to a function that pairs each variable
             self.Joint_looper(paths1, paths2, savepath)
 
-        def __pair():
+        def _pair():
             """Create pairplot-grid, i.e. each channel vs each channel."""
             allData = pd.DataFrame()
             # Loop through all channels.
@@ -234,7 +232,7 @@ class Samplegroups:
         #         kws.update(basekws)
         #         plot_maker.plot_Data(plotter.linePlot, savepath, **kws)
 
-        def __distributions():
+        def _distributions():
             """Create density distribution plots of different data types."""
             savepath = self._plotDir.joinpath('Distributions')
             savepath.mkdir(exist_ok=True)
@@ -298,7 +296,7 @@ class Samplegroups:
                                              palette=self._grpPalette)
                         plot_maker.plot_Data(plotter.distPlot, savepath, **kws)
 
-        def __clusters():
+        def _clusters():
             """Handle data for cluster plots."""
             # Find paths to sample-specific data based on found cluster data:
             # Find cluster channels
@@ -382,28 +380,28 @@ class Samplegroups:
         if Sett.Create_Channel_Plots:  # Plot channels
             lg.logprint(LAM_logger, 'Plotting channels', 'i')
             print('Plotting channels  ...')
-            __base(self._chanPaths, plotter.boxPlot)
+            _base(self._chanPaths, plotter.boxPlot)
             lg.logprint(LAM_logger, 'Channel plots done.', 'i')
 
         if Sett.Create_AddData_Plots:  # Plot additional data
             lg.logprint(LAM_logger, 'Plotting additional data', 'i')
             print('Plotting additional data  ...')
-            __base(self._addData, plotter.linePlot, ylabel=None)
+            _base(self._addData, plotter.linePlot, ylabel=None)
             lg.logprint(LAM_logger, 'Additional data plots done.', 'i')
 
         if Sett.Create_Channel_PairPlots:  # Plot pair plot
             lg.logprint(LAM_logger, 'Plotting channel pairs', 'i')
             print('Plotting channel pairs  ...')
-            __pair()
+            _pair()
             lg.logprint(LAM_logger, 'Channel pairs done.', 'i')
 
         if Sett.Create_Heatmaps:  # Plot channel heatmaps
             lg.logprint(LAM_logger, 'Plotting heatmaps', 'i')
             print('Plotting heatmaps  ...')
             HMpaths = self._dataDir.glob("ChanAvg_*")
-            __heat(HMpaths)  # Sample groups
+            _heat(HMpaths)  # Sample groups
             HMpaths = self._dataDir.glob("Norm_*")
-            __heat(HMpaths, samples=True)  # Sample-specific
+            _heat(HMpaths, samples=True)  # Sample-specific
             lg.logprint(LAM_logger, 'Heatmaps done.', 'i')
 
         if Sett.Create_ChanVSAdd_Plots:  # Plot channels
@@ -411,32 +409,32 @@ class Samplegroups:
             print('Plotting channel VS additional data  ...')
             paths1 = _select(self._chanPaths, adds=False)
             paths2 = _select(self._addData)
-            __versus(paths1, paths2, 'Chan VS AddData')
+            _versus(paths1, paths2, 'Chan VS AddData')
             lg.logprint(LAM_logger, 'Channel VS additional data done.', 'i')
 
         if Sett.Create_AddVSAdd_Plots:  # Plot additional data against self
             lg.logprint(LAM_logger, 'Plotting add. data vs add. data', 'i')
             print('Plotting additional data VS additional data  ...')
             paths = _select(self._addData)
-            __versus(paths, folder='AddData VS AddData')
+            _versus(paths, folder='AddData VS AddData')
             lg.logprint(LAM_logger, 'additional data VS additional data done',
                         'i')
 
         if Sett.Create_Distribution_Plots:  # Plot distributions
             lg.logprint(LAM_logger, 'Plotting distributions', 'i')
             print('-Distributions-')
-            __distributions()
+            _distributions()
             lg.logprint(LAM_logger, 'Distributions done', 'i')
 
         if Sett.Create_Cluster_Plots:  # Plot cluster data
             lg.logprint(LAM_logger, 'Plotting clusters', 'i')
             print('Plotting clusters  ...')
-            __clusters()  # Plots specific to clusters
+            _clusters()  # Plots specific to clusters
             kws = {'ylabel': 'Clustered Cells'}
             paths = list(self._dataDir.glob('ClNorm_*'))
             if paths:  # Plotting of regular count plots for clusters
                 lg.logprint(LAM_logger, 'Plotting cluster counts', 'i')
-                __base(paths, plotter.boxPlot, **kws)
+                _base(paths, plotter.boxPlot, **kws)
                 lg.logprint(LAM_logger, 'Clusters done', 'i')
             else:
                 print('No cluster files found')
@@ -851,7 +849,7 @@ class Sample(Group):
     def find_distances(self, Data, volIncl=200, compare='smaller',
                        clusters=False, **kws):
         """Calculate cell-to-cell distances or find clusters."""
-        def __get_nearby(ind, row, target, maxDist, rmv_self=False):
+        def _get_nearby(ind, row, target, maxDist, rmv_self=False):
             """Within an iterator, find all cells near the current cell."""
             # When finding nearest in the same channel, remove the current
             # cell from the frame, otherwise nearest cell would be itself.
@@ -862,20 +860,26 @@ class Sample(Group):
                           (abs(target.y - row.y) <= maxDist))].index
             if nID.size == 0:
                 return None
+            # Get coordinate data of current cell
             point = np.asarray([row.at['x'], row.at['y'], row.at['z']])
             point = np.reshape(point, (-1, 3))
+            # DF for storing nearby cells
             r_df = pd.DataFrame(index=nID, columns=['XYZ', 'Dist', 'ID'])
+            # Calculate distances to each nearby cell
+            # NOTE: z-distance is also taken into account at this step
             r_df['Dist'] = distance.cdist(point, target.loc[
                 nID, ['x', 'y', 'z']].to_numpy(), 'euclidean').ravel()
+            # Drop data that is more distant than the max distance
             r_df = r_df[r_df.Dist <= maxDist]
-            if r_df.empty:
+            if r_df.empty:  # If no cells are close enough
                 return None
+            # Otherwise, insert coordinates and cell ID to DF
             r_df['XYZ'] = target.loc[nID, ['x', 'y', 'z']].apply(tuple,
                                                                  axis=1)
             r_df['ID'] = target.loc[r_df.index, 'ID']
             return r_df
 
-        def __find_clusters():
+        def _find_clusters():
             """Find cluster 'seeds' and merge to create full clusters."""
             def __merge(Seeds):
                 """Merge seeds that share cells."""
@@ -898,7 +902,7 @@ class Sample(Group):
             clusterSeed = {}  # For storing cluster 'seeds'
             for i, row in XYpos.iterrows():  # Iterate over all cells
                 # Find nearby cells
-                nearby = __get_nearby(i, row, XYpos, maxDist)
+                nearby = _get_nearby(i, row, XYpos, maxDist)
                 # If nearby cells, make a list of their IDs and add to seeds
                 if nearby is not None:
                     if nearby.shape[0] > 1:
@@ -914,10 +918,10 @@ class Sample(Group):
                         Sett.Cl_min and len(y) <= Sett.Cl_max]
             return Clusters
 
-        def __find_nearest():
+        def _find_nearest():
             """Iterate passed data to determine nearby cells."""
             maxDist = kws.get('Dist')  # distance used for subsetting target
-            # If distances are found on other channel:
+            # If distances are found to features on another channel:
             if 'targetXY' in locals():
                 target = targetXY
                 comment = Sett.target_chan
@@ -929,15 +933,39 @@ class Sample(Group):
                 rmv = True
                 comment = Data.name
                 filename = 'Avg_{}_Distance Means.csv'.format(Data.name)
+            # Creation of DF to store found data (later concatenated to data)
             cols = ['Nearest_XYZ_{}'.format(comment), 'Nearest_Dist_{}'.format(
                     comment), 'Nearest_ID_{}'.format(comment)]
             NewData = pd.DataFrame(columns=cols, index=XYpos.index)
-            # Iterate over each cell (row) in the data
-            for i, row in XYpos.iterrows():
-                nearby = __get_nearby(i, row, target, maxDist, rmv_self=rmv)
-                if nearby is not None:
-                    NewData.loc[i, cols] = nearby.loc[nearby.Dist.idxmin()
-                                                      ].to_list()
+            # If not finding nearest on other channel, search distance can be
+            # limited if current cell has already been found to be near another
+            # -> we know there's a cell at least at that distance
+            if 'targetXY' not in locals():
+                found_ids = {}  # Stores the IDs already found
+                # Iterate over each cell (row) in the data
+                for i, row in XYpos.iterrows():
+                    find_dist = maxDist
+                    # Search if cell ID already used
+                    if row.at['ID'] in found_ids.keys():
+                        find_dist = found_ids.get(row.at['ID'])  # Limit dist
+                    # Find nearby cells
+                    nearby = _get_nearby(i, row, target, find_dist,
+                                         rmv_self=rmv)
+                    # If some are found:
+                    if nearby is not None:
+                        min_idx = nearby.Dist.idxmin()  # Find nearest of cells
+                        row2 = nearby.loc[min_idx]  # Get data of cell
+                        # Update ID to the 'founds'
+                        found_ids.update({row2.at['ID']: row2.at['Dist']})
+                        # Insert cell data to the storage DF
+                        NewData.loc[i, cols] = row2.to_list()
+            else:  # If cells are found on another channel:
+                # Iterate each cell and find nearest at the user-defined dist
+                for i, row in XYpos.iterrows():
+                    nearby = _get_nearby(i, row, target, maxDist, rmv_self=rmv)
+                    if nearby is not None:
+                        NewData.loc[i, cols] = nearby.loc[nearby.Dist.idxmin()
+                                                          ].to_list()
             # Concatenate the obtained data with the read data.
             NewData = pd.concat([Data, NewData], axis=1)
             # Get bin and distance to nearest cell for each cell, calculate
@@ -973,14 +1001,14 @@ class Sample(Group):
                                         'Position Z', 'ID']]
             targetXY.rename(columns=renames, inplace=True)
         if not clusters:  # Finding nearest distances
-            NewData, Means, filename = __find_nearest()
-            Means = pd.Series(Means, name=self.name)
-            insert, _ = process.relate_data(Means, self.MP, self._center,
+            NewData, Means, filename = _find_nearest()
+            SMeans = pd.Series(Means, name=self.name)
+            insert, _ = process.relate_data(SMeans, self.MP, self._center,
                                             self._length)
-            SMeans = pd.Series(data=insert, name=self.name)
-            system.saveToFile(SMeans, self._dataDir, filename)
+            IMeans = pd.Series(data=insert, name=self.name)
+            system.saveToFile(IMeans, self._dataDir, filename)
         else:  # Finding clusters
-            Clusters = __find_clusters()
+            Clusters = _find_clusters()
             # Create dataframe for storing the obtained data
             clustData = pd.DataFrame(index=Data.index, columns=['ID',
                                                                 'ClusterID'])
