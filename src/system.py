@@ -109,6 +109,11 @@ def read_data(filepath, header=Sett.header_row, test=True, index_col=False):
         print("WARNING: {}".format(msg))
         lg.logprint(LAM_logger, msg, 'w')
         return data
+    except pd.errors.ParserError:
+        msg = "{} cannot be read.".format(filepath)
+        print("ERROR: {}".format(msg))
+        print("\nWrong header row?")
+        lg.logprint(LAM_logger, msg, 'ex')
     return data
 
 

@@ -84,7 +84,7 @@ class base_GUI(tk.Toplevel):
         PlotV = tk.BooleanVar(value=Sett.Create_Plots)
         StatsV = tk.BooleanVar(value=Sett.statistics)
         MPV = tk.BooleanVar(value=Sett.useMP)
-        Proj = tk.BooleanVar(value=Sett.useMP)
+        Proj = tk.BooleanVar(value=Sett.project)
         self.pSample = tk.Checkbutton(self.midf, text="Process",
                                       variable=SampleV, relief='groove', bd=4,
                                       font=('Arial', 8, 'bold'),
@@ -465,6 +465,7 @@ class base_GUI(tk.Toplevel):
         else:
             self.lblMP.configure(state='normal')
             self.MPIn.configure(state='normal')
+        Sett.useMP = MPV.get()
 
     def Target_check(self):
         """Relevant changes when target-setting is checked."""
@@ -544,6 +545,7 @@ class base_GUI(tk.Toplevel):
             self.lblHead.configure(state='normal')
             self.HeadIn.configure(state='normal')
             self.pProj.configure(state='normal')
+        self.MP_check()
         self.run_check()
 
     def browse_button(self):

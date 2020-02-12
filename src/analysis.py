@@ -98,8 +98,7 @@ class Samplegroups:
                 retPaths.extend(selected)  # Add found paths to list
             return retPaths
 
-        def _base(paths, func, ylabel='Cell Count', name_sep=1,
-                   **kws):
+        def _base(paths, func, ylabel='Cell Count', name_sep=1, **kws):
             """
             General plotting for LAM, i.e. variable on y-axis, and bins on x.
 
@@ -166,10 +165,10 @@ class Samplegroups:
             # Initialize plotting-class, create kws, and plot all channel data.
             plot_maker = plotter(fullData, self._plotDir, center=cntr,
                                  title=name, palette=None)
-            kws = {'height': 3, 'aspect': 5, 'sharey': False, 'row': 'Channel',
-                   'title_y': 0.93, 'center': plot_maker.MPbin,
-                   'xlen': self._length, 'gridspec': {'hspace': 0.5}}
-            if samples:  # MAke height of plot dependant on sample size
+            kws = {'height': 3, 'aspect': 5, 'row': 'Channel', 'title_y': 0.93,
+                   'center': plot_maker.MPbin, 'xlen': self._length,
+                   'vmax': None, 'gridspec': {'hspace': 0.5}, 'sharey': False}
+            if samples:  # Make height of plot dependant on sample size
                 val = fullData.index.unique().size / 2
                 kws.update({'height': val})
             plot_maker.plot_Data(plotter.Heatmap, savepath, **kws)
@@ -295,6 +294,49 @@ class Samplegroups:
                                              title=name,
                                              palette=self._grpPalette)
                         plot_maker.plot_Data(plotter.distPlot, savepath, **kws)
+                        
+        def _distributions2():
+            kws = {'hue': 'Sample Group', 'row': 'variable', 'col': 'Channel',
+                   'title_y': 0.95, 'gridspec': {'hspace': 0.7, 'wspace': 0.5},
+                   'sharey': False, 'sharex': False, 'height': 5, 'aspect':1}
+
+            AllData = pd.DataFrame()
+            for path in self._dataDir.glob('All_*'):
+                data, name, _ = self.read_channel(path, self._groups)
+                melt_data = pd.melt(data, id_vars='Sample Group')
+                melt_data.loc[:, 'variable'] = 'Feature count'
+                melt_data.loc[:, 'Channel'] = name
+                AllData = pd.concat([AllData, melt_data])
+            del data, melt_data
+            AllData = AllData[~AllData['Channel'].str.contains("R2R3")]
+            AllData = AllData[~AllData['Channel'].str.contains("R3R4")]
+            AllData = AllData[~AllData['Channel'].str.contains("R4R5")]
+            for key in Sett.AddData.keys():
+                paths = [p for s in self._samplePaths for p in s.glob('*.csv')
+                          if p.stem not in ['MPs', 'Vector', "R2R3", "R3R4", "R4R5"]]
+                # read and concatenate all found data files:
+                for path in paths:
+                    data = system.read_data(path, header=0, test=False,
+                                            index_col=False)
+                    if not any(data.columns.str.contains(key)):
+                        continue
+                    values = data.loc[:, data.columns.str.contains(key)].copy()
+                    group = path.parent.name.split('_')[0]
+                    # Assign identification columns
+                    values.loc[:, 'Sample Group'] = group
+                    values.loc[:, 'Channel'] = path.stem
+                    # for col in values.loc[:, ~values.columns.isin(
+                    #         ['Sample Group','Channel'])].columns:
+                    #     # If no variance, drop data
+                    #     if values.loc[:, col].nunique() == 1:
+                    #         values.drop(col, axis=1, inplace=True)
+                    melt_data = pd.melt(values, id_vars=['Channel', 'Sample Group'])
+                    AllData = pd.concat([AllData, melt_data], sort=False)
+            plot_name = "All Distributions"
+            plot_maker = plotter(AllData, self._plotDir, title=plot_name,
+                                 palette=self._grpPalette)
+            savepath = self._plotDir
+            plot_maker.distPlot(savepath, **kws)
 
         def _clusters():
             """Handle data for cluster plots."""
@@ -423,7 +465,7 @@ class Samplegroups:
         if Sett.Create_Distribution_Plots:  # Plot distributions
             lg.logprint(LAM_logger, 'Plotting distributions', 'i')
             print('-Distributions-')
-            _distributions()
+            _distributions2()
             lg.logprint(LAM_logger, 'Distributions done', 'i')
 
         if Sett.Create_Cluster_Plots:  # Plot cluster data
@@ -856,28 +898,6 @@ class Sample(Group):
             if rmv_self:
                 target = target.loc[target.index.difference([ind]), :]
             # Find cells within the accepted limits (Sett.maxDist)
-<<<<<<< HEAD
-            near = target[((abs(target.x - row.x) <= maxDist) &
-                           (abs(target.y - row.y) <= maxDist) &
-                           (abs(target.z - row.z) <= maxDist))].index
-            if not near.empty:  # Then get distances to nearby cells:
-                cols = ['XYZ', 'Dist', 'ID']
-                nearby = pd.DataFrame(columns=cols)
-                # Loop through the nearby cells
-                for i2, row2 in target.loc[near, :].iterrows():
-                    point2 = CG3dPoint(row2.x, row2.y, row2.z)
-                    # Distance from the first cell to the second
-                    dist = utils.distance(point, point2)
-                    if dist <= maxDist:  # If distance is OK, store data
-                        temp = pd.Series([(row2.x, row2.y, row2.z), dist,
-                                          row2.ID], index=cols, name=i2)
-                        nearby = nearby.append(temp, ignore_index=True)
-                # if there are cells nearby, return data
-                if not nearby.empty:
-                    return nearby
-            # If no nearby cells, return with None
-            return None
-=======
             nID = target[((abs(target.x - row.x) <= maxDist) &
                           (abs(target.y - row.y) <= maxDist))].index
             if nID.size == 0:
@@ -900,7 +920,6 @@ class Sample(Group):
                                                                  axis=1)
             r_df['ID'] = target.loc[r_df.index, 'ID']
             return r_df
->>>>>>> dist_revamp
 
         def _find_clusters():
             """Find cluster 'seeds' and merge to create full clusters."""

@@ -263,7 +263,7 @@ class plotter:
         # Giving a title and then saving the plot
         plt.suptitle(self.title, weight='bold', y=kws.get('title_y'))
         filepath = savepath.joinpath(self.title + self.ext)
-        fig = fig = plt.gcf()
+        fig = plt.gcf()
         fig.savefig(str(filepath), format=self.format)
         plt.close('all')
 
@@ -326,13 +326,13 @@ class plotter:
             ax.set_xlim(left=0)
         return g
 
-    def distPlot(palette, **kws):
+    def distPlot2(palette, **kws):
         """Creation of distributions."""
         axes = plt.gca()
         data = kws.pop('data')
         values = kws.get('value_str')
         try:
-            color = palette[data[kws.get('hue')].iloc[0]]
+            # color = palette[data[kws.get('hue')].iloc[0]]
             sns.distplot(a=data[values], hist=True, rug=True, norm_hist=True,
                          color=color, axlabel=kws.get('xlabel'), ax=axes)
         # In case of missing or erroneous data, linalgerror can be raised
@@ -344,6 +344,24 @@ class plotter:
             print(msg)
             axes.text(x=0.1, y=0.1, s="ERROR")
         return axes
+    
+    def distPlot(self, savepath, **kws):
+        """Creation of distributions."""
+        # plt.rcParams['figure.constrained_layout.use'] = True
+        g = sns.FacetGrid(data=self.data, row=kws.get('row'), col=kws.get('col'),
+                          hue=kws.get('hue'), palette=self.palette,
+                          sharex=kws.get('sharex'), sharey=kws.get('sharey'),
+                          height=kws.get('height'), aspect=kws.get('aspect'),
+                          gridspec_kws=kws.get('gridspec'))
+        g = (g.map(sns.distplot, 'value', kde=True, hist=True, norm_hist=True,
+                   hist_kws={"alpha": 0.5}))
+        for ax in g.axes.flat:
+            title = ax.get_title()
+            new_title = title.replace(' | ', '\n')
+            ax.set_title(new_title)
+        filepath = savepath.joinpath(self.title + self.ext)
+        fig = plt.gcf()
+        fig.savefig(str(filepath), format=self.format)
 
     def linePlot(palette, **kws):
         """Creation of line plots of additional data."""
@@ -394,7 +412,7 @@ class plotter:
         axes = plt.gca()
         data = kws.pop('data')
         sns.heatmap(data=data.iloc[:, :-2], cmap='coolwarm', robust=True,
-                    ax=axes)
+                    ax=axes, vmax=kws.get('vmax'))
         plt.yticks(rotation=45)
         MPbin = kws.get('center')
         axes.plot((MPbin, MPbin), (0, data.shape[0]), 'r--')

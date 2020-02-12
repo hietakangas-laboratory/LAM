@@ -3,13 +3,59 @@
 Created on Thu Feb  6 12:14:14 2020
 
 @author: artoviit
+
+DESCRIPTION:
+-----------
+    Splits a data set and its vectors based on user given points after their
+    projection during regular LAM 'Count'-functionality. In its simplicity, the
+    projected points determine cut-off points in the data set and its vectors.
+    The script creates a LAM-hierarchical folders for each of the sub-sections
+    of the data set, that can then be analysed separately.
+
+USAGE:
+-----
+    Perform a LAM projection (i.e. 'Count') using a full data set, with each
+    cut-off point determined by a separate 'channel', similar to a MP. After
+    projection, define the required variables below and run the script.
+
+    NOTE:
+        After projecting each of the subsets, you can use combineSets.py to re-
+        combine the sets to possibly create better comparisons between sample
+        groups when there is variability in region proportions. HOWEVER, this
+        breaks the equivalency of the bins at cut-off points, and should be
+        handled with great care.
+
+Vars:
+----
+    ROOT : pathlib.Path
+        The root analysis directory of the data set to split.
+
+    SAVEDIR : pathlib.Path
+        The destination directory for the split data sets. Each split set will
+        be saved into a directory defined by CUT_POINTS.
+
+    CUT_POINTS : list [str]
+        List of the channel names of the cut-off points. The order of the list
+        determines the order of the data split, e.g. ["R2R3", "R3R4"]
+        will cut the data set from smallest value along the vector to R2R3,
+        from R2R3 to R3R4, and from R3R4 to the end of the vector.
+
+    TOTAL_BIN : int
+        The wanted bin number of the full data set. The script gives suggestion
+        for how many bins each sub-set should be analyzed on in order to retain
+        better biological relevancy. The suggestion is calculated from the
+        total vector lengths and the lengths of the divided vectors.
+
+    CONT_END : BOOL
+        If True, continue the data set to the end of the vector after the final
+        cut-off point. If False, the data after the final cut-off point is not
+        used.
 """
 import numpy as np
 import pandas as pd
 import pathlib as pl
 import shapely.geometry as gm
 import shapely.ops as op
-import copy
 
 ROOT = pl.Path(r"P:\h919\hietakangas\Arto\fed_full_data")
 SAVEDIR = pl.Path(r"P:\h919\hietakangas\Arto\split_test")
@@ -70,9 +116,9 @@ def cut_vector(vector_path, cut_distances):
     return sub_vectors
 
 
-def save_vector(output_dir, sub_vector):
+def save_vector(vector_dir, sub_vector):
     vector_df = pd.DataFrame(np.vstack(sub_vector.xy).T, columns=['X', 'Y'])
-    vector_df.to_csv(output_dir.joinpath("Vector.csv"), index=False)
+    vector_df.to_csv(vector_dir.joinpath("Vector.csv"), index=False)
 
 
 def get_sample_data(samplepath, POINTS, length_data):
@@ -92,12 +138,15 @@ def get_sample_data(samplepath, POINTS, length_data):
             data = pd.read_csv(datafile)
             idx_cuts = cut_data(data, cut_distances)
             for i, cut in enumerate(idx_cuts):
-                output_dir = SAVEDIR.joinpath(POINTS[i], "Analysis Data",
+                vector_dir = SAVEDIR.joinpath(POINTS[i], "Analysis Data",
                                               "Samples", sample_name)
-                output_dir.mkdir(parents=True, exist_ok=True)
-                name = "{}_{}.csv".format(datafile.stem, POINTS[i])
-                data.loc[cut, :].to_csv(output_dir.joinpath(name), index=False)
-                save_vector(output_dir, sub_vectors[i])
+                vector_dir.mkdir(parents=True, exist_ok=True)
+                name = "Position.csv".format()
+                chan_dir = '{}_{}_Stats'.format(sample_name, datafile.stem)
+                data_dir = SAVEDIR.joinpath(POINTS[i], sample_name, chan_dir)
+                data_dir.mkdir(parents=True, exist_ok=True)
+                data.loc[cut, :].to_csv(data_dir.joinpath(name), index=False)
+                save_vector(vector_dir, sub_vectors[i])
 
 
 class vector_lengths:
@@ -122,6 +171,9 @@ class vector_lengths:
                 [self.averages, grouped.get_group(group).mean()], axis=1)
         self.averages.columns = grouped.groups.keys()
 
+    def find_bins(self):
+        pass
+
 
 if __name__ == '__main__':
     SAMPLES = [p for p in ROOT.joinpath("Analysis Data", "Samples").iterdir()
@@ -131,8 +183,12 @@ if __name__ == '__main__':
         POINTS.append("END")
     length_data = vector_lengths(SAMPLES, POINTS)
     for path in SAMPLES:
+        print(path.name)
         get_sample_data(path, POINTS, length_data)
+    print("Finding averages ...")
     length_data.find_averages()
+    
+    
     summed_length = length_data.averages.sum(axis=0)
     bin_suggestion = pd.DataFrame(index=length_data.averages.index,
                                   columns=length_data.averages.columns)

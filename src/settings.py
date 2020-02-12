@@ -17,7 +17,7 @@ class settings:
 
     # DEFINE PATH TO ANALYSIS FOLDER:
     # (Use input r'PATH' where PATH is your path)
-    workdir = pl.Path(r'C:')
+    workdir = pl.Path(r'P:\h919\hietakangas\Arto\fed_full_data')
     # Whether to gather raw data and create vectors. If False, expects to find
     # pre-created datafiles in the Analysis Data directory, i.e. a previous
     # full run has been made, and there has been no edits to the data files.
@@ -26,9 +26,9 @@ class settings:
     # data to be in place. Can be used to e.g. create additional plots faster.
     process_counts = False
     # Whether to compute average distances and clusters.
-    process_dists = True
+    process_dists = False
     # Set True/False to set all plotting functionalities ON/OFF
-    Create_Plots = False     # ON / OFF switch for plots
+    Create_Plots = True     # ON / OFF switch for plots
     # Whether to calculate statistics
     statistics = False
     ##################################################################
@@ -38,7 +38,7 @@ class settings:
     vectChannel = "DAPI"
     # Whether to do projection when using count. If False, expects projection
     # data to be found in channel files of './Analysis Data/Samples/'.
-    project = False
+    project = True
     # Number of bins used for projection unto vector.
     projBins = 100
 
@@ -61,12 +61,13 @@ class settings:
     # ---MEASUREMENT POINTS--- #
     # Whether to use measurement point coordinates for normalization. If False,
     # the samples will be handled as perfectly aligned from beginning to end.
-    useMP = True
+    useMP = False
     # The name of the file used for normalizing between samples, i.e. anchoring
     MPname = "MP"
 
     # ---DATA GATHERING--- #
     header_row = 2  # On which row does the data have its header (start = 0)
+
     # Additional data to be collected from channels. Key (the first string
     # before ':') must be the data column label and the following string for
     # searching the csv-file containing the wanted data. If multiple files are
@@ -75,8 +76,8 @@ class settings:
     # E.g. "Intensity_Mean" => "Intensity_Mean_Ch=1".
     # The last value is the unit of the values used for plotting labels,
     # e.g. um^2 for area. um^2 = "$\u03BCm^2$"  ;   um^3 = "$\u03BCm^3$"
-    AddData = {"Area": ["Area.csv", "Area, $\u03BCm^2$"],
-               "Volume": ["Volume.csv", "Volume, $\u03BCm^3$"],
+    AddData = {"Area": ["Position.csv", "Area, $\u03BCm^2$"],
+               "Volume": ["Position.csv", "Volume, $\u03BCm^3$"],
                "Intensity Mean": ["Intensity_Mean", "Intensity"]
                }
     # If set to true, replaces the above mentioned (AddData) ID numbers with an
@@ -96,13 +97,13 @@ class settings:
     # cell is found on the channel defined by target_chan, otherwise they are
     # found within the channel undergoing analysis.
     Find_Distances = True
-    Distance_Channels = ["DAPI"]
+    Distance_Channels = ['DAPI', 'DAPIEC']
     use_target = False
     target_chan = "Pros"
     # The maximum distance the nearest cell will be looked at. Increase is
     # computationally expensive, depending on the size of the dataset and the
     # density of cells.
-    maxDist = 25    # Radius around a cell
+    maxDist = 40    # Radius around a cell
     # Whether to look only at cells of certain size. Default is to include
     # cells smaller than Vol_inclusion. If cells of greater volume are wanted,
     # designate incl_type to be 'greater'. Otherwise, it can be left empty.
@@ -138,17 +139,17 @@ class settings:
     # ---PLOTTING OPTIONS--- #
     Create_Channel_Plots = False
     Create_AddData_Plots = False     # Plots also nearest distance & clusters
-    Create_Channel_PairPlots = True
-    Create_Heatmaps = True
-    Create_Distribution_Plots = False
-    Create_Statistics_Plots = True  # requires statistics to be True
+    Create_Channel_PairPlots = False
+    Create_Heatmaps = False
+    Create_Distribution_Plots = True
+    Create_Statistics_Plots = False  # requires statistics to be True
     Create_Cluster_Plots = False
 
     # Variable vs. variable plots:
     Create_ChanVSAdd_Plots = False  # Pairs of channel and additional data
     Create_AddVSAdd_Plots = False  # Pairs of additional data
     # Create plots of all possible pair combinations of the following:
-    vs_channels = ['DAPI', 'GFP']
+    vs_channels = ['DAPI', 'DAPIEC']
     vs_adds = ['Intensity Mean']
 
     # Whether to drop outliers from plots ONLY
