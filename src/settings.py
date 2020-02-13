@@ -17,14 +17,14 @@ class settings:
 
     # DEFINE PATH TO ANALYSIS FOLDER:
     # (Use input r'PATH' where PATH is your path)
-    workdir = pl.Path(r'P:\h919\hietakangas\Arto\fed_full_data')
+    workdir = pl.Path(r'C:')
     # Whether to gather raw data and create vectors. If False, expects to find
     # pre-created datafiles in the Analysis Data directory, i.e. a previous
     # full run has been made, and there has been no edits to the data files.
     process_samples = False  # CLEARS DATA FILES-DIRECTORY
     # Whether to project, count and normalize data. If set to False, expect all
     # data to be in place. Can be used to e.g. create additional plots faster.
-    process_counts = False
+    process_counts = True
     # Whether to compute average distances and clusters.
     process_dists = False
     # Set True/False to set all plotting functionalities ON/OFF
@@ -40,7 +40,7 @@ class settings:
     # data to be found in channel files of './Analysis Data/Samples/'.
     project = True
     # Number of bins used for projection unto vector.
-    projBins = 100
+    projBins = 40
 
     # Make vector by creating binary image and then skeletonizing. If False,
     # vector is created by finding middle point between smallest and largest
@@ -61,7 +61,7 @@ class settings:
     # ---MEASUREMENT POINTS--- #
     # Whether to use measurement point coordinates for normalization. If False,
     # the samples will be handled as perfectly aligned from beginning to end.
-    useMP = False
+    useMP = True
     # The name of the file used for normalizing between samples, i.e. anchoring
     MPname = "MP"
 
@@ -76,8 +76,8 @@ class settings:
     # E.g. "Intensity_Mean" => "Intensity_Mean_Ch=1".
     # The last value is the unit of the values used for plotting labels,
     # e.g. um^2 for area. um^2 = "$\u03BCm^2$"  ;   um^3 = "$\u03BCm^3$"
-    AddData = {"Area": ["Position.csv", "Area, $\u03BCm^2$"],
-               "Volume": ["Position.csv", "Volume, $\u03BCm^3$"],
+    AddData = {"Area": ["Area.csv", "Area, $\u03BCm^2$"],
+               "Volume": ["Volume.csv", "Volume, $\u03BCm^3$"],
                "Intensity Mean": ["Intensity_Mean", "Intensity"]
                }
     # If set to true, replaces the above mentioned (AddData) ID numbers with an
@@ -138,11 +138,11 @@ class settings:
 
     # ---PLOTTING OPTIONS--- #
     Create_Channel_Plots = False
-    Create_AddData_Plots = False     # Plots also nearest distance & clusters
-    Create_Channel_PairPlots = False
-    Create_Heatmaps = False
+    Create_AddData_Plots = True     # Plots also nearest distance & clusters
+    Create_Channel_PairPlots = True
+    Create_Heatmaps = True
     Create_Distribution_Plots = True
-    Create_Statistics_Plots = False  # requires statistics to be True
+    Create_Statistics_Plots = True  # requires statistics to be True
     Create_Cluster_Plots = False
 
     # Variable vs. variable plots:

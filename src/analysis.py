@@ -214,91 +214,10 @@ class Samplegroups:
                    'height': 3.5, 'aspect': 1, 'title_y': 1}
             plot_maker.plot_Data(plotter.pairPlot, self._plotDir, **kws)
 
-        # def __nearestDist(): # !!!
-        #     """Create plots of average distance to nearest cell."""
-        #     # Find files containing calculated average distances
-        #     paths = self._dataDir.glob('Avg_DistanceMeans_*')
-        #     savepath = self._plotDir
-        #     # Loop the found files
-        #     for path in paths:
-        #         # Read data file, create plotter, update keywords, and plot
-        #         plotData, name, cntr = self.read_channel(path, self._groups)
-        #         plot_maker = plotter(plotData, self._plotDir, center=cntr,
-        #                              title=name, palette=self._grpPalette)
-        #         kws = {'centerline': plot_maker.MPbin, 'ylabel': 'Distance',
-        #                'title': plot_maker.title, 'xlen': self._length,
-        #                'title_y': 0.95}
-        #         kws.update(basekws)
-        #         plot_maker.plot_Data(plotter.linePlot, savepath, **kws)
-
         def _distributions():
-            """Create density distribution plots of different data types."""
-            savepath = self._plotDir.joinpath('Distributions')
-            savepath.mkdir(exist_ok=True)
-            kws = {'hue': 'Sample Group', 'row': 'Sample Group', 'height': 5,
-                   'sharey': True, 'aspect': 1, 'title_y': 0.95,
-                   'gridspec': {'hspace': 0.4}}
-            ylabel = 'Density'
-            # Channels
-            print("Channels  ...")
-            for path in self._dataDir.glob('All_*'):
-                plotData, name, cntr = self.read_channel(path, self._groups)
-                plot_maker = plotter(plotData, self._plotDir, center=cntr,
-                                     title=name, palette=self._grpPalette)
-                xlabel = 'Cell Count'
-                kws.update({'id_str': 'Sample Group', 'var_str': xlabel,
-                            'ylabel': ylabel, 'value_str': ylabel})
-                plot_maker.plot_Data(plotter.distPlot, savepath, **kws)
-
-            # Additional data
-            for key in Sett.AddData.keys():
-                print("{}  ...".format(key))
-                ban = ['Group', 'Channel']
-                AllVals = pd.DataFrame(columns=[key, 'Group', 'Channel'])
-                paths = [p for s in self._samplePaths for p in s.glob('*.csv')
-                         if p.stem not in ['MPs', 'Vector']]
-                # read and concatenate all found data files:
-                for path in paths:
-                    try:
-                        data = system.read_data(path, header=0, test=False,
-                                                index_col=False)
-                        values = data.loc[:, data.columns.str.contains(key)]
-                        group = str(path.parent.name).split('_')[0]
-                        channel = str(path.stem)
-                        # Assign identification columns
-                        values = values.assign(Group=group, Channel=channel)
-                        for col in values.loc[:, ~values.columns.isin(ban)
-                                              ].columns:
-                            # If no variance, drop data
-                            if values.loc[:, col].nunique() == 1:
-                                values.loc[:, str(col)] = np.nan
-                        AllVals = pd.concat([AllVals, values], axis=0,
-                                            ignore_index=True, sort=True)
-                    except AttributeError:
-                        msg = 'AttributeError when handling'
-                        print('{} {}'.format(msg, path.name))
-                        lg.logprint(LAM_logger, msg, 'e')
-                # Find unit of data
-                xlabel = Sett.AddData.get(key)[1]
-                kws.update({'id_str': ['Group', 'Channel'], 'ylabel': ylabel,
-                            'var_str': xlabel, 'value_str': ylabel,
-                            'hue': 'Group', 'row': 'Group'})
-                # Go through data columns dropping NaN and plot each
-                for col in AllVals.loc[:, ~AllVals.columns.isin(ban)].columns:
-                    allData = AllVals.loc[:, ['Group', 'Channel',
-                                              col]].dropna()
-                    for plotChan in allData.Channel.unique():
-                        name = "{}_{}".format(plotChan, col)
-                        plotData = allData.loc[allData.Channel == plotChan, :]
-                        plot_maker = plotter(plotData, self._plotDir,
-                                             title=name,
-                                             palette=self._grpPalette)
-                        plot_maker.plot_Data(plotter.distPlot, savepath, **kws)
-                        
-        def _distributions2():
             kws = {'hue': 'Sample Group', 'row': 'variable', 'col': 'Channel',
                    'title_y': 0.95, 'gridspec': {'hspace': 0.7, 'wspace': 0.5},
-                   'sharey': False, 'sharex': False, 'height': 5, 'aspect':1}
+                   'sharey': False, 'sharex': False, 'height': 5, 'aspect': 1}
 
             AllData = pd.DataFrame()
             for path in self._dataDir.glob('All_*'):
@@ -308,12 +227,8 @@ class Samplegroups:
                 melt_data.loc[:, 'Channel'] = name
                 AllData = pd.concat([AllData, melt_data])
             del data, melt_data
-            AllData = AllData[~AllData['Channel'].str.contains("R2R3")]
-            AllData = AllData[~AllData['Channel'].str.contains("R3R4")]
-            AllData = AllData[~AllData['Channel'].str.contains("R4R5")]
             for key in Sett.AddData.keys():
-                paths = [p for s in self._samplePaths for p in s.glob('*.csv')
-                          if p.stem not in ['MPs', 'Vector', "R2R3", "R3R4", "R4R5"]]
+                paths = [p for s in self._samplePaths for p in s.glob('*.csv')]
                 # read and concatenate all found data files:
                 for path in paths:
                     data = system.read_data(path, header=0, test=False,
@@ -325,12 +240,13 @@ class Samplegroups:
                     # Assign identification columns
                     values.loc[:, 'Sample Group'] = group
                     values.loc[:, 'Channel'] = path.stem
-                    # for col in values.loc[:, ~values.columns.isin(
-                    #         ['Sample Group','Channel'])].columns:
-                    #     # If no variance, drop data
-                    #     if values.loc[:, col].nunique() == 1:
-                    #         values.drop(col, axis=1, inplace=True)
-                    melt_data = pd.melt(values, id_vars=['Channel', 'Sample Group'])
+                    for col in values.loc[:, ~values.columns.isin(
+                            ['Sample Group','Channel'])].columns:
+                        # If no variance, drop data
+                        if values.loc[:, col].nunique() == 1:
+                            values.drop(col, axis=1, inplace=True)
+                    melt_data = pd.melt(values, id_vars=['Channel',
+                                                         'Sample Group'])
                     AllData = pd.concat([AllData, melt_data], sort=False)
             plot_name = "All Distributions"
             plot_maker = plotter(AllData, self._plotDir, title=plot_name,
@@ -465,7 +381,7 @@ class Samplegroups:
         if Sett.Create_Distribution_Plots:  # Plot distributions
             lg.logprint(LAM_logger, 'Plotting distributions', 'i')
             print('-Distributions-')
-            _distributions2()
+            _distributions()
             lg.logprint(LAM_logger, 'Distributions done', 'i')
 
         if Sett.Create_Cluster_Plots:  # Plot cluster data

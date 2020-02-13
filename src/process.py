@@ -466,14 +466,11 @@ class get_sample:
                 print("-> Failed to find MP positions")
             finally:
                 MPbin = None
-                MPs = pd.DataFrame()
                 if not MPdata.empty:
                     MPbin = self.project_MPs(MPdata, self.vector, datadir,
                                              filename="MPs.csv")
-                    MPs = pd.concat([MPs, pd.Series(MPbin.iat[0], name='MP')])
-                    # MP = pd.Series(MPbin, name="MP")
-                    # MPs = pd.concat([MPs, MP], axis=1)
-                # MPs.to_csv(self.sampledir.joinpath("MPs.csv"), index=False)
+                    MP = pd.DataFrame(data=[MPbin.values], columns=['MP'])
+                    MP.to_csv(self.sampledir.joinpath("MPs.csv"), index=False)
         else:  # Sets measurement point values to zero when MP's are not used
             MPbin = pd.Series(0, name=self.name)
             system.saveToFile(MPbin, datadir, "MPs.csv")

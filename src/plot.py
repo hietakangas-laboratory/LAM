@@ -326,35 +326,19 @@ class plotter:
             ax.set_xlim(left=0)
         return g
 
-    def distPlot2(palette, **kws):
-        """Creation of distributions."""
-        axes = plt.gca()
-        data = kws.pop('data')
-        values = kws.get('value_str')
-        try:
-            # color = palette[data[kws.get('hue')].iloc[0]]
-            sns.distplot(a=data[values], hist=True, rug=True, norm_hist=True,
-                         color=color, axlabel=kws.get('xlabel'), ax=axes)
-        # In case of missing or erroneous data, linalgerror can be raised
-        except np.linalg.LinAlgError:
-            msg = '-> Confirm that all samples have proper channel data'
-            fullmsg = 'Distribution plot singular matrix\n{}'.format(msg)
-            lg.logprint(LAM_logger, fullmsg, 'ex')
-            print('ERROR: Distribution plot singular matrix')
-            print(msg)
-            axes.text(x=0.1, y=0.1, s="ERROR")
-        return axes
-    
     def distPlot(self, savepath, **kws):
         """Creation of distributions."""
-        # plt.rcParams['figure.constrained_layout.use'] = True
-        g = sns.FacetGrid(data=self.data, row=kws.get('row'), col=kws.get('col'),
-                          hue=kws.get('hue'), palette=self.palette,
-                          sharex=kws.get('sharex'), sharey=kws.get('sharey'),
-                          height=kws.get('height'), aspect=kws.get('aspect'),
-                          gridspec_kws=kws.get('gridspec'))
-        g = (g.map(sns.distplot, 'value', kde=True, hist=True, norm_hist=True,
-                   hist_kws={"alpha": 0.5}))
+        with warnings.catch_warnings():
+            warnings.simplefilter('ignore', category=UserWarning)
+            g = sns.FacetGrid(data=self.data, row=kws.get('row'),
+                              col=kws.get('col'), hue=kws.get('hue'),
+                              palette=self.palette, sharex=kws.get('sharex'),
+                              sharey=kws.get('sharey'),
+                              height=kws.get('height'),
+                              aspect=kws.get('aspect'),
+                              gridspec_kws=kws.get('gridspec'))
+            g = (g.map(sns.distplot, 'value', kde=True, hist=True,
+                       norm_hist=True, hist_kws={"alpha": 0.5}))
         for ax in g.axes.flat:
             title = ax.get_title()
             new_title = title.replace(' | ', '\n')
