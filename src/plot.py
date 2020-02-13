@@ -207,8 +207,8 @@ class plotter:
 
         def __add(centerline=True):
             """Label, tick, and centerline creation/altering."""
-            # if 'centerline' in kws.keys() and centerline: # !!!
-            #     __centerline()
+            if 'centerline' in kws.keys() and centerline:
+                __centerline()
             if 'xlen' in kws.keys():
                 __set_xtick()
             if 'ylabel' in kws.keys():
@@ -409,8 +409,8 @@ class plotter:
         sns.heatmap(data=data.iloc[:, :-2], cmap='coolwarm', robust=True,
                     ax=axes, vmax=240, vmin=0)
         plt.yticks(rotation=45)
-        # MPbin = kws.get('center')
-        # axes.plot((MPbin, MPbin), (0, data.shape[0]), 'r--')
+        MPbin = kws.get('center')
+        axes.plot((MPbin, MPbin), (0, data.shape[0]), 'r--')
         return axes
 
     def total_plot(self, stats, order):
