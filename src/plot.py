@@ -151,7 +151,7 @@ class plotter:
                 # Create twin axis with -log2 P-values
                 ax2 = plt.twinx()
                 lkws = {'alpha': 0.85}
-                ax2.plot(X, np.negative(logvals), color='dimgrey', linewidth=1,
+                ax2.plot(X, np.negative(logvals), color='dimgrey', linewidth=2,
                          **lkws)
                 ax2.plot((xmin, xtop), (0, 0), linestyle='dashed',
                          color='grey', linewidth=0.85, **lkws)
@@ -207,8 +207,8 @@ class plotter:
 
         def __add(centerline=True):
             """Label, tick, and centerline creation/altering."""
-            if 'centerline' in kws.keys() and centerline:
-                __centerline()
+            # if 'centerline' in kws.keys() and centerline: # !!!
+            #     __centerline()
             if 'xlen' in kws.keys():
                 __set_xtick()
             if 'ylabel' in kws.keys():
@@ -255,8 +255,6 @@ class plotter:
                                   aspect=kws.get('aspect'), legend_out=True,
                                   dropna=False, palette=self.palette)
                 g = g.map_dataframe(plotfunc, self.palette, **kws).add_legend()
-                if plotfunc.__name__ == 'distPlot':
-                    g._legend.remove()
                 for ax in g.axes.flat:
                     ax.xaxis.set_tick_params(labelbottom=True)
                 __add()
@@ -343,19 +341,32 @@ class plotter:
             title = ax.get_title()
             new_title = title.replace(' | ', '\n')
             ax.set_title(new_title)
+        g = g.add_legend()
         filepath = savepath.joinpath(self.title + self.ext)
         fig = plt.gcf()
         fig.savefig(str(filepath), format=self.format)
 
     def linePlot(palette, **kws):
         """Creation of line plots of additional data."""
+        # import pathlib as pl
+        # cutpoints = pd.read_csv(
+        #     pl.Path(r'P:\h919\hietakangas\Arto\fed_full_data\Analysis Data\Data Files\cutpoints.csv'),
+        #     index_col=False)
         axes = plt.gca()
         data = kws.pop('data')
         err_kws = {'alpha': 0.4}
         sns.lineplot(data=data, x=kws.get('xlabel'), y=kws.get('ylabel'),
-                     hue=kws.get('hue'), alpha=0.5, dashes=False,
+                     hue=kws.get('hue'), alpha=1, dashes=False,
                      err_style='band', ci='sd', palette=palette, ax=axes,
                      err_kws=err_kws)
+        # ybot, ytop = axes.get_ylim()
+        # y_vals = [ybot, ytop]
+        # for col in cutpoints.columns:
+        #     vals = cutpoints[col].values + 3
+        #     x_val = sum(vals) / len(vals)
+        #     x_vals = [x_val, x_val]
+        #     axes.plot(x_vals, y_vals, 'c:', zorder=0)
+        # plt.ylim(None, None)
         return axes
 
     def jointPlot(palette, **kws):
@@ -396,10 +407,10 @@ class plotter:
         axes = plt.gca()
         data = kws.pop('data')
         sns.heatmap(data=data.iloc[:, :-2], cmap='coolwarm', robust=True,
-                    ax=axes, vmax=kws.get('vmax'))
+                    ax=axes, vmax=240, vmin=0)
         plt.yticks(rotation=45)
-        MPbin = kws.get('center')
-        axes.plot((MPbin, MPbin), (0, data.shape[0]), 'r--')
+        # MPbin = kws.get('center')
+        # axes.plot((MPbin, MPbin), (0, data.shape[0]), 'r--')
         return axes
 
     def total_plot(self, stats, order):

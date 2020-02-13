@@ -95,7 +95,7 @@ def Project(PATHS):
         # Find anchoring point of the sample
         sample.MP = sample.get_MPs(Sett.MPname, Sett.useMP, PATHS.datadir)
         # Collection of data for each channel of the sample
-        for path2 in [p for p in sample.channelpaths if Sett.MPname # !!!
+        for path2 in [p for p in sample.channelpaths if Sett.MPname
                       != str(p).split('_')[-2]]:
             channel = get_channel(path2, sample, Sett.AddData, PATHS.datadir)
             # If no variance in found additional data, it is discarded.

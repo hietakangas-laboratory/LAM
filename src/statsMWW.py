@@ -139,8 +139,8 @@ class statistics:
         plot_maker = plotter(plotData, savepath=self.plotDir,
                              title=self.plottitle, palette=palette,
                              center=self.center)
-        kws = {'id_str': 'Sample Group', 'hue': 'Sample Group', 'height': 5,
-               'aspect': 4, 'var_str': 'Longitudinal Position',
+        kws = {'id_str': 'Sample Group', 'hue': 'Sample Group', 'height': 4,
+               'aspect': 3, 'var_str': 'Longitudinal Position',
                'value_str': unit, 'centerline': plot_maker.MPbin,
                'xlen': self.length, 'title': plot_maker.title, 'Stats': stats,
                'title_y': 1, 'fliersize': {'fliersize': '1'}}
