@@ -9,7 +9,7 @@ Created on Wed Mar  6 12:42:28 2019
 Dependencies:
 ------------
 matplotlib (3.1.1), numpy (1.16.5), pandas (0.25.1), pathlib2
-(2.3.5), pycg3d (0.0.1), scipy (1.3.1), seaborn (0.9.0), shapely (1.6.4),
+(2.3.5), scipy (1.3.1), seaborn (0.9.0), shapely (1.6.4),
 scikit-image (0.15.0), statsmodels (0.9.0)
 
 Installation:

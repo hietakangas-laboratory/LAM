@@ -220,6 +220,7 @@ class Samplegroups:
                    'sharey': False, 'sharex': False, 'height': 5, 'aspect': 1}
 
             AllData = pd.DataFrame()
+            # Get feature count data:
             for path in self._dataDir.glob('All_*'):
                 data, name, _ = self.read_channel(path, self._groups)
                 melt_data = pd.melt(data, id_vars='Sample Group')
@@ -227,21 +228,22 @@ class Samplegroups:
                 melt_data.loc[:, 'Channel'] = name
                 AllData = pd.concat([AllData, melt_data])
             del data, melt_data
+            # Get additional data:
             for key in Sett.AddData.keys():
                 paths = [p for s in self._samplePaths for p in s.glob('*.csv')]
                 # read and concatenate all found data files:
                 for path in paths:
                     data = system.read_data(path, header=0, test=False,
                                             index_col=False)
-                    if not any(data.columns.str.contains(key)):
-                        continue
                     values = data.loc[:, data.columns.str.contains(key)].copy()
+                    if values.empty:
+                        continue
                     group = path.parent.name.split('_')[0]
                     # Assign identification columns
                     values.loc[:, 'Sample Group'] = group
                     values.loc[:, 'Channel'] = path.stem
                     for col in values.loc[:, ~values.columns.isin(
-                            ['Sample Group','Channel'])].columns:
+                            ['Sample Group', 'Channel'])].columns:
                         # If no variance, drop data
                         if values.loc[:, col].nunique() == 1:
                             values.drop(col, axis=1, inplace=True)

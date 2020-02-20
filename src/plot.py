@@ -336,7 +336,7 @@ class plotter:
                               aspect=kws.get('aspect'),
                               gridspec_kws=kws.get('gridspec'))
             g = (g.map(sns.distplot, 'value', kde=True, hist=True,
-                       norm_hist=True, hist_kws={"alpha": 0.5}))
+                       norm_hist=True, hist_kws={"alpha": 0.3, "linewidth": 0}))
         for ax in g.axes.flat:
             title = ax.get_title()
             new_title = title.replace(' | ', '\n')
@@ -407,7 +407,7 @@ class plotter:
         axes = plt.gca()
         data = kws.pop('data')
         sns.heatmap(data=data.iloc[:, :-2], cmap='coolwarm', robust=True,
-                    ax=axes, vmax=240, vmin=0)
+                    ax=axes)  #, vmax=240, vmin=0)
         plt.yticks(rotation=45)
         MPbin = kws.get('center')
         axes.plot((MPbin, MPbin), (0, data.shape[0]), 'r--')
@@ -494,13 +494,13 @@ class plotter:
         baseData = self.data[self.data["ClusterID"].isnull()]
         # Initialization of figure
         figure, ax = plt.subplots(figsize=(13, 4.75))
-        kws = dict(linewidth=0.1)
+        kws = dict(linewidth=0.1, edgecolor='dimgrey')
         # Plot background
         ax.scatter(baseData.loc[:, "Position X"],
-                   baseData.loc[:, "Position Y"], s=1.5, c='xkcd:tan')
+                   baseData.loc[:, "Position Y"], s=20, c='xkcd:tan')
         # Plot clusters
         sns.scatterplot(data=plotData, x="Position X", y="Position Y",
-                        hue="ClusterID", palette=palette, ax=ax, s=5,
+                        hue="ClusterID", palette=palette, ax=ax, s=35,
                         legend=False, **kws)
         plt.title(self.title)
         plt.axis('equal')

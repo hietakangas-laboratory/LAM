@@ -18,12 +18,22 @@ USAGE:
     cut-off point determined by a separate 'channel', similar to a MP. After
     projection, define the required variables below and run the script.
 
+    To analyze the split sets with LAM, make sure that settings.header_row is
+    set to zero (or the alternative in GUI).
+
     NOTE:
         After projecting each of the subsets, you can use combineSets.py to re-
         combine the sets to possibly create better comparisons between sample
         groups when there is variability in region proportions. HOWEVER, this
         breaks the equivalency of the bins at cut-off points, and should be
         handled with great care.
+
+DEPS:
+----
+    - Shapely >= 1.7.0
+    - Pandas
+    - Numpy
+    - Pathlib
 
 Vars:
 ----
@@ -57,9 +67,9 @@ import pathlib as pl
 import shapely.geometry as gm
 import shapely.ops as op
 
-ROOT = pl.Path(r"P:\h919\hietakangas\Arto\fed_full_data")
-SAVEDIR = pl.Path(r"P:\h919\hietakangas\Arto\split_test")
-CUT_POINTS = ["R2R3", "R3R4", "R4R5"]
+ROOT = pl.Path(r"E:\Code_folder\DSS")
+SAVEDIR = pl.Path(r"E:\Code_folder\split_dss")
+CUT_POINTS = ["R2R3", "R3R4"]#, "R4R5"]
 # Number of bins for whole length of samples. Script gives recommendation for
 # numbers of bins for each split region based on this value:
 TOTAL_BIN = 40
@@ -133,7 +143,7 @@ def get_sample_data(samplepath, POINTS, length_data):
     length_data.save_substrings(sample_name, sub_vectors)
     # Cutting and saving of new data:
     for datafile in file_paths:
-        ban = ["Vector", "MP"] + POINTS
+        ban = ["Vector", "MPs"] + POINTS
         if datafile.stem not in ban:
             data = pd.read_csv(datafile)
             idx_cuts = cut_data(data, cut_distances)
