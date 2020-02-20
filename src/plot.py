@@ -105,7 +105,7 @@ class plotter:
             MPbin = kws.get('centerline')
             __, ytop = plt.ylim()
             for ax in g.axes.flat:
-                ax.plot((MPbin, MPbin), (0, ytop), 'r--', zorder=0)
+                ax.plot((MPbin, MPbin), (0, ytop), 'k--', zorder=0)
 
         def __stats():
             """Plot statistical elements within data plots."""
@@ -167,12 +167,12 @@ class plotter:
                 # Create centerline:
                 ybot, ytop = ax.get_ylim()
                 yaxis = [ytop, ytop]
-                ax.plot((MPbin, MPbin), (ybot, ytop), 'r--', zorder=0)
+                ax.plot((MPbin, MPbin), (ybot, ytop), 'k--', zorder=0)
             # Initiation of variables when not using -log2 & make centerline
             else:
                 yaxis = [tytop, tytop]
                 yheight = ytop*1.1
-                ax.plot((MPbin, MPbin), (0, tytop), 'r--')
+                ax.plot((MPbin, MPbin), (0, tytop), 'k--')
 
             # Create significance stars and color fills
             if 'windowed' in kws:
@@ -336,7 +336,8 @@ class plotter:
                               aspect=kws.get('aspect'),
                               gridspec_kws=kws.get('gridspec'))
             g = (g.map(sns.distplot, 'value', kde=True, hist=True,
-                       norm_hist=True, hist_kws={"alpha": 0.3, "linewidth": 0}))
+                       norm_hist=True, hist_kws={"alpha": 0.3,
+                                                 "linewidth": 0}))
         for ax in g.axes.flat:
             title = ax.get_title()
             new_title = title.replace(' | ', '\n')
@@ -346,28 +347,43 @@ class plotter:
         fig = plt.gcf()
         fig.savefig(str(filepath), format=self.format)
 
-    def linePlot(palette, **kws):
+    def linePlot(self, **kws):
         """Creation of line plots of additional data."""
-        # import pathlib as pl
-        # cutpoints = pd.read_csv(
-        #     pl.Path(r'P:\h919\hietakangas\Arto\fed_full_data\Analysis Data\Data Files\cutpoints.csv'),
-        #     index_col=False)
-        axes = plt.gca()
-        data = kws.pop('data')
+        row_var = kws.get('row')
+        data = self.data.sort_values(by=row_var)
+        adds = data.loc[:, row_var].unique()
+        label_units = kws.get('ylabels')
+        ylabels = [label_units.get(l) for l in adds]
         err_kws = {'alpha': 0.4}
-        sns.lineplot(data=data, x=kws.get('xlabel'), y=kws.get('ylabel'),
-                     hue=kws.get('hue'), alpha=1, dashes=False,
-                     err_style='band', ci='sd', palette=palette, ax=axes,
-                     err_kws=err_kws)
-        # ybot, ytop = axes.get_ylim()
-        # y_vals = [ybot, ytop]
-        # for col in cutpoints.columns:
-        #     vals = cutpoints[col].values + 3
-        #     x_val = sum(vals) / len(vals)
-        #     x_vals = [x_val, x_val]
-        #     axes.plot(x_vals, y_vals, 'c:', zorder=0)
-        # plt.ylim(None, None)
-        return axes
+        g = sns.FacetGrid(data=data, row=row_var, hue=kws.get('hue'),
+                          height=2, aspect=3.5, sharey=False)
+        g = (g.map_dataframe(sns.lineplot, x='variable', y='value', ci='sd',
+                   err_style='band', hue=kws.get('hue'), dashes=False,
+                   alpha=1, palette=self.palette, err_kws=err_kws))
+        # grps = {'ctrl': [19, 22], 'dss': [20, 23]}
+        # palette_colors = ['orange yellow', 'aqua marine']
+        # groupcolors = sns.xkcd_palette(palette_colors)
+        for i, ax in enumerate(g.axes.flat):
+            ax.set_ylabel(ylabels[i])
+            # ybot, ytop = ax.get_ylim()
+            # y_vals = [ybot, ytop]
+            # for i, grp in enumerate(grps.keys()):
+            #     points = grps.get(grp)
+            #     for val in points:
+            #         x_vals = [val, val]
+            #         ax.plot(x_vals, y_vals, color=groupcolors[i], zorder=0,
+            #                 linestyle='dotted', linewidth=1.75)
+
+            # Create centerline:
+            ybot, ytop = ax.get_ylim()
+            yaxis = [ytop, ytop]
+            ax.plot((self.MPbin, self.MPbin), (ybot, ytop), 'k--', zorder=0)
+        g = g.add_legend()
+        plt.suptitle(self.title, y=0.995)
+        filepath = self.savepath.joinpath(self.title + self.ext)
+        fig = plt.gcf()
+        fig.savefig(str(filepath), format=self.format)
+        plt.close('all')
 
     def jointPlot(palette, **kws):
         """Creation of bivariable joint plots with density and distribution."""

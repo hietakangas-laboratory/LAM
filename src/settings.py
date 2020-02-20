@@ -155,7 +155,7 @@ class settings:
     # Whether to drop outliers from plots ONLY
     # for considering what is an outlier.
     Drop_Outliers = True
-    dropSTD = 3  # The standard deviation limit for drop
+    dropSTD = 2.5  # The standard deviation limit for drop
 
     # Gives values some coordinate-shift in channel pairplots. Useful in pre-
     # senting the data, as it is discrete; most of the data would be hidden

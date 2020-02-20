@@ -80,24 +80,47 @@ class Samplegroups:
                    'title_y': 0.95, 'sharey': True,
                    'gridspec': {'hspace': 0.3}}
 
-        def _select(paths, adds=True):
-            """Find different types of data for versus plot."""
-            retPaths = []
-            # Find target names from settings
-            if adds:
-                targets = Sett.vs_adds
-            else:
-                targets = Sett.vs_channels
-            for trgt in targets:  # For each target, find corresponding file
-                if adds:  # File name dependent on data type
-                    namer = "^Avg_.*_{}.*".format(trgt)
+        def _additional(paths, name_sep=1, **kws):
+            # Find whether outliers are to be dropped
+            dropB = Sett.Drop_Outliers
+            all_data = pd.DataFrame()
+            ylabels = {}
+            for path in paths:
+                # Read data from file and the pass it on to the plotter-class
+                data, add_name, cntr = self.read_channel(path, self._groups,
+                                                  drop=dropB,
+                                                  name_sep=name_sep)
+                # Get unit of data
+                sub_names = add_name.split('_')
+                key_name = sub_names[1].split('-')[0]
+                if "Distance Means" in key_name:
+                    label = "Distance"
                 else:
-                    namer = "^Norm_{}.*".format(trgt)
-                reg = re.compile(namer, re.I)
-                selected = [p for p in paths if reg.search(str(p.stem))]
-                retPaths.extend(selected)  # Add found paths to list
-            return retPaths
-
+                    temp = Sett.AddData.get(key_name)
+                    if temp is None:
+                        label = 'Cell Count'
+                    else:
+                        label = temp[1]
+                data.loc[:, 'Channel'] = sub_names[0]
+                data.loc[:, 'Additional'] = sub_names[1]
+                ylabels.update({sub_names[1]: label})
+                # Transform data into plottable form
+                data = pd.melt(data, id_vars=['Channel', 'Additional',
+                                                   'Sample Group'])
+                data.dropna(inplace=True)
+                all_data = pd.concat([all_data, data], sort=False)
+            kws = {'row': 'Additional', 'hue': 'Sample Group',
+                   'ylabels': ylabels}
+            # Grouping of data and subsequent plotting:
+            grouped_data = all_data.groupby(['Channel'])
+            for group in grouped_data.groups:
+                data = grouped_data.get_group(group)
+                title_name = "{} AddData".format(group)
+                plot_maker = plotter(data, self._plotDir, center=cntr,
+                                     title=title_name,
+                                     palette=self._grpPalette)
+                plot_maker.linePlot(**kws)  # Plotting
+                    
         def _base(paths, func, ylabel='Cell Count', name_sep=1, **kws):
             """
             General plotting for LAM, i.e. variable on y-axis, and bins on x.
@@ -125,136 +148,7 @@ class Samplegroups:
                         'title': plot_maker.title, 'xlen': self._length,
                         'ylabel': ylabel}
                 kws2.update(basekws)  # update to include the base keywords
-                # If no given y-label, get name from file name / settings:
-                if ylabel is None:  # Find labels for additional data
-                    addName = plot_maker.title.split('-')[0].split('_')[1]
-                    if "Distance Means" in addName:
-                        newlabel = "Distance"
-                    else:
-                        temp = Sett.AddData.get(addName)
-                        if temp is None:
-                            newlabel = 'Cell Count'
-                        else:
-                            newlabel = temp[1]
-                    kws2.update({'ylabel': newlabel, 'value_str': newlabel})
-                kws2.update(kws)  # Update with kws passed to this function
                 plot_maker.plot_Data(func, savepath, **kws2)  # Plotting
-
-        def _heat(paths, samples=False):
-            """Create heatmaps of cell counts for each sample group."""
-            savepath = self._plotDir
-            fullData = pd.DataFrame()
-            # Loop through the given channels and read the data file. Each
-            # channel is concatenated to one dataframe for easier plotting.
-            for path in paths:
-                plotData, name, cntr = self.read_channel(path, self._groups)
-                # change each sample's group to be contained in its index
-                # within the dataframe.
-                if not samples:
-                    plotData.index = plotData.loc[:, 'Sample Group']
-                plotData.drop(labels='Sample Group', axis=1, inplace=True)
-                # Channel-variable is added for identification
-                plotData.loc[:, 'Channel'] = name
-                fullData = pd.concat([fullData, plotData], axis=0, copy=False)
-            # The plotting can't handle NaN's, so they are changed to zero.
-            fullData = fullData.replace(np.nan, 0)
-            if not samples:
-                name = "All Channels Heatmaps"
-            else:
-                name = "All Samples Channel Heatmaps"
-            # Initialize plotting-class, create kws, and plot all channel data.
-            plot_maker = plotter(fullData, self._plotDir, center=cntr,
-                                 title=name, palette=None)
-            kws = {'height': 3, 'aspect': 5, 'row': 'Channel', 'title_y': 0.93,
-                   'center': plot_maker.MPbin, 'xlen': self._length,
-                   'vmax': None, 'gridspec': {'hspace': 0.5}, 'sharey': False}
-            if samples:  # Make height of plot dependant on sample size
-                val = fullData.index.unique().size / 2
-                kws.update({'height': val})
-            plot_maker.plot_Data(plotter.Heatmap, savepath, **kws)
-
-        def _versus(paths1, paths2=None, folder=None):
-            """Creation of bivariant jointplots."""
-            if folder:
-                savepath = self._plotDir.joinpath(folder)
-            else:
-                savepath = self._plotDir
-            savepath.mkdir(exist_ok=True)
-            # Pass given paths to a function that pairs each variable
-            self.Joint_looper(paths1, paths2, savepath)
-
-        def _pair():
-            """Create pairplot-grid, i.e. each channel vs each channel."""
-            allData = pd.DataFrame()
-            # Loop through all channels.
-            for path in self._dataDir.glob('ChanAvg_*'):
-                # Find whether to drop outliers and then read data
-                dropB = Sett.Drop_Outliers
-                plotData, __, cntr = self.read_channel(path, self._groups,
-                                                       drop=dropB)
-                # get channel name from path, and add identification ('Sample')
-                channel = str(path.stem).split('_')[1]
-#                plotData['Sample'] = plotData.index
-                # Change data into long form (one observation per row):
-                plotData = pd.melt(plotData, id_vars=['Sample Group'],
-                                   var_name='Longitudinal Position',
-                                   value_name=channel)
-                if allData.empty:
-                    allData = plotData
-                else:  # Merge data so that each row contains all channel
-                    # counts from one bin of one sample
-                    allData = allData.merge(plotData, how='outer', copy=False,
-                                            on=['Sample Group',
-                                                'Longitudinal Position'])
-            name = 'All Channels Pairplots'
-            # Initialize plotter, create plot keywords, and then create plots
-            plot_maker = plotter(allData, self._plotDir, title=name,
-                                 center=cntr, palette=self._grpPalette)
-            kws = {'hue': 'Sample Group', 'kind': 'reg', 'diag_kind': 'kde',
-                   'height': 3.5, 'aspect': 1, 'title_y': 1}
-            plot_maker.plot_Data(plotter.pairPlot, self._plotDir, **kws)
-
-        def _distributions():
-            kws = {'hue': 'Sample Group', 'row': 'variable', 'col': 'Channel',
-                   'title_y': 0.95, 'gridspec': {'hspace': 0.7, 'wspace': 0.5},
-                   'sharey': False, 'sharex': False, 'height': 5, 'aspect': 1}
-
-            AllData = pd.DataFrame()
-            # Get feature count data:
-            for path in self._dataDir.glob('All_*'):
-                data, name, _ = self.read_channel(path, self._groups)
-                melt_data = pd.melt(data, id_vars='Sample Group')
-                melt_data.loc[:, 'variable'] = 'Feature count'
-                melt_data.loc[:, 'Channel'] = name
-                AllData = pd.concat([AllData, melt_data])
-            del data, melt_data
-            # Get additional data:
-            for key in Sett.AddData.keys():
-                paths = [p for s in self._samplePaths for p in s.glob('*.csv')]
-                # read and concatenate all found data files:
-                for path in paths:
-                    data = system.read_data(path, header=0, test=False,
-                                            index_col=False)
-                    values = data.loc[:, data.columns.str.contains(key)].copy()
-                    if values.empty:
-                        continue
-                    group = path.parent.name.split('_')[0]
-                    # Assign identification columns
-                    values.loc[:, 'Sample Group'] = group
-                    values.loc[:, 'Channel'] = path.stem
-                    for col in values.loc[:, ~values.columns.isin(
-                            ['Sample Group', 'Channel'])].columns:
-                        # If no variance, drop data
-                        if values.loc[:, col].nunique() == 1:
-                            values.drop(col, axis=1, inplace=True)
-                    melt_data = pd.melt(values, id_vars=['Channel',
-                                                         'Sample Group'])
-                    AllData = pd.concat([AllData, melt_data], sort=False)
-            plot_name = "All Distributions"
-            plot_maker = plotter(AllData, self._plotDir, title=plot_name,
-                                 palette=self._grpPalette)
-            savepath = self._plotDir
-            plot_maker.distPlot(savepath, **kws)
 
         def _clusters():
             """Handle data for cluster plots."""
@@ -324,6 +218,145 @@ class Samplegroups:
                 print('WARNING: {}'.format(msg))
                 lg.logprint(LAM_logger, msg, 'w')
 
+        def _distributions():
+            kws = {'hue': 'Sample Group', 'row': 'variable', 'col': 'Channel',
+                   'title_y': 0.95, 'gridspec': {'hspace': 0.7, 'wspace': 0.5},
+                   'sharey': False, 'sharex': False, 'height': 5, 'aspect': 1}
+
+            all_data = pd.DataFrame()
+            # Get feature count data:
+            for path in self._dataDir.glob('All_*'):
+                data, name, _ = self.read_channel(path, self._groups)
+                data = pd.melt(data, id_vars='Sample Group')
+                data.loc[:, 'variable'] = 'Feature count'
+                data.loc[:, 'Channel'] = name
+                if Sett.Drop_Outliers:
+                    data.loc[:, 'value'] = DropOutlier(data.loc[:, 'value'])
+                all_data = pd.concat([all_data, data])
+            # Get additional data:
+            for key in Sett.AddData.keys():
+                print(key)
+                paths = [p for s in self._samplePaths for p in s.glob('*.csv')]
+                # read and concatenate all found data files:
+                temp = pd.DataFrame()
+                for path in paths:
+                    data = system.read_data(path, header=0, test=False,
+                                            index_col=False)
+                    values = data.loc[:, data.columns.str.contains(key)].copy()
+                    if values.empty:
+                        continue
+                    group = path.parent.name.split('_')[0]
+                    # Assign identification columns
+                    values.loc[:, 'Sample Group'] = group
+                    values.loc[:, 'Channel'] = path.stem
+                    for col in values.loc[:, ~values.columns.isin(
+                            ['Sample Group', 'Channel'])].columns:
+                        # If no variance, drop data
+                        if values.loc[:, col].nunique() == 1:
+                            values.drop(col, axis=1, inplace=True)
+                    data = pd.melt(values, id_vars=['Channel', 'Sample Group'])
+                    temp =  pd.concat([temp, data], sort=False)
+                if Sett.Drop_Outliers:
+                    temp.loc[:, 'value'] = DropOutlier(temp.loc[:, 'value'])
+                all_data = pd.concat([all_data, temp], sort=False)
+            plot_name = "All Distributions"
+            plot_maker = plotter(all_data, self._plotDir, title=plot_name,
+                                 palette=self._grpPalette)
+            savepath = self._plotDir
+            plot_maker.distPlot(savepath, **kws)
+
+        def _heat(paths, samples=False):
+            """Create heatmaps of cell counts for each sample group."""
+            savepath = self._plotDir
+            fullData = pd.DataFrame()
+            # Loop through the given channels and read the data file. Each
+            # channel is concatenated to one dataframe for easier plotting.
+            for path in paths:
+                plotData, name, cntr = self.read_channel(path, self._groups)
+                # change each sample's group to be contained in its index
+                # within the dataframe.
+                if not samples:
+                    plotData.index = plotData.loc[:, 'Sample Group']
+                plotData.drop(labels='Sample Group', axis=1, inplace=True)
+                # Channel-variable is added for identification
+                plotData.loc[:, 'Channel'] = name
+                fullData = pd.concat([fullData, plotData], axis=0, copy=False)
+            # The plotting can't handle NaN's, so they are changed to zero.
+            fullData = fullData.replace(np.nan, 0)
+            if not samples:
+                name = "All Channels Heatmaps"
+            else:
+                name = "All Samples Channel Heatmaps"
+            # Initialize plotting-class, create kws, and plot all channel data.
+            plot_maker = plotter(fullData, self._plotDir, center=cntr,
+                                 title=name, palette=None)
+            kws = {'height': 3, 'aspect': 5, 'row': 'Channel', 'title_y': 0.93,
+                   'center': plot_maker.MPbin, 'xlen': self._length,
+                   'vmax': None, 'gridspec': {'hspace': 0.5}, 'sharey': False}
+            if samples:  # Make height of plot dependant on sample size
+                val = fullData.index.unique().size / 2
+                kws.update({'height': val})
+            plot_maker.plot_Data(plotter.Heatmap, savepath, **kws)
+
+        def _pair():
+            """Create pairplot-grid, i.e. each channel vs each channel."""
+            all_data = pd.DataFrame()
+            # Loop through all channels.
+            for path in self._dataDir.glob('ChanAvg_*'):
+                # Find whether to drop outliers and then read data
+                dropB = Sett.Drop_Outliers
+                plotData, __, cntr = self.read_channel(path, self._groups,
+                                                       drop=dropB)
+                # get channel name from path, and add identification ('Sample')
+                channel = str(path.stem).split('_')[1]
+#                plotData['Sample'] = plotData.index
+                # Change data into long form (one observation per row):
+                plotData = pd.melt(plotData, id_vars=['Sample Group'],
+                                   var_name='Longitudinal Position',
+                                   value_name=channel)
+                if all_data.empty:
+                    all_data = plotData
+                else:  # Merge data so that each row contains all channel
+                    # counts from one bin of one sample
+                    all_data = all_data.merge(plotData, how='outer', copy=False,
+                                            on=['Sample Group',
+                                                'Longitudinal Position'])
+            name = 'All Channels Pairplots'
+            # Initialize plotter, create plot keywords, and then create plots
+            plot_maker = plotter(all_data, self._plotDir, title=name,
+                                 center=cntr, palette=self._grpPalette)
+            kws = {'hue': 'Sample Group', 'kind': 'reg', 'diag_kind': 'kde',
+                   'height': 3.5, 'aspect': 1, 'title_y': 1}
+            plot_maker.plot_Data(plotter.pairPlot, self._plotDir, **kws)
+
+        def _select(paths, adds=True):
+            """Find different types of data for versus plot."""
+            retPaths = []
+            # Find target names from settings
+            if adds:
+                targets = Sett.vs_adds
+            else:
+                targets = Sett.vs_channels
+            for trgt in targets:  # For each target, find corresponding file
+                if adds:  # File name dependent on data type
+                    namer = "^Avg_.*_{}.*".format(trgt)
+                else:
+                    namer = "^Norm_{}.*".format(trgt)
+                reg = re.compile(namer, re.I)
+                selected = [p for p in paths if reg.search(str(p.stem))]
+                retPaths.extend(selected)  # Add found paths to list
+            return retPaths
+
+        def _versus(paths1, paths2=None, folder=None):
+            """Creation of bivariant jointplots."""
+            if folder:
+                savepath = self._plotDir.joinpath(folder)
+            else:
+                savepath = self._plotDir
+            savepath.mkdir(exist_ok=True)
+            # Pass given paths to a function that pairs each variable
+            self.Joint_looper(paths1, paths2, savepath)
+
         # If no plots handled by this method are True, return
         plots = [Sett.Create_Channel_Plots, Sett.Create_AddData_Plots,
                  Sett.Create_Channel_PairPlots, Sett.Create_Heatmaps,
@@ -346,7 +379,7 @@ class Samplegroups:
         if Sett.Create_AddData_Plots:  # Plot additional data
             lg.logprint(LAM_logger, 'Plotting additional data', 'i')
             print('Plotting additional data  ...')
-            _base(self._addData, plotter.linePlot, ylabel=None)
+            _additional(self._addData)
             lg.logprint(LAM_logger, 'Additional data plots done.', 'i')
 
         if Sett.Create_Channel_PairPlots:  # Plot pair plot
@@ -1017,6 +1050,11 @@ def DropOutlier(Data):
         warnings.simplefilter('ignore', category=RuntimeWarning)
         mean = np.nanmean(Data.values)
         std = np.nanstd(Data.values)
-        Data = Data.applymap(lambda x: x if np.abs(x - mean) <=
-                             (Sett.dropSTD * std) else np.nan)
+        dropval = Sett.dropSTD * std
+        if isinstance(Data, pd.DataFrame):
+            Data = Data.applymap(lambda x, dropval=dropval: x if
+                                 np.abs(x - mean) <= dropval else np.nan)
+        elif isinstance(Data, pd.Series):
+            Data = Data.apply(lambda x, dropval=dropval: x if np.abs(x - mean)
+                              <= dropval else np.nan)
     return Data
