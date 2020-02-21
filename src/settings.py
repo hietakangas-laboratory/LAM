@@ -153,9 +153,12 @@ class settings:
     vs_adds = ['Intensity Mean']
 
     # Whether to drop outliers from plots ONLY
-    # for considering what is an outlier.
     Drop_Outliers = True
-    dropSTD = 2.5  # The standard deviation limit for drop
+    dropSTD = 3  # The standard deviation limit for drop
+    # NOTE ON DROPPING OUTLIERS:
+    #   Some variables may not be normally distributed (e.g. feature counts),
+    #   and using standard deviation for dropping on such data might remove
+    #   valid features from the plot.
 
     # Gives values some coordinate-shift in channel pairplots. Useful in pre-
     # senting the data, as it is discrete; most of the data would be hidden

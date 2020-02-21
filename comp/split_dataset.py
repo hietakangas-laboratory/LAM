@@ -1,32 +1,44 @@
 # -*- coding: utf-8 -*-
 """
+Split data sets by coordinate points to allow LAM analysis of sub-regions.
+
 Created on Thu Feb  6 12:14:14 2020
 
 @author: artoviit
-
+-------------------------------------------------------------------------------
 DESCRIPTION:
 -----------
     Splits a data set and its vectors based on user given points after their
     projection during regular LAM 'Count'-functionality. In its simplicity, the
     projected points determine cut-off points in the data set and its vectors.
-    The script creates a LAM-hierarchical folders for each of the sub-sections
-    of the data set, that can then be analysed separately.
+    The script creates LAM-hierarchical folders for each of the sub-sections of
+    the data set, that can then be analysed separately.
+
+    Intended use is to input biologically identifiable cut-off points, i.e. co-
+    ordinates of region borders as seen on the microscopy image. This allows
+    proper alignment of the different regions between the samples, and enables
+    data collection from specific regions.
+
+    After projecting each of the subsets, you can use combineSets.py to re-
+    combine the sets to possibly create better comparisons between sample
+    groups when there is variability in region proportions. HOWEVER, this
+    breaks the sample-specific equivalency of the bins at cut-off points, and
+    should be handled with great care.
 
 USAGE:
 -----
     Perform a LAM projection (i.e. 'Count') using a full data set, with each
     cut-off point determined by a separate 'channel', similar to a MP. After
-    projection, define the required variables below and run the script.
+    projection, define the required variables below and run the script. The
+    script creates N+1 directories, where N is the number of defined cutpoints.
+    The directories will contain the data of all samples cut followingly: from
+    the first bin to the first cut-off point (directory named by the point),
+    from that point to the next cut-off point (named by the second cut point),
+    ad infinitum, and then from the final cut point to the final bin of the
+    samples (named as 'END').
 
     To analyze the split sets with LAM, make sure that settings.header_row is
     set to zero (or the alternative in GUI).
-
-    NOTE:
-        After projecting each of the subsets, you can use combineSets.py to re-
-        combine the sets to possibly create better comparisons between sample
-        groups when there is variability in region proportions. HOWEVER, this
-        breaks the equivalency of the bins at cut-off points, and should be
-        handled with great care.
 
 DEPS:
 ----
@@ -35,7 +47,7 @@ DEPS:
     - Numpy
     - Pathlib
 
-Vars:
+VARS:
 ----
     ROOT : pathlib.Path
         The root analysis directory of the data set to split.
@@ -43,6 +55,10 @@ Vars:
     SAVEDIR : pathlib.Path
         The destination directory for the split data sets. Each split set will
         be saved into a directory defined by CUT_POINTS.
+
+    CHANNELS : list [str]
+        List of all the channels that are to be split. All channels out of this
+        list are disregarded and will not be copied to the SAVEDIR.
 
     CUT_POINTS : list [str]
         List of the channel names of the cut-off points. The order of the list
@@ -67,9 +83,10 @@ import pathlib as pl
 import shapely.geometry as gm
 import shapely.ops as op
 
-ROOT = pl.Path(r"E:\Code_folder\DSS")
-SAVEDIR = pl.Path(r"E:\Code_folder\split_dss")
-CUT_POINTS = ["R2R3", "R3R4"]#, "R4R5"]
+ROOT = pl.Path(r"P:\h919\hietakangas\Arto\DSS")
+SAVEDIR = pl.Path(r"P:\h919\hietakangas\Arto\DSS_split_re")
+CUT_POINTS = ["R2R3", "R3R4"]  # "R4R5"]
+CHANNELS = ['DAPI', 'GFP', 'Delta', 'Prospero', 'DAPIbig', 'DAPIpienet']
 # Number of bins for whole length of samples. Script gives recommendation for
 # numbers of bins for each split region based on this value:
 TOTAL_BIN = 40
@@ -143,8 +160,7 @@ def get_sample_data(samplepath, POINTS, length_data):
     length_data.save_substrings(sample_name, sub_vectors)
     # Cutting and saving of new data:
     for datafile in file_paths:
-        ban = ["Vector", "MPs"] + POINTS
-        if datafile.stem not in ban:
+        if datafile.stem in CHANNELS:
             data = pd.read_csv(datafile)
             idx_cuts = cut_data(data, cut_distances)
             for i, cut in enumerate(idx_cuts):

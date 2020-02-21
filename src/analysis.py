@@ -225,7 +225,7 @@ class Samplegroups:
 
             all_data = pd.DataFrame()
             # Get feature count data:
-            for path in self._dataDir.glob('All_*'):
+            for path in [p for p in self._dataDir.glob('All_*')]:
                 data, name, _ = self.read_channel(path, self._groups)
                 data = pd.melt(data, id_vars='Sample Group')
                 data.loc[:, 'variable'] = 'Feature count'
@@ -235,8 +235,9 @@ class Samplegroups:
                 all_data = pd.concat([all_data, data])
             # Get additional data:
             for key in Sett.AddData.keys():
-                print(key)
-                paths = [p for s in self._samplePaths for p in s.glob('*.csv')]
+                print("{}  ...".format(key))
+                paths = [p for s in self._samplePaths for p in s.glob('*.csv')
+                         if p.stem not in ['Vector', 'MPs']]
                 # read and concatenate all found data files:
                 temp = pd.DataFrame()
                 for path in paths:
@@ -245,19 +246,21 @@ class Samplegroups:
                     values = data.loc[:, data.columns.str.contains(key)].copy()
                     if values.empty:
                         continue
+                    for col in values.columns:
+                        # If no variance, drop data
+                        if values.loc[:, col].nunique() == 1:
+                            values.drop(col, axis=1, inplace=True)
                     group = path.parent.name.split('_')[0]
                     # Assign identification columns
                     values.loc[:, 'Sample Group'] = group
                     values.loc[:, 'Channel'] = path.stem
-                    for col in values.loc[:, ~values.columns.isin(
-                            ['Sample Group', 'Channel'])].columns:
-                        # If no variance, drop data
-                        if values.loc[:, col].nunique() == 1:
-                            values.drop(col, axis=1, inplace=True)
                     data = pd.melt(values, id_vars=['Channel', 'Sample Group'])
                     temp =  pd.concat([temp, data], sort=False)
                 if Sett.Drop_Outliers:
-                    temp.loc[:, 'value'] = DropOutlier(temp.loc[:, 'value'])
+                    for var in temp.variable.unique():
+                        temp.loc[(temp.variable == var), 'value'] =\
+                            DropOutlier(temp.loc[(temp.variable == var),
+                                                 'value'])
                 all_data = pd.concat([all_data, temp], sort=False)
             plot_name = "All Distributions"
             plot_maker = plotter(all_data, self._plotDir, title=plot_name,

@@ -360,24 +360,30 @@ class plotter:
         g = (g.map_dataframe(sns.lineplot, x='variable', y='value', ci='sd',
                    err_style='band', hue=kws.get('hue'), dashes=False,
                    alpha=1, palette=self.palette, err_kws=err_kws))
-        # grps = {'ctrl': [19, 22], 'dss': [20, 23]}
+        # grps = {'ctrl': [23.1, 26.8], 'dss': [23.1, 26.4]}
         # palette_colors = ['orange yellow', 'aqua marine']
         # groupcolors = sns.xkcd_palette(palette_colors)
         for i, ax in enumerate(g.axes.flat):
             ax.set_ylabel(ylabels[i])
             # ybot, ytop = ax.get_ylim()
             # y_vals = [ybot, ytop]
-            # for i, grp in enumerate(grps.keys()):
+            # ax.plot([19, 19], y_vals, color='k', zorder=0,
+            #         linestyle='dotted', alpha=0.4, linewidth=2.25)
+            # ax.plot([22, 22], y_vals, color='k', zorder=0,
+            #         linestyle='dotted', alpha=0.4, linewidth=2.25)
+            # ybot, ytop = ax.get_ylim()
+            # y_vals = [ybot, ytop]
+            # for i2, grp in enumerate(grps.keys()):
             #     points = grps.get(grp)
             #     for val in points:
             #         x_vals = [val, val]
-            #         ax.plot(x_vals, y_vals, color=groupcolors[i], zorder=0,
-            #                 linestyle='dotted', linewidth=1.75)
+            #         ax.plot(x_vals, y_vals, color=groupcolors[i2], zorder=0,
+            #                 linestyle='dotted', alpha=0.4, linewidth=2.25)
 
             # Create centerline:
-            ybot, ytop = ax.get_ylim()
-            yaxis = [ytop, ytop]
-            ax.plot((self.MPbin, self.MPbin), (ybot, ytop), 'k--', zorder=0)
+            # ybot, ytop = ax.get_ylim()
+            # yaxis = [ytop, ytop]
+            # ax.plot((self.MPbin, self.MPbin), (ybot, ytop), 'k--', zorder=0)
         g = g.add_legend()
         plt.suptitle(self.title, y=0.995)
         filepath = self.savepath.joinpath(self.title + self.ext)
