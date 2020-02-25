@@ -1,6 +1,7 @@
 name: LAMenv
 channels:
   - defaults
+  - conda-forge
 dependencies:
   - wincertstore==0.2
   - pyparsing==2.4.5
@@ -8,7 +9,6 @@ dependencies:
   - numpy==1.18.1
   - cloudpickle==1.2.2
   - statsmodels==0.10.1
-  - python=3.6.9
   - cycler==0.10.0
   - mkl
   - pytz==2019.3
@@ -34,8 +34,6 @@ dependencies:
   - tornado==6.0.3
   - pillow==6.2.1
   - six==1.13.0
-  - shapely
-  - pip:
-    - pycg3d==0.0.1
+  - shapely==1.7.0
 prefix: C:\ProgramData\Anaconda3\envs\LAMenv
 

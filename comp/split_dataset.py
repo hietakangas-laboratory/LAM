@@ -83,13 +83,13 @@ import pathlib as pl
 import shapely.geometry as gm
 import shapely.ops as op
 
-ROOT = pl.Path(r"P:\h919\hietakangas\Arto\DSS")
-SAVEDIR = pl.Path(r"P:\h919\hietakangas\Arto\DSS_split_re")
+ROOT = pl.Path(r"P:\h919\hietakangas\Arto\LAM_manu_sets\DSS")
+SAVEDIR = pl.Path(r"P:\h919\hietakangas\Arto\LAM_manu_sets\DSS_62bin_split")
 CUT_POINTS = ["R2R3", "R3R4"]  # "R4R5"]
 CHANNELS = ['DAPI', 'GFP', 'Delta', 'Prospero', 'DAPIbig', 'DAPIpienet']
 # Number of bins for whole length of samples. Script gives recommendation for
 # numbers of bins for each split region based on this value:
-TOTAL_BIN = 40
+TOTAL_BIN = 62
 CONT_END = True
 
 
@@ -213,18 +213,19 @@ if __name__ == '__main__':
         get_sample_data(path, POINTS, length_data)
     print("Finding averages ...")
     length_data.find_averages()
-    
-    
+    print("\n- Average lengths:\n", length_data.averages, "\n")
+
     summed_length = length_data.averages.sum(axis=0)
     bin_suggestion = pd.DataFrame(index=length_data.averages.index,
                                   columns=length_data.averages.columns)
     for grp in summed_length.index:
         fraction = length_data.averages.loc[:, grp] / summed_length[grp]
         bins = TOTAL_BIN * fraction
-        bin_suggestion.loc[:, grp] = np.round(bins).astype(int)
+        bin_suggestion.loc[:, grp] = bins
     if len(bin_suggestion.columns) > 1:
         bin_suggestion.loc['TOTAL', :] = bin_suggestion.sum().values
-        bin_suggestion.loc[:, 'MEAN'] = bin_suggestion.mean(axis=1).values
-    print(bin_suggestion)
+        bin_suggestion.loc[:, 'MEAN'] = bin_suggestion.mean(
+            axis=1).values.astype(int)
+    print("- Bin fractions:\n", bin_suggestion)
     bin_suggestion.to_csv(SAVEDIR.joinpath('Bin_suggestions.csv'))
     print('\n\nSPLIT DONE')

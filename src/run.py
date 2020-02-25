@@ -6,13 +6,13 @@ Created on Wed Mar  6 12:42:28 2019
 @author: Arto I. Viitanen
 -------------------------------------------------------------------------------
 
-Dependencies:
+DEPENDENCIES:
 ------------
 matplotlib (3.1.1), numpy (1.16.5), pandas (0.25.1), pathlib2
-(2.3.5), scipy (1.3.1), seaborn (0.9.0), shapely (1.6.4),
+(2.3.5), scipy (1.3.1), seaborn (0.9.0), shapely (1.7.0),
 scikit-image (0.15.0), statsmodels (0.9.0)
 
-Installation:
+INSTALLATION:
 ------------
 The master folder should contain environment.yml that can be used to create
 Anaconda environment for LAM-use. For a Python environment, requirements.txt is
@@ -34,19 +34,16 @@ included.
         front of the line to pass it, in order to install all other necessary
         dependencies.
 
-- Anaconda base environment:
+- Anaconda3 base environment:
     1. install Anaconda3 distribution (https://www.anaconda.com/distribution/)
     2. add Shapely-package:
         open Anaconda prompt and write following command:
         Windows:
-            conda install shapely –c conda-forge
+            conda install shapely=1.7.0 –c conda-forge
         OS X & Linux:
-            pip install shapely
-    3. add pycg3d-package:
-        Open Anaconda Prompt, write command:
-            pip install pycg3d
+            pip install shapely=1.7.0
 
-Usage:
+USAGE:
 -----
 Script for longitudinal analysis of Drosophila midgut images. To run the
 script, change the work directory in either Sett.py or the GUI to the directory

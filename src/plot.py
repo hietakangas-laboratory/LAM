@@ -328,16 +328,25 @@ class plotter:
         """Creation of distributions."""
         with warnings.catch_warnings():
             warnings.simplefilter('ignore', category=UserWarning)
-            g = sns.FacetGrid(data=self.data, row=kws.get('row'),
-                              col=kws.get('col'), hue=kws.get('hue'),
-                              palette=self.palette, sharex=kws.get('sharex'),
-                              sharey=kws.get('sharey'),
-                              height=kws.get('height'),
-                              aspect=kws.get('aspect'),
-                              gridspec_kws=kws.get('gridspec'))
-            g = (g.map(sns.distplot, 'value', kde=True, hist=True,
-                       norm_hist=True, hist_kws={"alpha": 0.3,
-                                                 "linewidth": 0}))
+            try:
+                g = sns.FacetGrid(data=self.data, row=kws.get('row'),
+                                  col=kws.get('col'), hue=kws.get('hue'),
+                                  palette=self.palette,
+                                  sharex=kws.get('sharex'),
+                                  sharey=kws.get('sharey'),
+                                  height=kws.get('height'),
+                                  aspect=kws.get('aspect'),
+                                  gridspec_kws=kws.get('gridspec'))
+                g = (g.map(sns.distplot, 'value', kde=True, hist=True,
+                           norm_hist=True, hist_kws={"alpha": 0.3,
+                                                     "linewidth": 0}))
+            except np.linalg.LinAlgError:
+                msg = '-> Confirm that all samples have proper channel data'
+                fullmsg = 'Distribution plot singular matrix\n{}'.format(msg)
+                lg.logprint(LAM_logger, fullmsg, 'ex')
+                print('ERROR: Distribution plot singular matrix')
+                print(msg)
+                return
         for ax in g.axes.flat:
             title = ax.get_title()
             new_title = title.replace(' | ', '\n')
@@ -358,8 +367,9 @@ class plotter:
         g = sns.FacetGrid(data=data, row=row_var, hue=kws.get('hue'),
                           height=2, aspect=3.5, sharey=False)
         g = (g.map_dataframe(sns.lineplot, x='variable', y='value', ci='sd',
-                   err_style='band', hue=kws.get('hue'), dashes=False,
-                   alpha=1, palette=self.palette, err_kws=err_kws))
+                             err_style='band', hue=kws.get('hue'),
+                             dashes=False, alpha=1, palette=self.palette,
+                             err_kws=err_kws))
         # grps = {'ctrl': [23.1, 26.8], 'dss': [23.1, 26.4]}
         # palette_colors = ['orange yellow', 'aqua marine']
         # groupcolors = sns.xkcd_palette(palette_colors)
