@@ -273,6 +273,8 @@ class get_sample:
             binaryArray, skeleton = None, None
         # Simplification of vector points
         vector = vector.simplify(Sett.simplifyTol)
+	# Get vector direction at bins
+	lineDF = self.vector_direction(lineDF)  # ???
         # Save total length of vector
         length = pd.Series(vector.length, name=self.name)
         system.saveToFile(length, datadir, 'Length.csv')
@@ -281,6 +283,10 @@ class get_sample:
         # Create plots of created vector
         create_plot = plotter(self, self.sampledir)
         create_plot.vector(self.name, vector, X, Y, binaryArray, skeleton)
+
+    def vector_direction(vector_df):  # !!!
+	
+	
 
     def SkeletonVector(self, X, Y, resize, BDiter, SigmaGauss):
         """Create vector by skeletonization of image-transformed positions."""
@@ -510,8 +516,10 @@ class get_sample:
         # projection.
         points = gm.MultiPoint(XYpos)
         # Find point of projection on the vector.
-        Positions["VectPoint"] = [self.vector.interpolate(self.vector.project(
-            gm.Point(x))) for x in points]
+# !!!
+	proj_points = [self.vector.project(gm.Point(x))) for x in points]
+	proj_dist = [p.distance(proj_points[i]) for i, p in enumerate(points)] 
+        Positions["VectPoint"] = [self.vector.interpolate(p) for p in proj_points]
         # Find normalized distance (0->1)
         Positions["NormDist"] = [self.vector.project(x, normalized=True) for x
                                  in Positions["VectPoint"]]
