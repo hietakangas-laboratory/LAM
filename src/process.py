@@ -12,6 +12,7 @@ import inspect
 import math
 import re
 import warnings
+from itertools import chain
 # Other packages
 import numpy as np
 import pandas as pd
@@ -104,9 +105,20 @@ def Project(PATHS):
                 print(msg)
             # Project features of channel onto vector
             sample.data = sample.project_channel(channel)
-            channel_name = str(path2.stem)
+            if channel.name == Sett.vectChannel:
+                sample.data = sample.point_handedness(channel.name)
+                sample.average_width(PATHS.datadir)
+                # !!!
+                # import seaborn as sns
+                # g = sns.FacetGrid(data=sample.data, height=3, aspect=2.5)
+                # g = g.map(sns.scatterplot, data=sample.data, x='Position X',
+                #           y='Position Y', hue='hand', **{'linewidth': 0,
+                #                                          's': 10})
+                # g = g.add_legend()
+                # g.savefig(sample.sampledir.joinpath("DAPI_hands.pdf"),
+                #           format='pdf')
             # Count occurrences in each bin
-            if channel_name not in ["MPs"]:
+            if channel.name not in ["MPs"]:
                 sample.find_counts(channel.name, PATHS.datadir)
     lg.logprint(LAM_logger, 'All channels projected and counted.', 'i')
 
@@ -173,9 +185,16 @@ def Get_Counts(PATHS):
             # relative comparison.
             ch_counts = normalize(path)
             ch_counts.starts, norm_counts = ch_counts.normalize_samples(
-                MPs, store.totalLength)
+                MPs, store.totalLength, store.center)
             ch_counts.averages(norm_counts)
             ch_counts.Avg_AddData(PATHS, Sett.AddData, store.totalLength)
+        if Sett.measure_width:
+            print('Width  ...')
+            width_path = PATHS.datadir.joinpath('Sample_widths.csv')
+            width_counts = normalize(str(width_path))
+            _, _ = width_counts.normalize_samples(
+                MPs * 2, store.totalLength * 2, store.center*2,
+                name='Sample_widths_norm')
         lg.logprint(LAM_logger, 'Channels normalized.', 'i')
 
 
@@ -208,10 +227,9 @@ class get_sample:
                 if channel.lower() not in [c.lower() for c in store.channels]:
                     store.channels.append(channel)
             self.find_sample_vector(PATHS.datadir)
-    
+
     def find_sample_vector(self, path):  # path = data directory
         """Find sample's vector data."""
-
         try:  # Find sample's vector file and read it
             vectorp = next(self.sampledir.glob('Vector.*'))
             if vectorp.name == "Vector.csv":
@@ -273,8 +291,6 @@ class get_sample:
             binaryArray, skeleton = None, None
         # Simplification of vector points
         vector = vector.simplify(Sett.simplifyTol)
-	# Get vector direction at bins
-	lineDF = self.vector_direction(lineDF)  # ???
         # Save total length of vector
         length = pd.Series(vector.length, name=self.name)
         system.saveToFile(length, datadir, 'Length.csv')
@@ -283,10 +299,6 @@ class get_sample:
         # Create plots of created vector
         create_plot = plotter(self, self.sampledir)
         create_plot.vector(self.name, vector, X, Y, binaryArray, skeleton)
-
-    def vector_direction(vector_df):  # !!!
-	
-	
 
     def SkeletonVector(self, X, Y, resize, BDiter, SigmaGauss):
         """Create vector by skeletonization of image-transformed positions."""
@@ -510,38 +522,113 @@ class get_sample:
 
     def project_channel(self, channel):
         """For projecting coordinates onto the vector."""
-        Positions = channel.data
-        XYpos = list(zip(Positions['Position X'], Positions['Position Y']))
+        # import seaborn as sns  # !!!
+        data = channel.data
+        XYpos = list(zip(data['Position X'], data['Position Y']))
         # The shapely packages reguires transformation into Multipoints for the
         # projection.
         points = gm.MultiPoint(XYpos)
-        # Find point of projection on the vector.
-# !!!
-	proj_points = [self.vector.project(gm.Point(x))) for x in points]
-	proj_dist = [p.distance(proj_points[i]) for i, p in enumerate(points)] 
-        Positions["VectPoint"] = [self.vector.interpolate(p) for p in proj_points]
+        # Find projection distance on the vector.
+        proj_vector_dist = [self.vector.project(gm.Point(x)) for x in points]
+        # Find the exact point of projection
+        proj_points = [self.vector.interpolate(p) for p in proj_vector_dist]
+        # Find distance between feature and the point of projection
+        proj_dist = [p.distance(proj_points[i]) for i, p in enumerate(points)]
         # Find normalized distance (0->1)
-        Positions["NormDist"] = [self.vector.project(x, normalized=True) for x
-                                 in Positions["VectPoint"]]
+        data["NormDist"] = [d / self.vectorLength for d in proj_vector_dist]
         # Determine bins of each feature
         edges = np.linspace(0, 1, Sett.projBins+1)
         labels = np.arange(0, Sett.projBins)
-        Positions["DistBin"] = pd.cut(Positions["NormDist"], labels=labels,
-                                      bins=edges, include_lowest=True
-                                      ).astype('int')
-        # Save the obtained data:
-        ChString = str('{}.csv'.format(channel.name))
-        Positions["VectPoint"] = Positions["VectPoint"].apply(
-            lambda x: tuple([x.x, x.y]))
-        system.saveToFile(Positions, self.sampledir, ChString, append=False)
-        return Positions
+        data["DistBin"] = pd.cut(data["NormDist"], labels=labels, bins=edges,
+                                 include_lowest=True).astype('int')
+        # Assign data to DF and save the dataframe:
+        data["VectPoint"] = [(p.x, p.y) for p in proj_points]
+        data["ProjDist"] = proj_dist
+        ChString = '{}.csv'.format(channel.name)
+        system.saveToFile(data, self.sampledir, ChString, append=False)
+        return data
+
+    def point_handedness(self, channel):
+        """
+        Find handedness of projected points compared to vector.
+
+        self.data must contain columns created by project_channel(). Returns DF
+        with added column 'hand', with possible values [-1, 0, 1] that corres-
+        pond to [right side, on vector, left side] respectively.
+        """
+        def _get_sign(arr, p1x, p1y, p2x, p2y):
+            X, Y = arr[0], arr[1]
+            val = math.copysign(1, (p2x - p1x) * (Y - p1y) -
+                                (p2y - p1y) * (X - p1x))
+            return val
+
+        edges, edge_points = self.get_vector_edges(multip=2)
+        data = self.data.sort_values(by='NormDist')
+        for ind, point1 in enumerate(edge_points[:-1]):
+            point2 = edge_points[ind+1]
+            p1x, p1y = point1.x, point1.y
+            p2x, p2y = point2.x, point2.y
+            d_index = self.data.loc[(data.NormDist >= edges[ind]) &
+                                    (data.NormDist < edges[ind+1])].index
+            points = data.loc[d_index, ['Position X', 'Position Y']]
+            data.loc[d_index, 'hand'] = points.apply(
+                _get_sign, args=(p1x, p1y, p2x, p2y), axis=1, raw=True
+                ).replace(np.nan, 0)
+        data = data.sort_index()
+        ChString = str('{}.csv'.format(channel))
+        system.saveToFile(data, self.sampledir, ChString, append=False)
+        return data
+
+    def get_vector_edges(self, multip=1, points=True):
+        """
+        Divide vector to segments.
+
+        Params:
+        ------
+            multip : int
+                Determines the number of segments, i.e. Sett.projBins * multip
+
+            points : bool
+                Whether to also find the XY-coordinates of the edges.
+        """
+        edges = np.linspace(0, 1, Sett.projBins*multip)
+        if points:
+            edge_points = [self.vector.interpolate(d, normalized=True) for d in
+                           edges]
+            return edges, edge_points
+        return edges
+
+    def average_width(self, datadir):
+        def _get_approx_width(data):
+            width = 0
+            for val in [-1, 1]:
+                distances = data.loc[(data.hand == val)].ProjDist
+                if distances.size > 5:
+                    width += distances.nlargest().mean()
+                elif distances.size > 0:
+                    width += distances.max()
+            return width
+
+        edges = self.get_vector_edges(multip=2, points=False)
+        cols = ['NormDist', 'ProjDist', 'hand']
+        data = self.data.sort_values(by='NormDist').loc[:, cols]
+        # Create series to hold width results
+        res = pd.Series(name=self.name, index=pd.RangeIndex(stop=len(edges)))
+        # Loop segments and get widths:
+        for ind, dist in enumerate(edges[:-1]):
+            dist2 = edges[ind+1]
+            d_index = data.loc[(data.NormDist >= edges[ind]) &
+                               (data.NormDist < edges[ind+1])].index
+            res.iat[ind] = _get_approx_width(data.loc[d_index, :])
+        system.saveToFile(res, datadir, 'Sample_widths.csv')
+
 
     def find_counts(self, channelName, datadir):
         """Gather projected features and find bin counts."""
         counts = np.bincount(self.data['DistBin'],
                              minlength=Sett.projBins)
         counts = pd.Series(np.nan_to_num(counts), name=self.name)
-        ChString = str('All_{}.csv'.format(channelName))
+        ChString = 'All_{}.csv'.format(channelName)
         system.saveToFile(counts, datadir, ChString)
 
 
@@ -648,26 +735,6 @@ class normalize:
         self.counts = system.read_data(path, header=0, test=False)
         self.starts = None
 
-    def normalize_samples(self, MPs, arrayLength):
-        """For inserting sample data into larger matrix, centered with MP."""
-        cols = self.counts.columns
-        data = pd.DataFrame(np.zeros((arrayLength, len(cols))), columns=cols)
-        # Create empty series for holding each sample's starting index
-        SampleStart = pd.Series(np.full(len(cols), np.nan), index=cols)
-        for col in self.counts.columns:
-            handle = self.counts.loc[:, col].values
-            MP = MPs.loc[0, col]
-            # Insert sample's count data into larger, anchored dataframe:
-            insert, insx = relate_data(handle, MP, store.center, arrayLength)
-            data[col] = insert
-            # Save starting index of the sample
-            SampleStart.at[col] = insx
-        # Save anchored data
-        filename = str('Norm_{}.csv'.format(self.channel))
-        data = data.sort_index(axis=1)
-        system.saveToFile(data, self.path.parent, filename, append=False)
-        return SampleStart, data
-
     def averages(self, NormCounts):
         """Find bin averages of channels."""
         samples = NormCounts.columns.tolist()
@@ -712,6 +779,27 @@ class normalize:
                     filename = str('Avg_{}_{}.csv'.format(self.channel, col))
                     system.saveToFile(avgS, PATHS.datadir, filename)
 
+    def normalize_samples(self, MPs, arrayLength, center, name=None,):
+        """For inserting sample data into larger matrix, centered with MP."""
+        cols = self.counts.columns
+        data = pd.DataFrame(np.zeros((arrayLength, len(cols))), columns=cols)
+        # Create empty series for holding each sample's starting index
+        SampleStart = pd.Series(np.full(len(cols), np.nan), index=cols)
+        for col in self.counts.columns:
+            handle = self.counts.loc[:, col].values
+            MP = MPs.loc[0, col]
+            # Insert sample's count data into larger, anchored dataframe:
+            insert, insx = relate_data(handle, MP, center, arrayLength)
+            data[col] = insert
+            # Save starting index of the sample
+            SampleStart.at[col] = insx
+        # Save anchored data
+        if name is None:
+            name = 'Norm_{}'.format(self.channel)
+        filename = '{}.csv'.format(name)
+        data = data.sort_index(axis=1)
+        system.saveToFile(data, self.path.parent, filename, append=False)
+        return SampleStart, data
 
 def relate_data(data, MP=0, center=50, TotalLength=100):
     """Place sample data in context of all data, i.e. anchoring."""

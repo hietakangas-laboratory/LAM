@@ -125,8 +125,8 @@ class Samplegroups:
             """
             General plotting for LAM, i.e. variable on y-axis, and bins on x.
 
-            Args:
-            ----
+            Params:
+            ------
             Name_sep : int
                 the start of data's name when file name is split by '_', e.g.
                 name_sep=1 would name the data as DAPI when file name is
