@@ -87,9 +87,8 @@ class Samplegroups:
             ylabels = {}
             for path in paths:
                 # Read data from file and the pass it on to the plotter-class
-                data, add_name, cntr = self.read_channel(path, self._groups,
-                                                  drop=dropB,
-                                                  name_sep=name_sep)
+                data, add_name, cntr = self.read_channel(
+                    path, self._groups, drop=dropB, name_sep=name_sep)
                 # Get unit of data
                 sub_names = add_name.split('_')
                 key_name = sub_names[1].split('-')[0]
@@ -106,7 +105,7 @@ class Samplegroups:
                 ylabels.update({sub_names[1]: label})
                 # Transform data into plottable form
                 data = pd.melt(data, id_vars=['Channel', 'Additional',
-                                                   'Sample Group'])
+                                              'Sample Group'])
                 data.dropna(inplace=True)
                 all_data = pd.concat([all_data, data], sort=False)
             kws = {'row': 'Additional', 'hue': 'Sample Group',
@@ -120,8 +119,8 @@ class Samplegroups:
                                      title=title_name,
                                      palette=self._grpPalette)
                 plot_maker.linePlot(**kws)  # Plotting
-                    
-        def _base(paths, func, ylabel='Cell Count', name_sep=1, **kws):
+
+        def _base(paths, func, ylabel='Cell Count', name_sep=1):
             """
             General plotting for LAM, i.e. variable on y-axis, and bins on x.
 
@@ -255,7 +254,7 @@ class Samplegroups:
                     values.loc[:, 'Sample Group'] = group
                     values.loc[:, 'Channel'] = path.stem
                     data = pd.melt(values, id_vars=['Channel', 'Sample Group'])
-                    temp =  pd.concat([temp, data], sort=False)
+                    temp = pd.concat([temp, data], sort=False)
                 if Sett.Drop_Outliers:
                     for var in temp.variable.unique():
                         temp.loc[(temp.variable == var), 'value'] =\
@@ -321,9 +320,10 @@ class Samplegroups:
                     all_data = plotData
                 else:  # Merge data so that each row contains all channel
                     # counts from one bin of one sample
-                    all_data = all_data.merge(plotData, how='outer', copy=False,
-                                            on=['Sample Group',
-                                                'Longitudinal Position'])
+                    all_data = all_data.merge(plotData, how='outer',
+                                              copy=False,
+                                              on=['Sample Group',
+                                                  'Longitudinal Position'])
             name = 'All Channels Pairplots'
             # Initialize plotter, create plot keywords, and then create plots
             plot_maker = plotter(all_data, self._plotDir, title=name,

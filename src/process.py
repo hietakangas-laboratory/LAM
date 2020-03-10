@@ -12,7 +12,6 @@ import inspect
 import math
 import re
 import warnings
-from itertools import chain
 # Other packages
 import numpy as np
 import pandas as pd
@@ -105,18 +104,12 @@ def Project(PATHS):
                 print(msg)
             # Project features of channel onto vector
             sample.data = sample.project_channel(channel)
+            # If channel is the vectorization channel, find width:
             if channel.name == Sett.vectChannel:
+                # Determine which side of vector all cells are
                 sample.data = sample.point_handedness(channel.name)
+                # Calculate width along vector
                 sample.average_width(PATHS.datadir)
-                # !!!
-                # import seaborn as sns
-                # g = sns.FacetGrid(data=sample.data, height=3, aspect=2.5)
-                # g = g.map(sns.scatterplot, data=sample.data, x='Position X',
-                #           y='Position Y', hue='hand', **{'linewidth': 0,
-                #                                          's': 10})
-                # g = g.add_legend()
-                # g.savefig(sample.sampledir.joinpath("DAPI_hands.pdf"),
-                #           format='pdf')
             # Count occurrences in each bin
             if channel.name not in ["MPs"]:
                 sample.find_counts(channel.name, PATHS.datadir)
@@ -188,9 +181,10 @@ def Get_Counts(PATHS):
                 MPs, store.totalLength, store.center)
             ch_counts.averages(norm_counts)
             ch_counts.Avg_AddData(PATHS, Sett.AddData, store.totalLength)
-        if Sett.measure_width:
+        if Sett.measure_width:  # When calculating sample width
             print('Width  ...')
             width_path = PATHS.datadir.joinpath('Sample_widths.csv')
+            # Anchor the width arrays:
             width_counts = normalize(str(width_path))
             _, _ = width_counts.normalize_samples(
                 MPs * 2, store.totalLength * 2, store.center*2,
@@ -522,7 +516,6 @@ class get_sample:
 
     def project_channel(self, channel):
         """For projecting coordinates onto the vector."""
-        # import seaborn as sns  # !!!
         data = channel.data
         XYpos = list(zip(data['Position X'], data['Position Y']))
         # The shapely packages reguires transformation into Multipoints for the
@@ -554,27 +547,32 @@ class get_sample:
 
         self.data must contain columns created by project_channel(). Returns DF
         with added column 'hand', with possible values [-1, 0, 1] that corres-
-        pond to [right side, on vector, left side] respectively.
+        pond to [right side, along vector, left side] respectively.
         """
-        def _get_sign(arr, p1x, p1y, p2x, p2y):
+        def _get_sign(arr, p1x, p1y, p2x, p2y):  # Copy sign from 
             X, Y = arr[0], arr[1]
             val = math.copysign(1, (p2x - p1x) * (Y - p1y) -
                                 (p2y - p1y) * (X - p1x))
             return val
 
+        # Divide vector into bins (distances of edges and coords):
         edges, edge_points = self.get_vector_edges(multip=2)
         data = self.data.sort_values(by='NormDist')
+        # Loop the bins:
         for ind, point1 in enumerate(edge_points[:-1]):
             point2 = edge_points[ind+1]
-            p1x, p1y = point1.x, point1.y
+            p1x, p1y = point1.x, point1.y  # Get xy-coords of both edges of bin
             p2x, p2y = point2.x, point2.y
+            # Get cells belonging to bin
             d_index = self.data.loc[(data.NormDist >= edges[ind]) &
                                     (data.NormDist < edges[ind+1])].index
             points = data.loc[d_index, ['Position X', 'Position Y']]
+            # Determine handedness of cells
             data.loc[d_index, 'hand'] = points.apply(
                 _get_sign, args=(p1x, p1y, p2x, p2y), axis=1, raw=True
                 ).replace(np.nan, 0)
         data = data.sort_index()
+        # Save the obtained data
         ChString = str('{}.csv'.format(channel))
         system.saveToFile(data, self.sampledir, ChString, append=False)
         return data
@@ -591,24 +589,29 @@ class get_sample:
             points : bool
                 Whether to also find the XY-coordinates of the edges.
         """
+        # Get bin edges:
         edges = np.linspace(0, 1, Sett.projBins*multip)
-        if points:
+        if points:  # Also get coordinates of edges:
             edge_points = [self.vector.interpolate(d, normalized=True) for d in
                            edges]
             return edges, edge_points
         return edges
 
     def average_width(self, datadir):
+        """Find average width along sample."""
         def _get_approx_width(data):
             width = 0
+            # Loop both sides of vector (right & left)
             for val in [-1, 1]:
                 distances = data.loc[(data.hand == val)].ProjDist
+                # Get width based on 5 most distant cells
                 if distances.size > 5:
-                    width += distances.nlargest().mean()
-                elif distances.size > 0:
+                    width += distances.nlargest().mean()  # add avg to width
+                elif distances.size > 0:  # if bin has less than 5 cells
                     width += distances.max()
             return width
 
+        # Create equidistant points along vector (determine bins):
         edges = self.get_vector_edges(multip=2, points=False)
         cols = ['NormDist', 'ProjDist', 'hand']
         data = self.data.sort_values(by='NormDist').loc[:, cols]
@@ -616,12 +619,13 @@ class get_sample:
         res = pd.Series(name=self.name, index=pd.RangeIndex(stop=len(edges)))
         # Loop segments and get widths:
         for ind, dist in enumerate(edges[:-1]):
-            dist2 = edges[ind+1]
-            d_index = data.loc[(data.NormDist >= edges[ind]) &
+            # Find all cells belonging to bin
+            d_index = data.loc[(data.NormDist >= dist) &
                                (data.NormDist < edges[ind+1])].index
+            # Calculate width
             res.iat[ind] = _get_approx_width(data.loc[d_index, :])
+        # Save data to data directory
         system.saveToFile(res, datadir, 'Sample_widths.csv')
-
 
     def find_counts(self, channelName, datadir):
         """Gather projected features and find bin counts."""
@@ -691,13 +695,13 @@ class get_channel:
             if not paths:
                 print("-> {} {} file not found".format(self.name, key))
                 continue
-            elif len(paths) == 1:
+            if len(paths) == 1:
                 namer = re.compile('^{}'.format(key), re.I)
                 if (paths[0] == self.pospath and
                         any(self.data.columns.str.contains(namer))):
                     continue
-                elif (paths[0] == self.pospath and
-                      not any(self.data.columns.str.contains(namer))):
+                if (paths[0] == self.pospath and not any(
+                        self.data.columns.str.contains(namer))):
                     print("'{}' not in AddData-file of {} on channel {}"
                           .format(key, self.sample.name, self.name))
                 tmpData = system.read_data(str(paths[0]))
@@ -800,6 +804,7 @@ class normalize:
         data = data.sort_index(axis=1)
         system.saveToFile(data, self.path.parent, filename, append=False)
         return SampleStart, data
+
 
 def relate_data(data, MP=0, center=50, TotalLength=100):
     """Place sample data in context of all data, i.e. anchoring."""
