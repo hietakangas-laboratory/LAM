@@ -140,7 +140,6 @@ def main():
         filepath = system_paths.datadir.joinpath('Sample_widths_norm.csv')
         plotData, name, cntr = SampleGroups.read_channel(filepath,
                                                          store.samplegroups)
-        print(plotData)
         import seaborn as sns
         import matplotlib.pyplot as plt
         err_kws = {'alpha': 0.4}
@@ -148,7 +147,7 @@ def main():
         plotData = plotData.melt(id_vars='Sample Group', value_name='val',
                                  var_name=var)
         plotData.loc[:, var] = plotData.loc[:, var].divide(2, fill_value=0)
-        g = sns.FacetGrid(data=plotData, hue='Sample Group',height=2,
+        g = sns.FacetGrid(data=plotData, hue='Sample Group', height=2,
                           aspect=3.5)
         g = (g.map_dataframe(sns.lineplot, x=var, y='val', ci='sd',
                              err_style='band', hue='Sample Group',

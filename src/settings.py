@@ -24,7 +24,7 @@ class settings:
     process_samples = False  # CLEARS DATA FILES-DIRECTORY
     # Whether to project, count and normalize data. If set to False, expect all
     # data to be in place. Can be used to e.g. create additional plots faster.
-    process_counts = True
+    process_counts = False
     # Whether to compute average distances and clusters.
     process_dists = False
     # Set True/False to set all plotting functionalities ON/OFF
@@ -138,12 +138,12 @@ class settings:
     cntrlGroup = "starv"
 
     # ---PLOTTING OPTIONS--- #
-    Create_Channel_Plots = False
-    Create_AddData_Plots = True     # Plots also nearest distance & clusters
-    Create_Channel_PairPlots = True
-    Create_Heatmaps = True
-    Create_Distribution_Plots = True
-    Create_Statistics_Plots = True  # requires statistics to be True
+    Create_Channel_Plots = True
+    Create_AddData_Plots = False     # Plots also nearest distance & clusters
+    Create_Channel_PairPlots = False
+    Create_Heatmaps = False
+    Create_Distribution_Plots = False
+    Create_Statistics_Plots = False  # requires statistics to be True
     Create_Cluster_Plots = False
 
     # Variable vs. variable plots:

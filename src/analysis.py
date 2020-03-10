@@ -22,6 +22,7 @@ import process
 from settings import store, settings as Sett
 from statsMWW import statistics, Total_Stats
 from plot import plotter
+import plot
 import logger as lg
 with warnings.catch_warnings():
     warnings.simplefilter('ignore', category=FutureWarning)
@@ -37,7 +38,7 @@ class Samplegroups:
 
     # Initiation of variables shared by all samples.
     _groups, _chanPaths, _samplePaths, _addData = [], [], [], []
-    _plotDir, _dataDir, _statsDir = pl.Path('./'), pl.Path('./'), pl.Path('./')
+    paths = pl.Path('./')
     _grpPalette = {}
     _AllMPs = None
     _length = 0
@@ -53,9 +54,7 @@ class Samplegroups:
                                          if p.is_dir()]
             Samplegroups._addData = list(PATHS.datadir.glob('Avg_*'))
             # Data and other usable directories
-            Samplegroups._plotDir = PATHS.plotdir
-            Samplegroups._dataDir = PATHS.datadir
-            Samplegroups._statsDir = PATHS.statsdir
+            Samplegroups.paths = PATHS
             # Total length of needed data matrix of all anchored samples
             Samplegroups._length = store.totalLength
             # Get MPs of all samples
@@ -116,7 +115,7 @@ class Samplegroups:
             for group in grouped_data.groups:
                 data = grouped_data.get_group(group)
                 title_name = "{} AddData".format(group)
-                plot_maker = plotter(data, self._plotDir, center=cntr,
+                plot_maker = plotter(data, self.paths.plotdir, center=cntr,
                                      title=title_name,
                                      palette=self._grpPalette)
                 plot_maker.linePlot(**kws)  # Plotting
@@ -132,7 +131,7 @@ class Samplegroups:
                 name_sep=1 would name the data as DAPI when file name is
                 'Avg_DAPI'.
             """
-            savepath = self._plotDir
+            savepath = self.paths.plotdir
             # For each data file to be plotted:
             for path in paths:
                 # Find whether outliers are to be dropped
@@ -141,7 +140,7 @@ class Samplegroups:
                 plotData, name, cntr = self.read_channel(path, self._groups,
                                                          drop=dropB,
                                                          name_sep=name_sep)
-                plot_maker = plotter(plotData, self._plotDir, center=cntr,
+                plot_maker = plotter(plotData, self.paths.plotdir, center=cntr,
                                      title=name, palette=self._grpPalette)
                 # Give additional keywords for plotting
                 kws2 = {'centerline': plot_maker.MPbin, 'value_str': ylabel,
@@ -155,7 +154,7 @@ class Samplegroups:
             # Find paths to sample-specific data based on found cluster data:
             # Find cluster channels
             clchans = [str(p.stem).split('-')[1] for p in
-                       self._dataDir.glob('Clusters-*.csv')]
+                       self.paths.datadir.glob('Clusters-*.csv')]
 
             # Creation of sample-specific position plots:
             if clchans:
@@ -166,7 +165,7 @@ class Samplegroups:
                 clpaths = [p for c in clchans for p in chanpaths if
                            p.name == "{}.csv".format(c)]
                 # Create directory for cluster plots
-                savepath = self._plotDir.joinpath('Clusters')
+                savepath = self.paths.plotdir.joinpath('Clusters')
                 savepath.mkdir(exist_ok=True)
                 # Create sample-specific position plots:
                 for path in clpaths:
@@ -182,7 +181,7 @@ class Samplegroups:
                 lg.logprint(LAM_logger, msg, 'w')
 
             # Creation of cluster heatmaps:
-            paths = list(self._dataDir.glob('ClNorm_*.csv'))
+            paths = list(self.paths.datadir.glob('ClNorm_*.csv'))
             if paths:  # Only if cluster data is found
                 fullData = pd.DataFrame()
                 for path in paths:  # Read all cluster data and concatenate
@@ -207,7 +206,7 @@ class Samplegroups:
                 name = "All Cluster Heatmaps"
                 cntr = Samplegroups._center
                 # Plotting
-                plot_maker = plotter(fullData, self._plotDir, center=cntr,
+                plot_maker = plotter(fullData, self.paths.plotdir, center=cntr,
                                      title=name, palette=None)
                 kws = {'height': 3, 'aspect': 5, 'gridspec': {'hspace': 0.5},
                        'row': 'Channel', 'title_y': 1.05, 'sharey': False,
@@ -225,7 +224,7 @@ class Samplegroups:
 
             all_data = pd.DataFrame()
             # Get feature count data:
-            for path in [p for p in self._dataDir.glob('All_*')]:
+            for path in [p for p in self.paths.datadir.glob('All_*')]:
                 data, name, _ = self.read_channel(path, self._groups)
                 data = pd.melt(data, id_vars='Sample Group')
                 data.loc[:, 'variable'] = 'Feature count'
@@ -263,14 +262,14 @@ class Samplegroups:
                                                  'value'])
                 all_data = pd.concat([all_data, temp], sort=False)
             plot_name = "All Distributions"
-            plot_maker = plotter(all_data, self._plotDir, title=plot_name,
+            plot_maker = plotter(all_data, self.paths.plotdir, title=plot_name,
                                  palette=self._grpPalette)
-            savepath = self._plotDir
+            savepath = self.paths.plotdir
             plot_maker.distPlot(savepath, **kws)
 
         def _heat(paths, samples=False):
             """Create heatmaps of cell counts for each sample group."""
-            savepath = self._plotDir
+            savepath = self.paths.plotdir
             fullData = pd.DataFrame()
             # Loop through the given channels and read the data file. Each
             # channel is concatenated to one dataframe for easier plotting.
@@ -291,7 +290,7 @@ class Samplegroups:
             else:
                 name = "All Samples Channel Heatmaps"
             # Initialize plotting-class, create kws, and plot all channel data.
-            plot_maker = plotter(fullData, self._plotDir, center=cntr,
+            plot_maker = plotter(fullData, self.paths.plotdir, center=cntr,
                                  title=name, palette=None)
             kws = {'height': 3, 'aspect': 5, 'row': 'Channel', 'title_y': 0.93,
                    'center': plot_maker.MPbin, 'xlen': self._length,
@@ -305,7 +304,7 @@ class Samplegroups:
             """Create pairplot-grid, i.e. each channel vs each channel."""
             all_data = pd.DataFrame()
             # Loop through all channels.
-            for path in self._dataDir.glob('ChanAvg_*'):
+            for path in self.paths.datadir.glob('ChanAvg_*'):
                 # Find whether to drop outliers and then read data
                 dropB = Sett.Drop_Outliers
                 plotData, __, cntr = self.read_channel(path, self._groups,
@@ -326,11 +325,11 @@ class Samplegroups:
                                                 'Longitudinal Position'])
             name = 'All Channels Pairplots'
             # Initialize plotter, create plot keywords, and then create plots
-            plot_maker = plotter(all_data, self._plotDir, title=name,
+            plot_maker = plotter(all_data, self.paths.plotdir, title=name,
                                  center=cntr, palette=self._grpPalette)
             kws = {'hue': 'Sample Group', 'kind': 'reg', 'diag_kind': 'kde',
                    'height': 3.5, 'aspect': 1, 'title_y': 1}
-            plot_maker.plot_Data(plotter.pairPlot, self._plotDir, **kws)
+            plot_maker.plot_Data(plotter.pairPlot, self.paths.plotdir, **kws)
 
         def _select(paths, adds=True):
             """Find different types of data for versus plot."""
@@ -353,9 +352,9 @@ class Samplegroups:
         def _versus(paths1, paths2=None, folder=None):
             """Creation of bivariant jointplots."""
             if folder:
-                savepath = self._plotDir.joinpath(folder)
+                savepath = self.paths.plotdir.joinpath(folder)
             else:
-                savepath = self._plotDir
+                savepath = self.paths.plotdir
             savepath.mkdir(exist_ok=True)
             # Pass given paths to a function that pairs each variable
             self.Joint_looper(paths1, paths2, savepath)
@@ -371,12 +370,19 @@ class Samplegroups:
         lg.logprint(LAM_logger, 'Begin plotting.', 'i')
         print("\n---Creating plots---")
         # Update addData variable to contain newly created average-files
-        self._addData = list(self._dataDir.glob('Avg_*'))
+        self._addData = list(self.paths.datadir.glob('Avg_*'))
 
+        new_kws = {'IDs': ['Channel', 'Sample Group'],
+                   'melt': {'id_vars': ['Sample Group', 'Channel'],
+                            'var_name': 'Longitudinal Position',
+                            'value_name': 'Count'},
+                   'drop_outlier': 'Sample Group'}
+# !!!
         if Sett.Create_Channel_Plots:  # Plot channels
             lg.logprint(LAM_logger, 'Plotting channels', 'i')
             print('Plotting channels  ...')
-            _base(self._chanPaths, plotter.boxPlot)
+            handle = plot.data_handler(self)
+            handle.data = handle.get_data(self._chanPaths, **new_kws)
             lg.logprint(LAM_logger, 'Channel plots done.', 'i')
 
         if Sett.Create_AddData_Plots:  # Plot additional data
@@ -394,9 +400,9 @@ class Samplegroups:
         if Sett.Create_Heatmaps:  # Plot channel heatmaps
             lg.logprint(LAM_logger, 'Plotting heatmaps', 'i')
             print('Plotting heatmaps  ...')
-            HMpaths = self._dataDir.glob("ChanAvg_*")
+            HMpaths = self.paths.datadir.glob("ChanAvg_*")
             _heat(HMpaths)  # Sample groups
-            HMpaths = self._dataDir.glob("Norm_*")
+            HMpaths = self.paths.datadir.glob("Norm_*")
             _heat(HMpaths, samples=True)  # Sample-specific
             lg.logprint(LAM_logger, 'Heatmaps done.', 'i')
 
@@ -427,7 +433,7 @@ class Samplegroups:
             print('Plotting clusters  ...')
             _clusters()  # Plots specific to clusters
             kws = {'ylabel': 'Clustered Cells'}
-            paths = list(self._dataDir.glob('ClNorm_*'))
+            paths = list(self.paths.datadir.glob('ClNorm_*'))
             if paths:  # Plotting of regular count plots for clusters
                 lg.logprint(LAM_logger, 'Plotting cluster counts', 'i')
                 _base(paths, plotter.boxPlot, **kws)
@@ -487,7 +493,7 @@ class Samplegroups:
                 title = '{} {} VS {}'.format(group, name, name2)
                 grpData = fullData.where(fullData['Sample Group'] == group
                                          ).dropna()
-                plot_maker = plotter(grpData, self._plotDir, title=title,
+                plot_maker = plotter(grpData, self.paths.plotdir, title=title,
                                      palette=self._grpPalette)
                 kws = {'x': name, 'y': name2, 'hue': 'Sample Group',
                        'title': title, 'height': 5, 'aspect': 1, 'title_y': 1}
@@ -667,10 +673,10 @@ class Samplegroups:
             lg.logprint(LAM_logger, '-> Total statistics', 'i')
             print('-Totals-')
             # Find the data file, initialize class, and count stats
-            datapaths = self._dataDir.glob('Total*.csv')
+            datapaths = self.paths.datadir.glob('Total*.csv')
             for path in datapaths:
-                TCounts = Total_Stats(path, self._groups, self._plotDir,
-                                      self._statsDir, self._grpPalette)
+                TCounts = Total_Stats(path, self._groups, self.paths.plotdir,
+                                      self.paths.statsdir, self._grpPalette)
                 # If error in data, continue to next total file
                 if TCounts.dataerror:
                     continue
@@ -701,7 +707,7 @@ class Samplegroups:
 
         lg.logprint(LAM_logger, 'Finding total counts', 'i')
         dropB = Sett.Drop_Outliers  # Find if dropping outliers
-        datadir = self._dataDir
+        datadir = self.paths.datadir
         All = pd.DataFrame()
         # Loop through files containing cell count data, read, and find sums
         for path in datadir.glob('All_*'):
@@ -1002,7 +1008,7 @@ class Sample(Group):
             insert, _ = process.relate_data(SMeans, self.MP, self._center,
                                             self._length)
             IMeans = pd.Series(data=insert, name=self.name)
-            system.saveToFile(IMeans, self._dataDir, filename)
+            system.saveToFile(IMeans, self.paths.datadir, filename)
         else:  # Finding clusters
             Clusters = _find_clusters()
             # Create dataframe for storing the obtained data
@@ -1037,14 +1043,14 @@ class Sample(Group):
                                  name=self.name)
         binnedCounts.loc[unique] = counts
         filename = 'Clusters-{}.csv'.format(name)
-        system.saveToFile(binnedCounts, self._dataDir, filename)
+        system.saveToFile(binnedCounts, self.paths.datadir, filename)
         # Relate the counts to context, i.e. anchor them at the MP
         insert, _ = process.relate_data(binnedCounts, self.MP,
                                         self._center, self._length)
         # Save the data
         SCounts = pd.Series(data=insert, name=self.name)
         filename = 'ClNorm_Clusters-{}.csv'.format(name)
-        system.saveToFile(SCounts, self._dataDir, filename)
+        system.saveToFile(SCounts, self.paths.datadir, filename)
 
 
 def DropOutlier(Data):
