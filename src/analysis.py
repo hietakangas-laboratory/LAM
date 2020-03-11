@@ -75,7 +75,7 @@ class Samplegroups:
         # Base keywords utilized in plots.
         basekws = {'id_str': 'Sample Group', 'hue': 'Sample Group',
                    'row': 'Sample Group', 'height': 5, 'aspect': 3,
-                   'var_str': 'Longitudinal Position', 'flierS': 2,
+                   'var_str': 'Linear Position', 'flierS': 2,
                    'title_y': 0.95, 'sharey': True,
                    'gridspec': {'hspace': 0.3}}
 
@@ -314,7 +314,7 @@ class Samplegroups:
 #                plotData['Sample'] = plotData.index
                 # Change data into long form (one observation per row):
                 plotData = pd.melt(plotData, id_vars=['Sample Group'],
-                                   var_name='Longitudinal Position',
+                                   var_name='Linear Position',
                                    value_name=channel)
                 if all_data.empty:
                     all_data = plotData
@@ -322,7 +322,7 @@ class Samplegroups:
                     # counts from one bin of one sample
                     all_data = all_data.merge(plotData, how='outer', copy=False,
                                             on=['Sample Group',
-                                                'Longitudinal Position'])
+                                                'Linear Position'])
             name = 'All Channels Pairplots'
             # Initialize plotter, create plot keywords, and then create plots
             plot_maker = plotter(all_data, self.paths.plotdir, title=name,
@@ -372,17 +372,26 @@ class Samplegroups:
         # Update addData variable to contain newly created average-files
         self._addData = list(self.paths.datadir.glob('Avg_*'))
 
-        new_kws = {'IDs': ['Channel', 'Sample Group'],
-                   'melt': {'id_vars': ['Sample Group', 'Channel'],
-                            'var_name': 'Longitudinal Position',
-                            'value_name': 'Count'},
-                   'drop_outlier': 'Sample Group'}
+        h_base__kws = {'IDs': ['Channel', 'Sample Group'],
+                       'melt': {'id_vars': ['Sample Group', 'Channel'],
+                                'var_name': 'Linear Position',
+                                'value_name': 'Count'},
+                       'drop_outlier': 'Sample Group'}
+        
+        
 # !!!
         if Sett.Create_Channel_Plots:  # Plot channels
             lg.logprint(LAM_logger, 'Plotting channels', 'i')
             print('Plotting channels  ...')
             handle = plot.data_handler(self)
-            handle.data = handle.get_data(self._chanPaths, **new_kws)
+            handle.data = handle.get_data(self._chanPaths, **h_base__kws)
+            p_kws = {}
+            plotter = plot.make_plot(handle, 'All Channels', **p_kws)
+            f_kws = {'var_name': 'Linear Position',
+                     'value_name': 'Count',
+                     'hue': 'Sample Group'}
+            args = ('centerline', 'ticks')
+            plotter(plot.pfunc.lines, *args, **f_kws)
             lg.logprint(LAM_logger, 'Channel plots done.', 'i')
 
         if Sett.Create_AddData_Plots:  # Plot additional data

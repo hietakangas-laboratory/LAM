@@ -70,6 +70,7 @@ class data_handler:
 
     def melt_data(self, data, **kws):
         data = data.T.melt(id_vars=kws.get('id_vars'),
+                           value_vars=kws.get('value_vars'),
                            var_name=kws.get('var_name'),
                            value_name=kws.get('value_name'))
         return data
@@ -82,64 +83,114 @@ class make_plot:
     """Create decorated plots."""
 
     # Base keywords utilized in plots.
-    base_kws = {'hue': 'Sample Group', 'row': 'Sample Group', 'height': 5,
-                'aspect': 3, 'flier_size': 2, 'title_y': 0.95, 'sharey': True,
-                'gridspec': {'hspace': 0.3}}
+    base_kws = {'hue': 'Sample Group', 'row': 'Channel', 'col': 'Sample Group',
+                'height': 5, 'aspect': 3, 'flier_size': 2, 'title_y': 0.95,
+                'sharex': False, 'sharey': 'row', 'gridspec': {'hspace': 0.3},
+                'xlabel': 'Linear Position', 'ylabel': 'Count'}
 
-    def __init__(self, func, plot_data):
-        pass
+    def __init__(self, handle, title, *args, **kws):
+        self.plot_error = False
+        self.handle = handle
+        self.title = title
+        self.format = Sett.saveformat
+        self.filepath = handle.savepath.joinpath(self.title + 
+                                                 ".{}".format(Sett.saveformat))
+        facet_kws = make_plot.base_kws.copy()
+        facet_kws.update(kws)
+        # Make canvas:
+        if 'Joint' in args:
+            pass
+        else:
+            self.g = self.get_facet(**facet_kws)
 
-    def __call__(self):
-        pass
+    def __call__(self, func, *args, **kws):
+        plot_kws = make_plot.base_kws.copy()
+        plot_kws.update(kws)
+        self.g = func(self, **plot_kws)
+        self.add_elements(*args)
+        self.save_plot()
 
-    def centerline(self):
-        pass
+    def add_elements(self, *args, **kws):
+        if 'centerline' in args:
+            self.centerline(**kws)
+        if 'ticks' in args:
+            self.xticks(**kws)
+        if 'labels' in args:
+            self.labels(**kws)
+        if 'legend' in args:
+            self.g.add_legend()
+        # if 'centerline' in args:
+        #     pass
 
-    def ticks(self, xticks=None, yticks=None):
-        pass
+    def centerline(self, **kws):
+        """Plot centerline, i.e. the anchoring point of samples."""
+        for ax in self.g.axes.flat:
+            __, ytop = ax.get_ylim()
+            ax.vlines(self.handle.center, 0, ytop, 'dimgrey', zorder=0,
+                      linestyles='dashed')
 
-    def labels(self, xlabel=None, ylabel=None, title=None):
-        pass
+    def get_facet(self, **kws):
+        g = sns.FacetGrid(self.handle.data, row=kws.get('row'),
+                          col=kws.get('col'), hue=kws.get('hue'),
+                          sharex=kws.get('sharex'), sharey=kws.get('sharey'),
+                          gridspec_kws=kws.get('gridspec'),
+                          aspect=kws.get('aspect'), legend_out=True,
+                          dropna=False, palette=self.handle.palette)
+        return g
 
-    def x_ticks(self):
+    def xticks(self, **kws):#xticks=None, yticks=None):
+        """Set plot xticks & tick labels to be shown every 5 ticks."""
+        xticks = np.arange(0, self.handle.total_length, 5)
+        plt.setp(self.g.axes, xticks=xticks, xticklabels=xticks)
+
+    def labels(self, **kws):#xlabel=None, ylabel=None, title=None):
+        labels = kws.get('labels')  # !!! Finish
+        if 'xlabel' in kws.keys():
+            # for ax in self.g.axes:
+            plt.xlabel(kws.get('xlabel'))
+        if 'ylabel' in kws.keys():
+            # for ax in self.g.axes:
+            #     ax.
+            plt.ylabel(kws.get('ylabel'))
+        if 'title' in kws.keys():
+            plt.suptitle(self.handle.title, weight='bold', y=kws.get('title_y'))
+
+    def stats(self):
         pass
 
     def stats(self):
         pass
 
     def save_plot(self):
-        pass
+        self.g.savefig(str(self.filepath), format=self.format)
+        plt.close()
 
 
-class plot_funcs:
+class pfunc:
     """Choose plotting function for make_plot decorator."""
 
-    def __init__(self, func):
-        func()
+    def lines(plot, *args, **kws):
+        err_dict = {'alpha': 0.4}
+        g = (plot.g.map_dataframe(sns.lineplot, data=plot.handle.data,
+                       x=kws.get('var_name'), y=kws.get('value_name'), ci='sd',
+                       err_style='band', hue=kws.get('hue'), dashes=False,
+                       alpha=1, palette=plot.handle.palette, err_kws=err_dict))
+        return g
 
-    # @make_plot
-    # def lines():
-    #     pass
+    def heatmap():
+        pass
 
-    # @make_plot
-    # def heatmap():
-    #     pass
+    def joint():
+        pass
 
-    # @make_plot
-    # def joint():
-    #     pass
+    def totals():
+        pass
 
-    # @make_plot
-    # def totals():
-    #     pass
+    def clusters():
+        pass
 
-    # @make_plot
-    # def clusters():
-    #     pass
-
-    # @make_plot
-    # def widths():
-    #     pass
+    def widths():
+        pass
 
 
 def drop_func(x, mean, drop_value):
@@ -182,7 +233,7 @@ def identifiers(data, path, ids):
         data.loc['Sample Group', :] = [str(c).split('_')[0] for c in
                                        data.columns]
     if 'Sample' in ids:
-        data.loc['Channel', :] = data.columns
+        data.loc['Sample', :] = data.columns
     return data
 
 
