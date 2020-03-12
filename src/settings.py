@@ -138,9 +138,9 @@ class settings:
     cntrlGroup = "starv"
 
     # ---PLOTTING OPTIONS--- #
-    Create_Channel_Plots = True
+    Create_Channel_Plots = False
     Create_AddData_Plots = False     # Plots also nearest distance & clusters
-    Create_Channel_PairPlots = False
+    Create_Channel_PairPlots = True
     Create_Heatmaps = False
     Create_Distribution_Plots = False
     Create_Statistics_Plots = False  # requires statistics to be True

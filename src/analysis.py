@@ -79,76 +79,6 @@ class Samplegroups:
                    'title_y': 0.95, 'sharey': True,
                    'gridspec': {'hspace': 0.3}}
 
-        def _additional(paths, name_sep=1, **kws):
-            # Find whether outliers are to be dropped
-            dropB = Sett.Drop_Outliers
-            all_data = pd.DataFrame()
-            ylabels = {}
-            for path in paths:
-                # Read data from file and the pass it on to the plotter-class
-                data, add_name, cntr = self.read_channel(path, self._groups,
-                                                  drop=dropB,
-                                                  name_sep=name_sep)
-                # Get unit of data
-                sub_names = add_name.split('_')
-                key_name = sub_names[1].split('-')[0]
-                if "Distance Means" in key_name:
-                    label = "Distance"
-                else:
-                    temp = Sett.AddData.get(key_name)
-                    if temp is None:
-                        label = 'Cell Count'
-                    else:
-                        label = temp[1]
-                data.loc[:, 'Channel'] = sub_names[0]
-                data.loc[:, 'Additional'] = sub_names[1]
-                ylabels.update({sub_names[1]: label})
-                # Transform data into plottable form
-                data = pd.melt(data, id_vars=['Channel', 'Additional',
-                                                   'Sample Group'])
-                data.dropna(inplace=True)
-                all_data = pd.concat([all_data, data], sort=False)
-            kws = {'row': 'Additional', 'hue': 'Sample Group',
-                   'ylabels': ylabels}
-            # Grouping of data and subsequent plotting:
-            grouped_data = all_data.groupby(['Channel'])
-            for group in grouped_data.groups:
-                data = grouped_data.get_group(group)
-                title_name = "{} AddData".format(group)
-                plot_maker = plotter(data, self.paths.plotdir, center=cntr,
-                                     title=title_name,
-                                     palette=self._grpPalette)
-                plot_maker.linePlot(**kws)  # Plotting
-                    
-        def _base(paths, func, ylabel='Cell Count', name_sep=1, **kws):
-            """
-            General plotting for LAM, i.e. variable on y-axis, and bins on x.
-
-            Params:
-            ------
-            Name_sep : int
-                the start of data's name when file name is split by '_', e.g.
-                name_sep=1 would name the data as DAPI when file name is
-                'Avg_DAPI'.
-            """
-            savepath = self.paths.plotdir
-            # For each data file to be plotted:
-            for path in paths:
-                # Find whether outliers are to be dropped
-                dropB = Sett.Drop_Outliers
-                # Read data from file and the pass it on to the plotter-class
-                plotData, name, cntr = self.read_channel(path, self._groups,
-                                                         drop=dropB,
-                                                         name_sep=name_sep)
-                plot_maker = plotter(plotData, self.paths.plotdir, center=cntr,
-                                     title=name, palette=self._grpPalette)
-                # Give additional keywords for plotting
-                kws2 = {'centerline': plot_maker.MPbin, 'value_str': ylabel,
-                        'title': plot_maker.title, 'xlen': self._length,
-                        'ylabel': ylabel}
-                kws2.update(basekws)  # update to include the base keywords
-                plot_maker.plot_Data(func, savepath, **kws2)  # Plotting
-
         def _clusters():
             """Handle data for cluster plots."""
             # Find paths to sample-specific data based on found cluster data:
@@ -372,38 +302,78 @@ class Samplegroups:
         # Update addData variable to contain newly created average-files
         self._addData = list(self.paths.datadir.glob('Avg_*'))
 
-        h_base__kws = {'IDs': ['Channel', 'Sample Group'],
-                       'melt': {'id_vars': ['Sample Group', 'Channel'],
-                                'var_name': 'Linear Position',
-                                'value_name': 'Count'},
-                       'drop_outlier': 'Sample Group'}
-        
-        
+        handle_kws = {'IDs': ['Channel', 'Sample Group'],
+                      'melt': {'id_vars': ['Sample Group', 'Channel'],
+                               'var_name': 'Linear Position',
+                               'value_name': 'Value'},
+                      'drop_outlier': 'Sample Group'}
+
 # !!!
-        if Sett.Create_Channel_Plots:  # Plot channels
+        # CHANNEL PLOTTING
+        if Sett.Create_Channel_Plots:
             lg.logprint(LAM_logger, 'Plotting channels', 'i')
             print('Plotting channels  ...')
-            handle = plot.data_handler(self)
-            handle.data = handle.get_data(self._chanPaths, **h_base__kws)
-            p_kws = {}
-            plotter = plot.make_plot(handle, 'All Channels', **p_kws)
-            f_kws = {'var_name': 'Linear Position',
-                     'value_name': 'Count',
-                     'hue': 'Sample Group'}
-            args = ('centerline', 'ticks')
-            plotter(plot.pfunc.lines, *args, **f_kws)
+
+            # Collect data:
+            handle = plot.data_handler(self, self._chanPaths)
+            all_data = handle.get_data('drop_outlier', **handle_kws)
+
+            # Make plot:
+            plotter = plot.make_plot(all_data, handle, 'All Channels')
+            args = ('centerline', 'ticks', 'title', 'legend', 'labels')
+            plotter(plot.pfunc.lines, *args, **handle_kws)
             lg.logprint(LAM_logger, 'Channel plots done.', 'i')
 
-        if Sett.Create_AddData_Plots:  # Plot additional data
+
+        # ADDITIONAL DATA PLOTTING
+        if Sett.Create_AddData_Plots:
             lg.logprint(LAM_logger, 'Plotting additional data', 'i')
             print('Plotting additional data  ...')
-            _additional(self._addData)
+
+            # Collect data:
+            input_kws = {'IDs': ['Channel', 'Sample Group', 'Type'],
+                         'row': 'Type', 'col': 'Sample Group',
+                         'melt': {'id_vars': ['Sample Group', 'Channel',
+                                              'Type'],
+                                  'var_name': 'Linear Position',
+                                  'value_name': 'Value'}}
+            new_kws = plot.merge_kws(handle_kws, input_kws)
+            handle = plot.data_handler(self, self._addData, **new_kws)
+            all_data = handle.get_data('drop_outlier', **new_kws)
+            grouped_data = all_data.groupby('Channel')
+
+            # Make plot:
+            args = ('centerline', 'ticks', 'title', 'legend', 'collect_labels',
+                    'labels')
+            for grp, data in grouped_data:
+                plotter = plot.make_plot(data, handle,
+                                         '{} Additional Data'.format(grp),
+                                         **new_kws)
+                plotter(plot.pfunc.lines, *args, **new_kws)
             lg.logprint(LAM_logger, 'Additional data plots done.', 'i')
 
+        # CHANNEL PAIR PLOTTING
         if Sett.Create_Channel_PairPlots:  # Plot pair plot
             lg.logprint(LAM_logger, 'Plotting channel pairs', 'i')
             print('Plotting channel pairs  ...')
-            _pair()
+            
+            # Collect data:
+            paths = self.paths.datadir.glob('ChanAvg_*')
+            handle = plot.data_handler(self, paths)
+            input_kws = {'IDs': ['Sample Group'],
+                         'kind': 'reg',
+                         'diag_kind': 'kde',
+                         'title_y': 1,
+                         'xlabel': 'Feature Count',
+                         'melt': {'id_vars': ['Sample Group'],
+                                  'var_name': 'Linear Position'}}
+            new_kws = plot.merge_kws(handle_kws, input_kws)
+            all_data = handle.get_data('Pair', **new_kws)
+
+            # Make plot:
+            plotter = plot.make_plot(all_data, handle, 'Channel Matrix')
+            args = ('title', 'legend', 'labels', 'no_grid')
+            plotter(plot.pfunc.pairs, *args, **new_kws)
             lg.logprint(LAM_logger, 'Channel pairs done.', 'i')
 
         if Sett.Create_Heatmaps:  # Plot channel heatmaps
