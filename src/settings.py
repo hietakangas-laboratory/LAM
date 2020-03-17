@@ -45,13 +45,13 @@ class settings:
     # Make vector by creating binary image and then skeletonizing. If False,
     # vector is created by finding middle point between smallest and largest
     # Y-axis position in bin.
-    SkeletonVector = False
-    SkeletonResize = 0.7    # Binary image resize. Keep at steps of ten.
-    # Find distance (XY-coord system) in skeleton vector creation
-    find_dist = 40
-    BDiter = 0          # Binary dilation iterations (set to 0 if not needed)
-    SigmaGauss = 0.3    # Sigma for gaussian smoothing (set to 0 if not needed)
-    simplifyTol = 25    # Tolerance for vector simplification.
+    SkeletonVector = True
+    SkeletonResize = 0.7    # Binary image resize. Keep at steps of 0.1.
+    # Find distance (in input coords) in skeleton vector creation
+    find_dist = 75
+    BDiter = 5          # Binary dilation iterations (set to 0 if not needed)
+    SigmaGauss = 5    # Sigma for gaussian smoothing (set to 0 if not needed)
+    simplifyTol = 20    # Tolerance for vector simplification.
     # Number of bins used for vector creation when using the median vector
     # creation. Increasing bin number too much may lead to stair-like vector;
     # increasing 'simplifyTol' can correct the steps.
@@ -140,8 +140,8 @@ class settings:
     # ---PLOTTING OPTIONS--- #
     Create_Channel_Plots = False
     Create_AddData_Plots = False     # Plots also nearest distance & clusters
-    Create_Channel_PairPlots = True
-    Create_Heatmaps = False
+    Create_Channel_PairPlots = False
+    Create_Heatmaps = True
     Create_Distribution_Plots = False
     Create_Statistics_Plots = False  # requires statistics to be True
     Create_Cluster_Plots = False

@@ -11,7 +11,7 @@ import logger as lg
 import system
 # Standard libraries
 import warnings
-from random import shuffle
+# from random import shuffle
 # Packages
 import matplotlib.pyplot as plt
 import numpy as np
@@ -25,14 +25,14 @@ except AttributeError:
     print('Cannot get logger')
 
 
-class data_handler:
+class DataHandler:
     """
     Handle data for plotting.
 
-    Data will be passed to plot.make_plot.
+    Data will be passed to MakePlot-class
     """
 
-    def __init__(self, samplegroups,paths, *args, **kws):
+    def __init__(self, samplegroups, paths):
         self.savepath = samplegroups.paths.plotdir
         self.palette = samplegroups._grpPalette
         self.center = samplegroups._center
@@ -57,11 +57,14 @@ class data_handler:
                 data = identifiers(data, path, kws.get('IDs'))
             if 'melt' in kws.keys():
                 melt = True
-                melt_kws = kws.get('melt')
+                m_kws = kws.get('melt')
                 if 'Pair' in args:
                     chan = path.stem.split('_')[1]
-                    melt_kws.update({'value_name': chan})
-                data = self.melt_data(data, **melt_kws)
+                    m_kws.update({'value_name': chan})
+                data = data = data.T.melt(id_vars=m_kws.get('id_vars'),
+                                          value_vars=m_kws.get('value_vars'),
+                                          var_name=m_kws.get('var_name'),
+                                          value_name=m_kws.get('value_name'))
             elif 'array' in args:
                 # data = self.data_array(data)
                 pass
@@ -79,19 +82,11 @@ class data_handler:
             all_data = drop_outliers(all_data, melt, **kws)
         return all_data
 
-
-    def melt_data(self, data, **kws):
-        data = data.T.melt(id_vars=kws.get('id_vars'),
-                           value_vars=kws.get('value_vars'),
-                           var_name=kws.get('var_name'),
-                           value_name=kws.get('value_name'))
-        return data
-
     # def call_plot(self, func, plot_kws=base_kws):  # needed ???
-    #     plot.make_plot(func)
+    #     plot.MakePlot(func)
 
 
-class make_plot:
+class MakePlot:
     """Create decorated plots."""
 
     # Base keywords utilized in plots.
@@ -100,17 +95,18 @@ class make_plot:
                 'sharex': False, 'sharey': False, 'gridspec': {'hspace': 0.45},
                 'xlabel': 'Linear Position', 'ylabel': 'Feature Count'}
 
-    def __init__(self, data, handle, title, *args, **kws):
+    def __init__(self, data, handle, title):
         self.data = data
         self.plot_error = False
         self.handle = handle
         self.title = title
         self.format = Sett.saveformat
+        self.g = None
         self.filepath = handle.savepath.joinpath(self.title +
                                                  ".{}".format(Sett.saveformat))
 
     def __call__(self, func, *args, **kws):
-        plot_kws = merge_kws(make_plot.base_kws, kws)
+        plot_kws = merge_kws(MakePlot.base_kws, kws)
         with warnings.catch_warnings():
             warnings.simplefilter('ignore', category=UserWarning)
             # Make canvas if needed:
@@ -121,17 +117,18 @@ class make_plot:
                     self.g = self.get_facet(**plot_kws)
             # Plot data
             self.g = func(self, **plot_kws)
-        if self.g is None and self.plot_error:
-            print('Whoops!')
-            # !!! HANDLE ERRORS PROPERLY
+        if self.plot_error:
+            msg = "Plot not saved"
+            print("WARNING: {}".format(msg))
+            lg.logprint(LAM_logger, msg, 'w')
         self.add_elements(*args, **plot_kws)
         self.save_plot()
 
     def add_elements(self, *args, **kws):
         if 'centerline' in args:
-            self.centerline(**kws)
+            self.centerline()
         if 'ticks' in args:
-            self.xticks(**kws)
+            self.xticks()
         if 'collect_labels' in args:
             new_labels = self.get_labels(**kws)
             kws.update({'ylabel': new_labels})
@@ -142,7 +139,7 @@ class make_plot:
         if 'title' in args:
             self.set_title(**kws)
 
-    def centerline(self, **kws):
+    def centerline(self):
         """Plot centerline, i.e. the anchoring point of samples."""
         for ax in self.g.axes.flat:
             __, ytop = ax.get_ylim()
@@ -175,11 +172,12 @@ class make_plot:
                 else:
                     label = temp[1]
             labels.update({key_name: label})
-        row_order = self.data[kws.get('row')].unique()
+        types = self.data[kws.get('row')].unique()
+        row_order = sorted([s.split('-')[0] for s in types])
         new_labels = [labels.get(k) for k in row_order]
         return new_labels
 
-    def xticks(self, **kws):#xticks=None, yticks=None):
+    def xticks(self):#xticks=None, yticks=None, , **kws):
         """Set plot xticks & tick labels to be shown every 5 ticks."""
         xticks = np.arange(0, self.handle.total_length, 5)
         plt.setp(self.g.axes, xticks=xticks, xticklabels=xticks)
@@ -191,18 +189,17 @@ class make_plot:
                 ax.set_xlabel(kws.get('xlabel'))
         if 'ylabel' in kws.keys():
             labels = kws.get('ylabel')
-            ln = bool(isinstance(labels, list) & len(labels) > 1)
-            if not ln:
+            length_test = (isinstance(labels, list) and len(labels) > 1)
+            # Test whether multiple keys are present:
+            if not length_test:
                 for ax in self.g.axes.flat:
                     ax.set_ylabel(labels)
-            else:
-                for ind, ax in enumerate(self.g.axes):
-                    ax.set_ylabel(labels[ind])
-                # nrows, ncols = self.g.axes.shape
-                # index = [[i_1, i_2] for i_1 in np.arange(nrows) for i_2 in
-                #           np.arange(ncols)]
-                # for ind in index:
-                #     self.g.axes[ind[0], ind[1]].set_ylabel(labels[ind[0]])
+            else:  # Change labels dependently on grid position
+                nrows, ncols = self.g.axes.shape
+                index = [(i_1, i_2) for i_1 in np.arange(nrows) for i_2 in
+                          np.arange(ncols)]
+                for ind in index:
+                    self.g.axes[ind].set_ylabel(labels[ind[0]])
 
     def set_title(self, **kws):
         self.g.fig.suptitle(self.title, weight='bold', y=kws.get('title_y'))
@@ -213,79 +210,9 @@ class make_plot:
     def save_plot(self):
         fig = plt.gcf()
         fig.savefig(str(self.filepath), format=self.format)
-        # self.g.savefig(str(self.filepath), format=self.format)
         plt.close()
 
 
-class pfunc:
-    """Choose plotting function for make_plot decorator."""
-
-    def lines(plot, *args, **kws):
-        err_dict = {'alpha': 0.3}
-        data = plot.data.dropna()
-        melt_kws = kws.get('melt')
-        g = (plot.g.map_dataframe(sns.lineplot, data=plot.data,
-                                  x=data.loc[:, melt_kws.get('var_name')
-                                             ].astype(int),
-                                  y=data.loc[:, melt_kws.get('value_name')],
-                                  ci='sd', err_style='band',
-                                  hue=kws.get('hue'), dashes=False, alpha=1,
-                                  palette=plot.handle.palette,
-                                  err_kws=err_dict))
-        return g
-
-    def pairs(plot, *args, **kws):
-        """Creation of pair plots."""
-        # Settings for plotting:
-        pkws = {'x_ci': None, 'truncate': True, 'order': 3,
-                'scatter_kws': {'linewidth': 0.05, 's': 10, 'alpha': 0.3},
-                'line_kws': {'alpha': 0.6, 'linewidth': 1.5}}
-        if Sett.plot_jitter:
-            pkws.update({'x_jitter': 0.49, 'y_jitter': 0.49})
-        
-        # Drop unneeded data and replace NaN with zero (required for plot)
-        data = plot.data.sort_values(by="Sample Group").drop(
-            'Linear Position', axis=1)
-        data = data.dropna(how='all',
-                           subset=data.columns[data.columns != 'Sample Group']
-                           ).replace(np.nan, 0)
-        try:
-            g = sns.pairplot(data=data, hue=kws.get('hue'),
-                             height=1.5, aspect=1,
-                             kind=kws.get('kind'),
-                             diag_kind=kws.get('diag_kind'),
-                             palette=plot.handle.palette,
-                             plot_kws=pkws,
-                             diag_kws= {'linewidth': 2})
-            # Set bottom values to zero, as no negatives in count data
-            for ax in g.axes.flat:
-                ax.set_ylim(bottom=0)
-                ax.set_xlim(left=0)
-        # In case of missing or erroneous data, linalgerror can be raised
-        except np.linalg.LinAlgError:  # Then, exit plotting
-            msg = '-> Confirm that all samples have proper channel data'
-            fullmsg = 'Pairplot singular matrix\n{}'.format(msg)
-            lg.logprint(LAM_logger, fullmsg, 'ex')
-            print('ERROR: Pairplot singular matrix')
-            print(msg)
-            plot.plot_error = True
-            return None
-        return g
-
-    def heatmap():
-        pass
-
-    def joint():
-        pass
-
-    def totals():
-        pass
-
-    def clusters():
-        pass
-
-    def widths():
-        pass
 
 
 def drop_func(x, mean, drop_value):

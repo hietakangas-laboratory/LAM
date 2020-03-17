@@ -23,6 +23,7 @@ from settings import store, settings as Sett
 from statsMWW import statistics, Total_Stats
 from plot import plotter
 import plot
+import plotfuncs as pfunc
 import logger as lg
 with warnings.catch_warnings():
     warnings.simplefilter('ignore', category=FutureWarning)
@@ -230,37 +231,6 @@ class Samplegroups:
                 kws.update({'height': val})
             plot_maker.plot_Data(plotter.Heatmap, savepath, **kws)
 
-        def _pair():
-            """Create pairplot-grid, i.e. each channel vs each channel."""
-            all_data = pd.DataFrame()
-            # Loop through all channels.
-            for path in self.paths.datadir.glob('ChanAvg_*'):
-                # Find whether to drop outliers and then read data
-                dropB = Sett.Drop_Outliers
-                plotData, __, cntr = self.read_channel(path, self._groups,
-                                                       drop=dropB)
-                # get channel name from path, and add identification ('Sample')
-                channel = str(path.stem).split('_')[1]
-#                plotData['Sample'] = plotData.index
-                # Change data into long form (one observation per row):
-                plotData = pd.melt(plotData, id_vars=['Sample Group'],
-                                   var_name='Linear Position',
-                                   value_name=channel)
-                if all_data.empty:
-                    all_data = plotData
-                else:  # Merge data so that each row contains all channel
-                    # counts from one bin of one sample
-                    all_data = all_data.merge(plotData, how='outer', copy=False,
-                                            on=['Sample Group',
-                                                'Linear Position'])
-            name = 'All Channels Pairplots'
-            # Initialize plotter, create plot keywords, and then create plots
-            plot_maker = plotter(all_data, self.paths.plotdir, title=name,
-                                 center=cntr, palette=self._grpPalette)
-            kws = {'hue': 'Sample Group', 'kind': 'reg', 'diag_kind': 'kde',
-                   'height': 3.5, 'aspect': 1, 'title_y': 1}
-            plot_maker.plot_Data(plotter.pairPlot, self.paths.plotdir, **kws)
-
         def _select(paths, adds=True):
             """Find different types of data for versus plot."""
             retPaths = []
@@ -315,15 +285,14 @@ class Samplegroups:
             print('Plotting channels  ...')
 
             # Collect data:
-            handle = plot.data_handler(self, self._chanPaths)
+            handle = plot.DataHandler(self, self._chanPaths)
             all_data = handle.get_data('drop_outlier', **handle_kws)
 
             # Make plot:
-            plotter = plot.make_plot(all_data, handle, 'All Channels')
+            plotter = plot.MakePlot(all_data, handle, 'All Channels')
             args = ('centerline', 'ticks', 'title', 'legend', 'labels')
-            plotter(plot.pfunc.lines, *args, **handle_kws)
+            plotter(pfunc.lines, *args, **handle_kws)
             lg.logprint(LAM_logger, 'Channel plots done.', 'i')
-
 
         # ADDITIONAL DATA PLOTTING
         if Sett.Create_AddData_Plots:
@@ -338,7 +307,7 @@ class Samplegroups:
                                   'var_name': 'Linear Position',
                                   'value_name': 'Value'}}
             new_kws = plot.merge_kws(handle_kws, input_kws)
-            handle = plot.data_handler(self, self._addData, **new_kws)
+            handle = plot.DataHandler(self, self._addData)
             all_data = handle.get_data('drop_outlier', **new_kws)
             grouped_data = all_data.groupby('Channel')
 
@@ -346,20 +315,19 @@ class Samplegroups:
             args = ('centerline', 'ticks', 'title', 'legend', 'collect_labels',
                     'labels')
             for grp, data in grouped_data:
-                plotter = plot.make_plot(data, handle,
-                                         '{} Additional Data'.format(grp),
-                                         **new_kws)
-                plotter(plot.pfunc.lines, *args, **new_kws)
+                plotter = plot.MakePlot(data, handle,
+                                         '{} Additional Data'.format(grp))
+                plotter(pfunc.lines, *args, **new_kws)
             lg.logprint(LAM_logger, 'Additional data plots done.', 'i')
 
         # CHANNEL PAIR PLOTTING
         if Sett.Create_Channel_PairPlots:  # Plot pair plot
             lg.logprint(LAM_logger, 'Plotting channel pairs', 'i')
             print('Plotting channel pairs  ...')
-            
+
             # Collect data:
             paths = self.paths.datadir.glob('ChanAvg_*')
-            handle = plot.data_handler(self, paths)
+            handle = plot.DataHandler(self, paths)
             input_kws = {'IDs': ['Sample Group'],
                          'kind': 'reg',
                          'diag_kind': 'kde',
@@ -371,16 +339,25 @@ class Samplegroups:
             all_data = handle.get_data('Pair', **new_kws)
 
             # Make plot:
-            plotter = plot.make_plot(all_data, handle, 'Channel Matrix')
-            args = ('title', 'legend', 'labels', 'no_grid')
-            plotter(plot.pfunc.pairs, *args, **new_kws)
+            plotter = plot.MakePlot(all_data, handle, 'Channel Matrix')
+            args = ('title', 'legend', 'no_grid')
+            plotter(pfunc.channel_matrix, *args, **new_kws)
             lg.logprint(LAM_logger, 'Channel pairs done.', 'i')
 
+        # SAMPLE AND SAMPLE GROUP HEATMAPS
         if Sett.Create_Heatmaps:  # Plot channel heatmaps
             lg.logprint(LAM_logger, 'Plotting heatmaps', 'i')
             print('Plotting heatmaps  ...')
+            # Get and plot sample group averages
             HMpaths = self.paths.datadir.glob("ChanAvg_*")
-            _heat(HMpaths)  # Sample groups
+            args = ('centerline', 'ticks', 'title', 'array')
+            handle = plot.DataHandler(self, HMpaths)
+            all_data = handle.get_data('drop_outlier', **handle_kws)
+            plotter = plot.MakePlot(all_data, handle,
+                                    'Heatmaps by sample group')
+            plotter(pfunc.lines, *args, **handle_kws)
+
+            # Get and plot heatmap with individual samples
             HMpaths = self.paths.datadir.glob("Norm_*")
             _heat(HMpaths, samples=True)  # Sample-specific
             lg.logprint(LAM_logger, 'Heatmaps done.', 'i')
@@ -415,7 +392,7 @@ class Samplegroups:
             paths = list(self.paths.datadir.glob('ClNorm_*'))
             if paths:  # Plotting of regular count plots for clusters
                 lg.logprint(LAM_logger, 'Plotting cluster counts', 'i')
-                _base(paths, plotter.boxPlot, **kws)
+                # _base(paths, plotter.boxPlot, **kws)
                 lg.logprint(LAM_logger, 'Clusters done', 'i')
             else:
                 print('No cluster files found')
@@ -476,8 +453,8 @@ class Samplegroups:
                                      palette=self._grpPalette)
                 kws = {'x': name, 'y': name2, 'hue': 'Sample Group',
                        'title': title, 'height': 5, 'aspect': 1, 'title_y': 1}
-                plot_maker.plot_Data(plotter.jointPlot, savepath,
-                                     palette=self._grpPalette, **kws)
+                # plot_maker.plot_Data(plotter.jointPlot, savepath,
+                #                      palette=self._grpPalette, **kws)
 
     def subset_data(self, Data, compare, volIncl):
         """Get indexes of cells based on volume."""
@@ -562,6 +539,7 @@ class Samplegroups:
                         for i, grp in enumerate(store.samplegroups):
                             print('{}: {}'.format(i, grp))
                         msg = "Select the number of control group: "
+                        print('\a')
                         ans = sd.askinteger(title="Dialog", prompt=msg)
                         if ans is None:
                             raise KeyboardInterrupt

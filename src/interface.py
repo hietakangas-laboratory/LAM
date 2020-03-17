@@ -198,7 +198,7 @@ class base_GUI(tk.Toplevel):
                                     variable=Pchans)
         self.addC = tk.Checkbutton(self.rightf, text="Additional Data",
                                    variable=Padds)
-        self.pairC = tk.Checkbutton(self.rightf, text="Channel pair plots",
+        self.pairC = tk.Checkbutton(self.rightf, text="Channel matrix",
                                     variable=Ppairs)
         self.heatC = tk.Checkbutton(self.rightf, text="Heat maps",
                                     variable=Pheats)

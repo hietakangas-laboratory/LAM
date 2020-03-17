@@ -12,18 +12,22 @@ import inspect
 import math
 import re
 import warnings
-from itertools import chain
 # Other packages
 import numpy as np
 import pandas as pd
 import pathlib as pl
-from scipy.ndimage import morphology as mp
 import shapely.geometry as gm
-from skimage.morphology import skeletonize
+
+from scipy.ndimage import morphology as mp
+from skimage.morphology import skeletonize, binary_dilation
 from skimage.filters import gaussian
+from skimage.transform import resize as resize_arr
+from skimage.measure import find_contours
+from skimage import img_as_bool
 # LAM modules
 from settings import store, settings as Sett
 from plot import plotter
+import plotfuncs as pfunc
 import logger as lg
 import system
 try:
@@ -282,13 +286,13 @@ class get_sample:
         positions = self.vectData
         X, Y = positions.loc[:, 'Position X'], positions.loc[:, 'Position Y']
         if Skeletonize:  # Create skeleton vector
-            vector, binaryArray, skeleton, lineDF = self.SkeletonVector(
+            vector, bin_array, skeleton, lineDF = self.SkeletonVector(
                 X, Y, resize, BDiter, SigmaGauss)
             if vector is None:
                 return
         else:  # Alternatively create median vector
             vector, lineDF = self.MedianVector(X, Y, creationBins)
-            binaryArray, skeleton = None, None
+            bin_array, skeleton = None, None
         # Simplification of vector points
         vector = vector.simplify(Sett.simplifyTol)
         # Save total length of vector
@@ -297,88 +301,138 @@ class get_sample:
         # Save vector file
         system.saveToFile(lineDF, self.sampledir, 'Vector.csv', append=False)
         # Create plots of created vector
-        create_plot = plotter(self, self.sampledir)
-        create_plot.vector(self.name, vector, X, Y, binaryArray, skeleton)
+        pfunc.vector_plots(self.sampledir, self.name, vector, X, Y,
+                           bin_array, skeleton)
+
 
     def SkeletonVector(self, X, Y, resize, BDiter, SigmaGauss):
         """Create vector by skeletonization of image-transformed positions."""
-        def resize_minmax(minv, maxv):
-            """
-            Round x- and y-coordinates for binarization.
 
-            Takes min and max values found in feature coordinates and rounds
-            them appropriately to provide indexes for the smaller, resized
-            binary array. The new indexes allow changing array values from
-            zeroes to ones based on feature coords.
-            """
-            rminv = math.floor(minv * resize / 10) * 10
-            rmaxv = math.ceil(maxv * resize / 10) * 10
-            return rminv, rmaxv
-
-        def _binarize():
-            """Transform XY into binary image and perform editing."""
+        def _binarize(coords):
+            """Transform XY into binary image and perform operations on it."""
             # Create DF indices (X&Y-coords) with a buffer for operations:
             buffer = 500 * resize
-            ylbl = np.arange(int(rminy - buffer),
-                             int(rmaxy + (buffer + 1)), 10)
-            xlbl = np.arange(int(rminx - buffer),
-                             int(rmaxx + (buffer + 1)), 10)
-            # Create binary array with the created indices
-            BA = pd.DataFrame(np.zeros((len(ylbl), len(xlbl))),
-                              index=np.flip(ylbl), columns=xlbl)
-            for coord in coords:  # Transform coords into binary array
-                y = round(coord[1] * resize / 10) * 10
-                x = (round(coord[0] * resize / 10) * 10)
-                BA.at[y, x] = 1
-            if BDiter > 0:  # binary dilations, if used
-                struct1 = mp.generate_binary_structure(2, 2)
-                try:
-                    BA = mp.binary_dilation(BA, structure=struct1,
-                                            iterations=BDiter)
-                except TypeError:
+            # Get needed axis related variables:
+            x_max, x_min = round(max(X) + buffer), round(min(X) - buffer)
+            y_max, y_min = round(max(Y) + buffer), round(min(Y) - buffer)
+            y_size = round(y_max - y_min)
+            x_size = round(x_max - x_min)
+
+            # Create binary array
+            BA = np.zeros((y_size, x_size))
+            for coord in coords:  # Set cell locations in array to True
+                BA[round(coord[1] - y_min), round(coord[0] - x_min)] = 1
+            if resize != 1:
+                y_size = round(y_size * resize)
+                x_size = round(x_size * resize)
+                BA = resize_arr(BA, (y_size, x_size))
+            # Create Series to store real coordinate labels
+            x_lbl = pd.Series(np.linspace(x_min, x_max, x_size),
+                              index=pd.RangeIndex(BA.shape[1]))
+            y_lbl = pd.Series(np.linspace(y_min, y_max, y_size),
+                              index=pd.RangeIndex(BA.shape[0]))
+            # BINARY DILATION
+            try:
+                for _ in range(BDiter):
+                    BA = mp.binary_dilation(BA, iterations=BDiter,
+                                            structure=
+                                            mp.generate_binary_structure(2, 2))
+            except TypeError:
                     msg = 'BDiter in settings has to be an integer.'
                     lg.logprint(LAM_logger, msg, 'e')
                     print("TypeError: {}".format(msg))
+            # SMOOTHING
             if SigmaGauss > 0:  # Gaussian smoothing
                 BA = gaussian(BA, sigma=SigmaGauss)
-                BA[BA > 0] = True  # Re-binarization
-            # Fill holes in the sample, e.g. ruptured locations with no micro-
-            # scopy features.
-            BA = mp.binary_fill_holes(BA)
-            return BA, list(np.flip(ylbl)), list(xlbl)
+
+            # FIND CONTOURS AND SIMPLIFY
+            contours = find_contours(BA, 0.6)
+            pols = []
+            for cont in contours:
+                pol = gm.Polygon(cont)
+                pol = pol.simplify(Sett.simplifyTol * resize,
+                                   preserve_topology=False)
+                pols.append(pol)
+            pols = gm.MultiPolygon(pols)
+            segm = _intersection(BA.shape, pols)
+            # # Close gaps
+            # segm = mp.binary_dilation(segm, iterations=BDiter,
+            #                           structure=
+            #                           mp.generate_binary_structure(2, 2))
+            # Fill holes in the array
+            with warnings.catch_warnings():
+                warnings.simplefilter('ignore', category=UserWarning)
+                bool_BA = mp.binary_fill_holes(segm)
+            return bool_BA, y_lbl, x_lbl
+
+        def _intersection(shape, pols):
+            segm = np.zeros(shape)
+            for ind in np.arange(shape[0]+1):
+                line = gm.LineString([(ind, 0), (ind, shape[1]+1)])
+                section = line.intersection(pols)
+                cols = (gm.MultiLineString, gm.collection.GeometryCollection)
+                if not section.is_empty and isinstance(section, gm.LineString):
+                    _, miny, _, maxy = section.bounds
+                    segm[ind, round(miny):round(maxy)] = 1
+                elif not section.is_empty and isinstance(section, cols):
+                    for geom in section.geoms:
+                        _, miny, _, maxy = geom.bounds
+                        segm[ind, round(miny):round(maxy)] = 1
+            return segm
+
+
+
+        def _score_nearest():
+            # DataFrame for storing relevant info on pixel coordinates
+            distances = pd.DataFrame(np.zeros((nearest.size, 6)),
+                                     index=nearest,
+                                     columns=['rads', 'dist', 'distOG',
+                                              'penalty', 'X', 'Y'])
+            # Create scores for each nearby pixel:
+            for ind, __ in coordDF.loc[nearest, :].iterrows():
+                x, y = coordDF.X.at[ind], coordDF.Y.at[ind]
+                point3 = gm.Point(x, y)
+                shiftx = x - point2[0]  # shift in x for test point
+                shifty = y - point2[1]  # shift in y for test point
+                rads = math.atan2(shifty, shiftx)
+                dist = testP.distance(point3)  # distance to a testpoint
+                distOg = point.distance(point3)  # dist to current coord
+                penalty = distOg + dist + abs(rads * 5)
+                distances.loc[ind, :] = [rads, dist, distOg, penalty, x,y]
+                # print(distances.loc[ind, :])
+            return distances
 
         coords = list(zip(X, Y))
-        rminy, rmaxy = resize_minmax(Y.min(), Y.max())
-        rminx, rmaxx = resize_minmax(X.min(), X.max())
         # Transform to binary
-        binaryArray, BAindex, BAcols = _binarize()
+        bin_array, BAindex, BAcols = _binarize(coords)
         # Make skeleton and get coordinates of skeleton pixels
-        skeleton = skeletonize(binaryArray)
-        skelValues = [(BAindex[y], BAcols[x]) for y, x in zip(
+        skeleton = skeletonize(bin_array)
+        skel_values = [(BAindex.iat[y], BAcols.iat[x]) for y, x in zip(
             *np.where(skeleton == 1))]
         # Dataframe from skeleton coords
-        coordDF = pd.DataFrame(skelValues, columns=['Y', 'X'])
+        coordDF = pd.DataFrame(skel_values, columns=['Y', 'X'])
 
         # BEGIN CREATION OF VECTOR FROM SKELETON COORDS
-        finder = Sett.find_dist  # Distance for detection of nearby XY
+        finder = Sett.find_dist * resize # Distance for detection of nearby XY
         line = []  # For storing vector
-        start = coordDF.X.idxmin()  # Start from smallest x-coord
-        sx, sy = coordDF.loc[start, 'X'], coordDF.loc[start, 'Y']
-        div = 5
+        # Start from smallest x-coords
+        start = coordDF.nsmallest(5, 'X').idxmin()
+        sx, sy = coordDF.loc[start, 'X'].mean(), coordDF.loc[start, 'Y'].mean()
+        multip = 0.001
         flag = False
         # Determining starting point of vector from as near to the end of
         # sample as possible:
         while not flag:
-            nearStart = coordDF[(abs(coordDF.X - sx) <= finder/div) &
-                                (abs(coordDF.Y - sy) <= finder)].index
+            nearStart = coordDF[(abs(coordDF.X - sx) <= finder * multip) &
+                                (abs(coordDF.Y - sy) <= finder * 3)].index
             if nearStart.size < 3:
-                div -= 0.1
+                multip += 0.001
             else:
                 flag = True
         # Take mean coordinates of cells near the end to be the starting point
-        sx, sy = coordDF.loc[nearStart, 'X'].mean(), coordDF.loc[
+        sx, sy = coordDF.loc[nearStart, 'X'].min(), coordDF.loc[
             nearStart, 'Y'].mean()
-        line.append((sx / resize, sy / resize))
+        line.append((sx, sy))
         # Drop the used coordinates
         coordDF.drop(nearStart, inplace=True)
         # Continue finding next points until flagged ready:
@@ -396,47 +450,41 @@ class get_sample:
                     nearest = coordDF[(abs(coordDF.X - sx) <= finder * 2) &
                                       (abs(coordDF.Y - sy) <= finder * 2)
                                       ].index
-            if nearest.size > 0:
+            if nearest.size > 1:
                 # If pixels are found, establish the vector's direction:
                 try:
                     point1, point2 = line[-3], line[-1]
                 except IndexError:
-                    point1, point2 = (sx, sy), (sx + (50*resize), sy)
+                    point1, point2 = (sx, sy), (sx + 5, sy)
                 # Create a test point (used to score nearby pixels)
-                shiftx = point2[0] - point1[0]  # shift in x for test
-                shifty = point2[1] - point1[1]  # shift in y for test
-                testP = gm.Point(point2[0]+1.25*shiftx, point2[1]+shifty)
-                # DataFrame for storing relevant info on pixel coordinates
-                distances = pd.DataFrame(np.zeros((nearest.size, 5)),
-                                         index=nearest,
-                                         columns=['dist', 'distOG', 'penalty',
-                                                  'X', 'Y'])
-                # Create scores for each nearby pixel:
-                for index, __ in coordDF.loc[nearest, :].iterrows():
-                    x, y = coordDF.X.at[index], coordDF.Y.at[index]
-                    point3 = gm.Point(x, y)
-                    dist = testP.distance(point3)  # distance to a testpoint
-                    distOg = point.distance(point3)  # dist to current coord
-                    penalty = (0.75 * distOg) + dist
-                    distances.loc[index, :] = [dist, distOg, penalty, x, y]
-                # Find the pixel with the smallest penalty and add to vector:
-                best = distances.penalty.idxmin()
-                x2, y2 = coordDF.X.at[best], coordDF.Y.at[best]
-                line.append((x2 / resize, y2 / resize))
+                shiftx = point2[0] - point1[0]  # shift in x for test point
+                shifty = point2[1] - point1[1]  # shift in y for test point
+                heading = math.atan2(shifty, shiftx)
+                testP = gm.Point(sx+shiftx, sy+shifty)
+                # Calculate scoring of points
+                distances = _score_nearest()
                 # Drop the pixels that are behind current vector coord
-                forfeit = distances[(distances.dist >= distances.distOG)
-                                    ].dropna().index
-                best = pd.Index([best], dtype='int64')
-                forfeit = forfeit.append(best)
-                coordDF.drop(forfeit, inplace=True)
-                # Set current location for the next loop
-                sx, sy = x2, y2
-            else:  # If none are found nearby after widening search, finished
+                forfeit = distances.loc[((distances.dist > distances.distOG) &
+                                         (abs(distances.rads) > 1.6))].index
+                # Find the pixel with the smallest penalty and add to vector:
+                try:
+                    best = distances.loc[nearest.difference(forfeit)
+                                         ].penalty.idxmin()
+                    x2, y2 = coordDF.X.at[best], coordDF.Y.at[best]
+                    line.append((x2, y2))
+                    best = pd.Index([best], dtype='int64')
+                    forfeit = forfeit.append(best)
+                    coordDF.drop(forfeit, inplace=True)
+                    # Set current location for the next loop
+                    sx, sy = x2, y2
+                except ValueError:
+                    flag = True
+            else:
                 flag = True
         try:  # Create LineString-object from finished vector
             vector = gm.LineString(line)
             linedf = pd.DataFrame(line, columns=['X', 'Y'])
-            return vector, binaryArray, skeleton, linedf
+            return vector, bin_array, skeleton, linedf
         except ValueError:  # If something went wrong with creation, warn
             msg = 'Faulty vector for {}'.format(self.name)
             lg.logprint(LAM_logger, msg, 'e')
@@ -616,12 +664,10 @@ class get_sample:
         res = pd.Series(name=self.name, index=pd.RangeIndex(stop=len(edges)))
         # Loop segments and get widths:
         for ind, dist in enumerate(edges[:-1]):
-            dist2 = edges[ind+1]
             d_index = data.loc[(data.NormDist >= edges[ind]) &
                                (data.NormDist < edges[ind+1])].index
             res.iat[ind] = _get_approx_width(data.loc[d_index, :])
         system.saveToFile(res, datadir, 'Sample_widths.csv')
-
 
     def find_counts(self, channelName, datadir):
         """Gather projected features and find bin counts."""
@@ -800,6 +846,7 @@ class normalize:
         data = data.sort_index(axis=1)
         system.saveToFile(data, self.path.parent, filename, append=False)
         return SampleStart, data
+
 
 def relate_data(data, MP=0, center=50, TotalLength=100):
     """Place sample data in context of all data, i.e. anchoring."""

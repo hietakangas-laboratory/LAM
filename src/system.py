@@ -40,9 +40,10 @@ class paths:
             # with analysis.
             if self.datadir.exists() and Sett.process_counts:
                 files = list(self.datadir.glob('*'))
-                msg = "'Data Files'-folder will be cleared. Continue? [y/n]"
                 if files:
                     flag = 1
+                    msg = "'Data Files'-folder will be cleared. Continue? [y/n]"
+                    print('\a')
                     while flag:
                         ans = sd.askstring(title="Dialog", prompt=msg)
                         if ans in ("y", "Y"):
@@ -172,6 +173,7 @@ def test_vector_ext(dir_path):
         # If a vector file is found, ask permission to remove:
         if test:
             flag = 1
+            print('\a')
             msg = "Pre-existing vectors will be cleared. Continue? [y/n]"
             while flag:
                 ans = sd.askstring(title="Dialog", prompt=msg)
