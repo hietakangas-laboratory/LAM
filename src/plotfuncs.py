@@ -18,6 +18,10 @@ import seaborn as sns
 with warnings.catch_warnings():
     warnings.simplefilter('ignore', category=FutureWarning)
     import pandas as pd
+try:
+    LAM_logger = lg.get_logger(__name__)
+except AttributeError:
+    print('Cannot get logger')
 
 def channel_matrix(plot, **kws):
     """Creation of pair plots."""
@@ -29,11 +33,9 @@ def channel_matrix(plot, **kws):
         pkws.update({'x_jitter': 0.49, 'y_jitter': 0.49})
 
     # Drop unneeded data and replace NaN with zero (required for plot)
-    data = plot.data.sort_values(by=kws.get('row')).drop(
-        'Linear Position', axis=1)
-    data = data.dropna(how='all',
-                       subset=data.columns[data.columns != 'Sample Group']
-                       ).replace(np.nan, 0)
+    data = plot.data.drop('Linear Position', axis=1)
+    cols = data.columns != 'Sample Group'
+    data = data.dropna(how='all', subset=data.columns[cols]).replace(np.nan, 0)
     try:
         g = sns.pairplot(data=data, hue=kws.get('hue'),
                          height=1.5, aspect=1,
@@ -60,8 +62,18 @@ def channel_matrix(plot, **kws):
 def clusters():
     pass
 
-def heatmap():
-    pass
+def heatmap(plot, **kws):
+    """Creation of heat maps."""
+    data = plot.data.replace(np.nan, 0)
+    rows = data.loc[:, kws.get('row')].unique()
+    for ind, ax in enumerate(plot.g.axes.flat):
+        sub_data = data.loc[data[kws.get('row')] == rows[ind],
+                            data.columns != kws.get('row')]
+        sns.heatmap(data=sub_data, cmap='coolwarm', robust=True,
+                    linewidth=0.05, linecolor='dimgrey', ax=ax)
+        ax.set_title(rows[ind])
+    plt.subplots_adjust(left=0.25, right=0.99)
+    return plot.g
 
 def joint():
     pass

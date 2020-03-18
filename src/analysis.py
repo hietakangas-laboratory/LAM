@@ -276,7 +276,8 @@ class Samplegroups:
                       'melt': {'id_vars': ['Sample Group', 'Channel'],
                                'var_name': 'Linear Position',
                                'value_name': 'Value'},
-                      'drop_outlier': 'Sample Group'}
+                      'array_index': 'Sample Group',
+                      'drop_grouper': 'Sample Group'}
 
 # !!!
         # CHANNEL PLOTTING
@@ -300,13 +301,15 @@ class Samplegroups:
             print('Plotting additional data  ...')
 
             # Collect data:
-            input_kws = {'IDs': ['Channel', 'Sample Group', 'Type'],
-                         'row': 'Type', 'col': 'Sample Group',
-                         'melt': {'id_vars': ['Sample Group', 'Channel',
+            new_kws = plot.merge_kws(handle_kws,
+                                     {'IDs': ['Channel', 'Sample Group',
                                               'Type'],
-                                  'var_name': 'Linear Position',
-                                  'value_name': 'Value'}}
-            new_kws = plot.merge_kws(handle_kws, input_kws)
+                                      'row': 'Type',
+                                      'col': 'Sample Group',
+                                      'melt': {'id_vars': ['Sample Group',
+                                                           'Channel','Type'],
+                                               'var_name': 'Linear Position',
+                                               'value_name': 'Value'}})
             handle = plot.DataHandler(self, self._addData)
             all_data = handle.get_data('drop_outlier', **new_kws)
             grouped_data = all_data.groupby('Channel')
@@ -316,50 +319,56 @@ class Samplegroups:
                     'labels')
             for grp, data in grouped_data:
                 plotter = plot.MakePlot(data, handle,
-                                         '{} Additional Data'.format(grp))
+                                        '{} Additional Data'.format(grp))
                 plotter(pfunc.lines, *args, **new_kws)
             lg.logprint(LAM_logger, 'Additional data plots done.', 'i')
 
-        # CHANNEL PAIR PLOTTING
+        # CHANNEL MATRIX PLOTTING
         if Sett.Create_Channel_PairPlots:  # Plot pair plot
-            lg.logprint(LAM_logger, 'Plotting channel pairs', 'i')
-            print('Plotting channel pairs  ...')
+            lg.logprint(LAM_logger, 'Plotting channel matrix', 'i')
+            print('Plotting channel matrix  ...')
 
             # Collect data:
             paths = self.paths.datadir.glob('ChanAvg_*')
             handle = plot.DataHandler(self, paths)
-            input_kws = {'IDs': ['Sample Group'],
-                         'kind': 'reg',
-                         'diag_kind': 'kde',
-                         'title_y': 1,
-                         'xlabel': 'Feature Count',
-                         'melt': {'id_vars': ['Sample Group'],
-                                  'var_name': 'Linear Position'}}
-            new_kws = plot.merge_kws(handle_kws, input_kws)
-            all_data = handle.get_data('Pair', **new_kws)
+            new_kws = plot.merge_kws(handle_kws,
+                                     {'IDs': ['Sample Group'],
+                                      'kind': 'reg',
+                                      'diag_kind': 'kde',
+                                      'title_y': 1,
+                                      'xlabel': 'Feature Count',
+                                      'melt': {'id_vars': ['Sample Group'],
+                                               'var_name': 'Linear Position'}})
+            all_data = handle.get_data('Matrix', **new_kws)
 
             # Make plot:
             plotter = plot.MakePlot(all_data, handle, 'Channel Matrix')
             args = ('title', 'legend', 'no_grid')
             plotter(pfunc.channel_matrix, *args, **new_kws)
-            lg.logprint(LAM_logger, 'Channel pairs done.', 'i')
+            lg.logprint(LAM_logger, 'Channel matrix done.', 'i')
 
         # SAMPLE AND SAMPLE GROUP HEATMAPS
         if Sett.Create_Heatmaps:  # Plot channel heatmaps
             lg.logprint(LAM_logger, 'Plotting heatmaps', 'i')
             print('Plotting heatmaps  ...')
-            # Get and plot sample group averages
+            # Get and plot _sample group averages_
             HMpaths = self.paths.datadir.glob("ChanAvg_*")
-            args = ('centerline', 'ticks', 'title', 'array')
             handle = plot.DataHandler(self, HMpaths)
-            all_data = handle.get_data('drop_outlier', **handle_kws)
-            plotter = plot.MakePlot(all_data, handle,
-                                    'Heatmaps by sample group')
-            plotter(pfunc.lines, *args, **handle_kws)
+            new_kws = plot.remove_from_kws(handle_kws, 'melt')
+            new_kws.update({'IDs': ['Channel']})
+            all_data = handle.get_data(array='Sample Group', **new_kws)
+            plotter = plot.MakePlot(all_data, handle, 'Heatmaps by Group')
+            p_kws = {'col': None, 'hue': None}
+            plotter(pfunc.heatmap, *('centerline','ticks', 'title'), **p_kws)
 
-            # Get and plot heatmap with individual samples
+            # Get and plot heatmap with _samples_
             HMpaths = self.paths.datadir.glob("Norm_*")
-            _heat(HMpaths, samples=True)  # Sample-specific
+            handle = plot.DataHandler(self, HMpaths)
+            all_data = handle.get_data(array=False, **new_kws)
+            plotter = plot.MakePlot(all_data, handle, 'Heatmaps by Sample')
+            val = all_data.index.unique().size / 2  # Plot height size depend.
+            p_kws.update({'height': val})
+            plotter(pfunc.heatmap, *('centerline', 'ticks', 'title'), **p_kws)
             lg.logprint(LAM_logger, 'Heatmaps done.', 'i')
 
         if Sett.Create_ChanVSAdd_Plots:  # Plot channels

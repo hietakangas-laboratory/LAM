@@ -41,8 +41,11 @@ class DataHandler:
         self.data = pd.DataFrame()
         self.paths = paths
 
-    def data_array(self):
-        pass
+    def data_array_index(self, data, indexer=None):
+        if indexer is not None:
+            data.index = data.loc[:, indexer]
+            data.drop(indexer, axis=1, inplace=True)
+        return data
 
     def get_add_vars(self):
         pass
@@ -51,24 +54,22 @@ class DataHandler:
         melt = False
         all_data = pd.DataFrame()
         for path in self.paths:
-            # !!! Add samplegroup identifier
             data = system.read_data(path, header=0, test=False)
             if 'IDs' in kws.keys():
                 data = identifiers(data, path, kws.get('IDs'))
             if 'melt' in kws.keys():
                 melt = True
                 m_kws = kws.get('melt')
-                if 'Pair' in args:
+                if 'Matrix' in args:
                     chan = path.stem.split('_')[1]
                     m_kws.update({'value_name': chan})
-                data = data = data.T.melt(id_vars=m_kws.get('id_vars'),
-                                          value_vars=m_kws.get('value_vars'),
-                                          var_name=m_kws.get('var_name'),
-                                          value_name=m_kws.get('value_name'))
-            elif 'array' in args:
-                # data = self.data_array(data)
-                pass
-            if 'Pair' in args:
+                data = data.T.melt(id_vars=m_kws.get('id_vars'),
+                                   value_vars=m_kws.get('value_vars'),
+                                   var_name=m_kws.get('var_name'),
+                                   value_name=m_kws.get('value_name'))
+            else:
+                data = data.T
+            if 'Matrix' in args:
                 if all_data.empty:
                     all_data = data
                 else:
@@ -77,9 +78,12 @@ class DataHandler:
                                                   'Linear Position'])
                 continue
             all_data = pd.concat([all_data, data], sort=True)
-        all_data.index = pd.RangeIndex(stop=all_data.shape[0])
+        if 'array' in args:
+            all_data = self.data_array_index(all_data, kws.get('array_index'))
         if 'drop_outlier' in args and Sett.Drop_Outliers:
+            all_data.index = pd.RangeIndex(stop=all_data.shape[0])
             all_data = drop_outliers(all_data, melt, **kws)
+        all_data = all_data.infer_objects()
         return all_data
 
     # def call_plot(self, func, plot_kws=base_kws):  # needed ???
@@ -121,6 +125,7 @@ class MakePlot:
             msg = "Plot not saved"
             print("WARNING: {}".format(msg))
             lg.logprint(LAM_logger, msg, 'w')
+            return
         self.add_elements(*args, **plot_kws)
         self.save_plot()
 
@@ -238,7 +243,7 @@ def drop_outliers(all_data, melted, **kws):  # !!! Finish
         return data
 
     # Handle data for dropping
-    grouper = kws.get('drop_outlier')
+    grouper = kws.get('drop_grouper')
     grp_data = all_data.groupby(grouper)
     if melted:
         names = kws.get('melt').get('value_name')
@@ -266,6 +271,14 @@ def merge_kws(kws1, kws2):
     new_kws = kws1.copy()
     if kws2 is not None:
         new_kws.update(kws2)
+    return new_kws
+
+
+def remove_from_kws(kws, *args):
+    new_kws = kws.copy()
+    for key in args:
+        if isinstance(key, str):
+            del new_kws[key]
     return new_kws
 
 class plotter:

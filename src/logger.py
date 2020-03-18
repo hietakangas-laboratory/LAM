@@ -11,7 +11,8 @@ Created on Wed Mar  6 12:42:28 2019
 import logging
 import time
 # A list of logger names used by the modules. Used for clearing of handlers.
-loggers = ['run', 'process', 'analysis', 'interface', 'plot', 'system']
+loggers = ['run', 'process', 'analysis', 'interface', 'plot', 'system',
+           'pfunc']
 # Needed variables
 logFile = ""
 ctime = time.strftime("%d%b%y_%H%M%S")
