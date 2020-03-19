@@ -61,7 +61,8 @@ class DataHandler:
                 melt = True
                 m_kws = kws.get('melt')
                 if 'Matrix' in args:
-                    id_var = path.stem.split('_')[1]
+		    id_sep = kws['Matrix'].get('id_sep')
+                    id_var = path.stem.split('_')[id_sep:]
                     m_kws.update({'value_name': id_var})
                 data = data.T.melt(id_vars=m_kws.get('id_vars'),
                                    value_vars=m_kws.get('value_vars'),
@@ -112,8 +113,9 @@ class MakePlot:
                 'sharex': False, 'sharey': False, 'gridspec': {'hspace': 0.45},
                 'xlabel': 'Linear Position', 'ylabel': 'Feature Count'}
 
-    def __init__(self, data, handle, title):
+    def __init__(self, data, handle, title, sec_data=None):
         self.data = data
+	self.sec_data = sec_data
         self.plot_error = False
         self.handle = handle
         self.title = title
@@ -150,6 +152,8 @@ class MakePlot:
         if 'collect_labels' in args:
             new_labels = self.get_labels(**kws)
             kws.update({'ylabel': new_labels})
+	    #if 'copy_YtoX' in args:
+	        #kws.update({'xlabel': new_labels}
         if 'labels' in args:
             self.labels(**kws)
         if 'legend' in args:

@@ -76,8 +76,9 @@ def heatmap(plot, **kws):
     return plot.g
 
 def bivariate_kde(plot, **kws):
-    # MAKE PAIRGRID WITH ADD TYPES ON AXES AND GROUPS AS HUES
+    b_kws = {'sharex': False, 'sharey': False}
     data = plot.data
+    sec_data = plot.sec_data
     g = sns.PairGrid(data, hue="Sample Group")
     g = g.map_diag(plt.hist)
     g = g.map_offdiag(plt.scatter)

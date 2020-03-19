@@ -240,7 +240,6 @@ class Samplegroups:
                       'array_index': 'Sample Group',
                       'drop_grouper': 'Sample Group'}
 
-# !!!
         # CHANNEL PLOTTING
         if Sett.Create_Channel_Plots:
             lg.logprint(LAM_logger, 'Plotting channels', 'i')
@@ -293,10 +292,13 @@ class Samplegroups:
             new_kws = plot.merge_kws(handle_kws,
                                      {'IDs': ['Sample Group'],
                                       'kind': 'reg', 'diag_kind': 'kde',
-                                      #'title_y': 1,
+                                      'title_y': 1,
                                       'xlabel': 'Feature Count',
                                       'melt': {'id_vars': ['Sample Group'],
-                                               'var_name': 'Linear Position'}})
+                                               'var_name': 'Linear Position'},
+				      'Matrix': {'id_sep': 1, 
+						 'merge_on': ['Sample Group',
+                                                  'Linear Position'])})
             all_data = handle.get_data('Matrix', **new_kws)
 
             # Make plot:
@@ -330,28 +332,43 @@ class Samplegroups:
             lg.logprint(LAM_logger, 'Heatmaps done.', 'i')
 
 # !!!
-        if Sett.Create_ChanVSAdd_Plots:  # Plot channels
-            pass
-            # lg.logprint(LAM_logger, 'Plotting channel VS additional data', 'i')
-            # print('Plotting channel VS additional data  ...')
-            # paths1 = _select(self._chanPaths, adds=False)
-            # paths2 = _select(self._addData)
+        if Sett.Create_ChanVSAdd_Plots:
+            lg.logprint(LAM_logger, 'Plotting channel VS additional data', 'i')
+            print('Plotting channel VS additional data  ...')
+            paths1 = _select(self._addData)
+	    paths2 = _select(self._chanPaths, adds=False)
             
-            # handle = plot.DataHandler(self, paths)
-            # new_kws = plot.merge_kws(handle_kws,
-            #                          {'IDs': ['Sample Group', 'Type'],
-            #                           'melt': {'id_vars': ['Sample Group'],
-            #                                    'var_name': 'Linear Position'}})
-            # all_data = handle.get_data('Versus', **new_kws)
+	    # Get Add data
+            handle = plot.DataHandler(self, paths)
+            data_vars = ['Channel', 'Sample Group', 'Type']
+	    matrix_kws = {'id_sep': 1,
+			  'merge_on': ['Sample Group', 'Channel', 'Linear Position']}
+            new_kws = plot.merge_kws(handle_kws,
+                                     {'IDs': data_vars,
+                                      'melt': {'id_vars': data_vars,
+					       'var_name': 'Linear Position'},
+				      'Matrix': matrix_kws})
+            all_add_data = handle.get_data(**new_kws)
 
-            # # Make plot:
-            # plotter = plot.MakePlot(all_data, handle, 'Channel Matrix')
-            # args = ('title', 'legend', 'collect_labels', 'labels')
-            # plotter(pfunc.channel_matrix, *args, **new_kws)
-            
-            
-            # _versus(paths1, paths2, 'Chan VS AddData')
-            # lg.logprint(LAM_logger, 'Channel VS additional data done.', 'i')
+	    # Get Channel data
+	    handle = plot.DataHandler(self, paths)
+	    matrix_kws = {'id_sep': 1,
+			  'merge_on': ['Sample Group', 'Linear Position']}
+            new_kws.update{'IDs': ['Channel', 'Sample Group'],
+                           'melt': {'id_vars': ['Sample Group'],
+                                    'var_name': 'Linear Position'},
+			   'Matrix': matrix_kws)
+            all_chan_data = handle.get_data(**new_kws)
+
+            # Make plot:
+	    grouped = all_add_data.groupby('Channel')
+	    for grp, data in grouped:
+		full_title = 'Channels Versus {} Add Data Matrix'.format(grp)
+                plotter = plot.MakePlot(all_data, handle, full_title.
+				    sec_data=all_chan_data)
+                args = ('title', 'legend')#, 'collect_labels', 'labels')
+                plotter(pfunc.channel_matrix, *args, **new_kws)
+            lg.logprint(LAM_logger, 'Channel VS additional data done.', 'i')
 
         if Sett.Create_AddVSAdd_Plots:  # Plot additional data against self
             lg.logprint(LAM_logger, 'Plotting add. data vs add. data', 'i')
@@ -360,19 +377,21 @@ class Samplegroups:
             
             handle = plot.DataHandler(self, paths)
             data_vars = ['Channel', 'Sample Group', 'Type']
+	    matrix_kws = {'id_sep': 1,
+			  'merge_on': ['Sample Group', 'Channel']}
             new_kws = plot.merge_kws(handle_kws,
                                      {'IDs': data_vars,
-                                      'melt': {'id_vars': data_vars,
-                                               'var_name': 'Linear Position'}})
+                                      'melt': {'id_vars': data_vars},
+				      'Matrix': matrix_kws)
             all_data = handle.get_data(**new_kws)
 
             # Make plot:
-            plotter = plot.MakePlot(all_data, handle, 'Channel Matrix')
-            args = ('title', 'legend', 'collect_labels', 'labels')
+            plotter = plot.MakePlot(all_data, handle, 'Add Versus Add Matrix')
+            args = ('title', 'legend')#, 'collect_labels', 'labels')
             plotter(pfunc.channel_matrix, *args, **new_kws)
             
             _versus(paths, folder='AddData VS AddData')
-            lg.logprint(LAM_logger, 'additional data VS additional data done',
+            lg.logprint(LAM_logger, 'Add VS Add done',
                         'i')
 
         if Sett.Create_Distribution_Plots:  # Plot distributions
