@@ -141,14 +141,14 @@ class settings:
     Create_Channel_Plots = False
     Create_AddData_Plots = False     # Plots also nearest distance & clusters
     Create_Channel_PairPlots = False
-    Create_Heatmaps = True
+    Create_Heatmaps = False
     Create_Distribution_Plots = False
     Create_Statistics_Plots = False  # requires statistics to be True
     Create_Cluster_Plots = False
 
     # Variable vs. variable plots:
     Create_ChanVSAdd_Plots = False  # Pairs of channel and additional data
-    Create_AddVSAdd_Plots = False  # Pairs of additional data
+    Create_AddVSAdd_Plots = True  # Pairs of additional data
     # Create plots of all possible pair combinations of the following:
     vs_channels = ['DAPI', 'DAPIEC']
     vs_adds = ['Intensity Mean']

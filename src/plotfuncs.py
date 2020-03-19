@@ -75,8 +75,13 @@ def heatmap(plot, **kws):
     plt.subplots_adjust(left=0.25, right=0.99)
     return plot.g
 
-def joint():
-    pass
+def bivariate_kde(plot, **kws):
+    # MAKE PAIRGRID WITH ADD TYPES ON AXES AND GROUPS AS HUES
+    data = plot.data
+    g = sns.PairGrid(data, hue="Sample Group")
+    g = g.map_diag(plt.hist)
+    g = g.map_offdiag(plt.scatter)
+    return g
 
 def lines(plot, **kws):
     err_dict = {'alpha': 0.3}

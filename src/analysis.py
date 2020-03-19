@@ -73,12 +73,6 @@ class Samplegroups:
 
     def create_plots(self):
         """Handle data for the creation of most plots."""
-        # Base keywords utilized in plots.
-        basekws = {'id_str': 'Sample Group', 'hue': 'Sample Group',
-                   'row': 'Sample Group', 'height': 5, 'aspect': 3,
-                   'var_str': 'Linear Position', 'flierS': 2,
-                   'title_y': 0.95, 'sharey': True,
-                   'gridspec': {'hspace': 0.3}}
 
         def _clusters():
             """Handle data for cluster plots."""
@@ -185,7 +179,7 @@ class Samplegroups:
                     values.loc[:, 'Sample Group'] = group
                     values.loc[:, 'Channel'] = path.stem
                     data = pd.melt(values, id_vars=['Channel', 'Sample Group'])
-                    temp =  pd.concat([temp, data], sort=False)
+                    temp = pd.concat([temp, data], sort=False)
                 if Sett.Drop_Outliers:
                     for var in temp.variable.unique():
                         temp.loc[(temp.variable == var), 'value'] =\
@@ -197,39 +191,6 @@ class Samplegroups:
                                  palette=self._grpPalette)
             savepath = self.paths.plotdir
             plot_maker.distPlot(savepath, **kws)
-
-        def _heat(paths, samples=False):
-            """Create heatmaps of cell counts for each sample group."""
-            savepath = self.paths.plotdir
-            fullData = pd.DataFrame()
-            # Loop through the given channels and read the data file. Each
-            # channel is concatenated to one dataframe for easier plotting.
-            for path in paths:
-                plotData, name, cntr = self.read_channel(path, self._groups)
-                # change each sample's group to be contained in its index
-                # within the dataframe.
-                if not samples:
-                    plotData.index = plotData.loc[:, 'Sample Group']
-                plotData.drop(labels='Sample Group', axis=1, inplace=True)
-                # Channel-variable is added for identification
-                plotData.loc[:, 'Channel'] = name
-                fullData = pd.concat([fullData, plotData], axis=0, copy=False)
-            # The plotting can't handle NaN's, so they are changed to zero.
-            fullData = fullData.replace(np.nan, 0)
-            if not samples:
-                name = "All Channels Heatmaps"
-            else:
-                name = "All Samples Channel Heatmaps"
-            # Initialize plotting-class, create kws, and plot all channel data.
-            plot_maker = plotter(fullData, self.paths.plotdir, center=cntr,
-                                 title=name, palette=None)
-            kws = {'height': 3, 'aspect': 5, 'row': 'Channel', 'title_y': 0.93,
-                   'center': plot_maker.MPbin, 'xlen': self._length,
-                   'vmax': None, 'gridspec': {'hspace': 0.5}, 'sharey': False}
-            if samples:  # Make height of plot dependant on sample size
-                val = fullData.index.unique().size / 2
-                kws.update({'height': val})
-            plot_maker.plot_Data(plotter.Heatmap, savepath, **kws)
 
         def _select(paths, adds=True):
             """Find different types of data for versus plot."""
@@ -301,13 +262,11 @@ class Samplegroups:
             print('Plotting additional data  ...')
 
             # Collect data:
+            data_vars = ['Channel', 'Sample Group', 'Type']
             new_kws = plot.merge_kws(handle_kws,
-                                     {'IDs': ['Channel', 'Sample Group',
-                                              'Type'],
-                                      'row': 'Type',
-                                      'col': 'Sample Group',
-                                      'melt': {'id_vars': ['Sample Group',
-                                                           'Channel','Type'],
+                                     {'IDs': data_vars,
+                                      'row': 'Type', 'col': 'Sample Group',
+                                      'melt': {'id_vars': data_vars,
                                                'var_name': 'Linear Position',
                                                'value_name': 'Value'}})
             handle = plot.DataHandler(self, self._addData)
@@ -333,9 +292,8 @@ class Samplegroups:
             handle = plot.DataHandler(self, paths)
             new_kws = plot.merge_kws(handle_kws,
                                      {'IDs': ['Sample Group'],
-                                      'kind': 'reg',
-                                      'diag_kind': 'kde',
-                                      'title_y': 1,
+                                      'kind': 'reg', 'diag_kind': 'kde',
+                                      #'title_y': 1,
                                       'xlabel': 'Feature Count',
                                       'melt': {'id_vars': ['Sample Group'],
                                                'var_name': 'Linear Position'}})
@@ -371,18 +329,48 @@ class Samplegroups:
             plotter(pfunc.heatmap, *('centerline', 'ticks', 'title'), **p_kws)
             lg.logprint(LAM_logger, 'Heatmaps done.', 'i')
 
+# !!!
         if Sett.Create_ChanVSAdd_Plots:  # Plot channels
-            lg.logprint(LAM_logger, 'Plotting channel VS additional data', 'i')
-            print('Plotting channel VS additional data  ...')
-            paths1 = _select(self._chanPaths, adds=False)
-            paths2 = _select(self._addData)
-            _versus(paths1, paths2, 'Chan VS AddData')
-            lg.logprint(LAM_logger, 'Channel VS additional data done.', 'i')
+            pass
+            # lg.logprint(LAM_logger, 'Plotting channel VS additional data', 'i')
+            # print('Plotting channel VS additional data  ...')
+            # paths1 = _select(self._chanPaths, adds=False)
+            # paths2 = _select(self._addData)
+            
+            # handle = plot.DataHandler(self, paths)
+            # new_kws = plot.merge_kws(handle_kws,
+            #                          {'IDs': ['Sample Group', 'Type'],
+            #                           'melt': {'id_vars': ['Sample Group'],
+            #                                    'var_name': 'Linear Position'}})
+            # all_data = handle.get_data('Versus', **new_kws)
+
+            # # Make plot:
+            # plotter = plot.MakePlot(all_data, handle, 'Channel Matrix')
+            # args = ('title', 'legend', 'collect_labels', 'labels')
+            # plotter(pfunc.channel_matrix, *args, **new_kws)
+            
+            
+            # _versus(paths1, paths2, 'Chan VS AddData')
+            # lg.logprint(LAM_logger, 'Channel VS additional data done.', 'i')
 
         if Sett.Create_AddVSAdd_Plots:  # Plot additional data against self
             lg.logprint(LAM_logger, 'Plotting add. data vs add. data', 'i')
             print('Plotting additional data VS additional data  ...')
             paths = _select(self._addData)
+            
+            handle = plot.DataHandler(self, paths)
+            data_vars = ['Channel', 'Sample Group', 'Type']
+            new_kws = plot.merge_kws(handle_kws,
+                                     {'IDs': data_vars,
+                                      'melt': {'id_vars': data_vars,
+                                               'var_name': 'Linear Position'}})
+            all_data = handle.get_data(**new_kws)
+
+            # Make plot:
+            plotter = plot.MakePlot(all_data, handle, 'Channel Matrix')
+            args = ('title', 'legend', 'collect_labels', 'labels')
+            plotter(pfunc.channel_matrix, *args, **new_kws)
+            
             _versus(paths, folder='AddData VS AddData')
             lg.logprint(LAM_logger, 'additional data VS additional data done',
                         'i')

@@ -61,8 +61,8 @@ class DataHandler:
                 melt = True
                 m_kws = kws.get('melt')
                 if 'Matrix' in args:
-                    chan = path.stem.split('_')[1]
-                    m_kws.update({'value_name': chan})
+                    id_var = path.stem.split('_')[1]
+                    m_kws.update({'value_name': id_var})
                 data = data.T.melt(id_vars=m_kws.get('id_vars'),
                                    value_vars=m_kws.get('value_vars'),
                                    var_name=m_kws.get('var_name'),
@@ -86,8 +86,21 @@ class DataHandler:
         all_data = all_data.infer_objects()
         return all_data
 
-    # def call_plot(self, func, plot_kws=base_kws):  # needed ???
-    #     plot.MakePlot(func)
+    def get_add_data(self, *args, **kws):
+        all_data = pd.DataFrame()
+        for path in self.paths:
+            data = system.read_data(path, header=0, test=False)
+            data = identifiers(data, path, kws.get('IDs'))
+            m_kws = kws.get('melt')
+            id_var = path.stem.split('_')[2]
+            m_kws.update({'value_name': id_var})
+            data = data.T.melt(id_vars=m_kws.get('id_vars'),
+                               value_vars=m_kws.get('value_vars'),
+                               var_name=m_kws.get('var_name'),
+                               value_name=m_kws.get('value_name'))
+            all_data = all_data.merge(data, how='outer', copy=False,
+                                      on=['Sample Group',
+                                          'Linear Position'])
 
 
 class MakePlot:
@@ -115,7 +128,7 @@ class MakePlot:
             warnings.simplefilter('ignore', category=UserWarning)
             # Make canvas if needed:
             if 'no_grid' not in args:
-                if 'Joint' in args:
+                if 'Versus' in args:
                     pass
                 else:
                     self.g = self.get_facet(**plot_kws)
@@ -216,8 +229,6 @@ class MakePlot:
         fig = plt.gcf()
         fig.savefig(str(self.filepath), format=self.format)
         plt.close()
-
-
 
 
 def drop_func(x, mean, drop_value):
