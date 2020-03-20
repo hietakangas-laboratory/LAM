@@ -125,14 +125,14 @@ def main():
     if Sett.Find_Clusters and Sett.process_dists:
         SampleGroups.Get_Clusters()
     # Computing total values from each sample's each bin
-    if Sett.stat_total or Sett.process_counts:
+    if (Sett.statistics and Sett.stat_total) or Sett.process_counts:
         SampleGroups.Get_Totals()
     # Calculation of MWW-statistics for cell counts and other data
     if Sett.statistics:
         SampleGroups.Get_Statistics()
     # Creation of plots from various data (excluding statistical plots)
     if Sett.Create_Plots:
-        SampleGroups.create_plots()
+        SampleGroups.create_plots
 
     # TEMPORARY !!!
     # !!! Change plotting of widths

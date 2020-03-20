@@ -41,11 +41,11 @@ class DataHandler:
         self.data = pd.DataFrame()
         self.paths = paths
 
-    def data_array_index(self, data, indexer=None):
-        if indexer is not None:
-            data.index = data.loc[:, indexer]
-            data.drop(indexer, axis=1, inplace=True)
-        return data
+    # def data_array_index(self, data, indexer=None):
+    #     if indexer is not None:
+    #         data.index = data.loc[:, indexer]
+    #         data.drop(indexer, axis=1, inplace=True)
+    #     return data
 
     def get_add_vars(self):
         pass
@@ -58,50 +58,39 @@ class DataHandler:
             if 'IDs' in kws.keys():
                 data = identifiers(data, path, kws.get('IDs'))
             if 'melt' in kws.keys():
-                melt = True
                 m_kws = kws.get('melt')
-                if 'Matrix' in args:
-		    id_sep = kws['Matrix'].get('id_sep')
-                    id_var = path.stem.split('_')[id_sep:]
-                    m_kws.update({'value_name': id_var})
+                if 'path_id' in args:
+                    id_sep = kws.get('id_sep')
+                    try:
+                        id_var = path.stem.split('_')[id_sep]
+                        m_kws.update({'value_name': id_var})
+                    except IndexError:
+                        msg = 'Faulty list index. Incorrect file names?'
+                        print('ERROR: {}'.format(msg))
+                        lg.logprint(LAM_logger, msg, 'e')
                 data = data.T.melt(id_vars=m_kws.get('id_vars'),
                                    value_vars=m_kws.get('value_vars'),
                                    var_name=m_kws.get('var_name'),
                                    value_name=m_kws.get('value_name'))
+                melt = True
             else:
                 data = data.T
-            if 'Matrix' in args:
+            if 'merge' in args:
                 if all_data.empty:
                     all_data = data
                 else:
+                    
                     all_data = all_data.merge(data, how='outer', copy=False,
-                                              on=['Sample Group',
-                                                  'Linear Position'])
+                                              on=kws.get('merge_on'))
                 continue
             all_data = pd.concat([all_data, data], sort=True)
-        if 'array' in args:
-            all_data = self.data_array_index(all_data, kws.get('array_index'))
+        # if 'array' in args:
+        #     all_data = self.data_array_index(all_data, kws.get('array_index'))
         if 'drop_outlier' in args and Sett.Drop_Outliers:
             all_data.index = pd.RangeIndex(stop=all_data.shape[0])
             all_data = drop_outliers(all_data, melt, **kws)
         all_data = all_data.infer_objects()
         return all_data
-
-    def get_add_data(self, *args, **kws):
-        all_data = pd.DataFrame()
-        for path in self.paths:
-            data = system.read_data(path, header=0, test=False)
-            data = identifiers(data, path, kws.get('IDs'))
-            m_kws = kws.get('melt')
-            id_var = path.stem.split('_')[2]
-            m_kws.update({'value_name': id_var})
-            data = data.T.melt(id_vars=m_kws.get('id_vars'),
-                               value_vars=m_kws.get('value_vars'),
-                               var_name=m_kws.get('var_name'),
-                               value_name=m_kws.get('value_name'))
-            all_data = all_data.merge(data, how='outer', copy=False,
-                                      on=['Sample Group',
-                                          'Linear Position'])
 
 
 class MakePlot:
@@ -115,7 +104,7 @@ class MakePlot:
 
     def __init__(self, data, handle, title, sec_data=None):
         self.data = data
-	self.sec_data = sec_data
+        self.sec_data = sec_data
         self.plot_error = False
         self.handle = handle
         self.title = title

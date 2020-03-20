@@ -147,10 +147,10 @@ class settings:
     Create_Cluster_Plots = False
 
     # Variable vs. variable plots:
-    Create_ChanVSAdd_Plots = False  # Pairs of channel and additional data
+    Create_ChanVSAdd_Plots = True  # Pairs of channel and additional data
     Create_AddVSAdd_Plots = True  # Pairs of additional data
     # Create plots of all possible pair combinations of the following:
-    vs_channels = ['DAPI', 'DAPIEC']
+    vs_channels = ['DAPI', 'GFP']
     vs_adds = ['Intensity Mean']
 
     # Whether to drop outliers from plots ONLY

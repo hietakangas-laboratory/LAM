@@ -76,13 +76,37 @@ def heatmap(plot, **kws):
     return plot.g
 
 def bivariate_kde(plot, **kws):
-    b_kws = {'sharex': False, 'sharey': False}
-    data = plot.data
-    sec_data = plot.sec_data
-    g = sns.PairGrid(data, hue="Sample Group")
-    g = g.map_diag(plt.hist)
-    g = g.map_offdiag(plt.scatter)
-    return g
+    b_kws = {'sharex': 'False', 'sharey': 'False'}
+    b_kws.update(kws)
+    plot_data = plot.data.drop('Channel', axis=1)
+    full_data = plot_data.merge(plot.sec_data, on=['Sample Group', 'Sample',
+                                                   'Linear Position'],
+                                how='outer')
+    
+    # id_cols = kws.get('col_ban')
+    # data_cols = plot.data.columns.difference(id_cols)
+    # sec_cols = plot.sec_data.columns.difference(id_cols)
+    
+    # shared_cols = plot.data.columns.intersection(plot.sec_data.columns)
+    # melt_cols = shared_cols.union(id_cols)
+    # plot_data = plot.data.merge(plot.sec_data, how='outer', copy=True,
+    #                             on=shared_cols.to_list())
+    # plot_data = plot_data.melt(id_vars=melt_cols)
+    
+    g = sns.FacetGrid(data=full_data, row='Channel', col='Type',
+                      hue="Sample Group", sharex=False, sharey=False)
+    g = g.map(sns.kdeplot, 'None_y', 'None_x')
+    
+    print('done')
+    # for ind, col in sec_cols:
+    #     for ind2, col2 in data_cols:
+    #         plot_data = data.loc[col2]
+    #         plot_sec_data = sec_data.loc[:, col]
+    #         sns.kdeplot()
+    # g = sns.FacetGrid(data, hue="Sample Group")
+    # g = g.map_diag(plt.hist)
+    # g = g.map_offdiag(plt.scatter)
+    return
 
 def lines(plot, **kws):
     err_dict = {'alpha': 0.3}
