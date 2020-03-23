@@ -7,7 +7,7 @@ Created on Mon Mar 16 16:34:33 2020
 # LAM modules
 from settings import settings as Sett
 import logger as lg
-import system
+import plot
 # Standard libraries
 import warnings
 # from random import shuffle
@@ -23,7 +23,27 @@ try:
 except AttributeError:
     print('Cannot get logger')
 
-def channel_matrix(plot, **kws):
+
+def bivariate_kde(plotter, **in_kws):
+    kws = in_kws.get('plot_kws')
+    data = plotter.data.drop('Channel', axis=1)
+    if plotter.sec_data is not None:
+        plot_data = data.merge(plotter.sec_data, how='outer',
+                               on=['Sample Group', 'Sample',
+                                   'Linear Position'])
+    else:
+        plot_data = data
+    g = sns.FacetGrid(data=plot_data, row=kws.get('row'), col=kws.get('col'),
+                      hue="Sample Group", sharex=False, sharey=False,
+                      height=4.5)
+    with warnings.catch_warnings():  # If 
+        warnings.simplefilter('ignore', category=UserWarning)
+        g = g.map(sns.kdeplot, 'None_y', 'None_x', shade_lowest=False,
+                  shade=False, linewidths=2.5, alpha=0.5)
+    return g
+
+
+def channel_matrix(plotter, **kws):
     """Creation of pair plots."""
     # Settings for plotting:
     pkws = {'x_ci': None, 'truncate': True, 'order': 2,
@@ -33,7 +53,7 @@ def channel_matrix(plot, **kws):
         pkws.update({'x_jitter': 0.49, 'y_jitter': 0.49})
 
     # Drop unneeded data and replace NaN with zero (required for plot)
-    data = plot.data.drop('Linear Position', axis=1)
+    data = plotter.data.drop('Linear Position', axis=1)
     cols = data.columns != 'Sample Group'
     data = data.dropna(how='all', subset=data.columns[cols]).replace(np.nan, 0)
     try:
@@ -41,7 +61,7 @@ def channel_matrix(plot, **kws):
                          height=1.5, aspect=1,
                          kind=kws.get('kind'),
                          diag_kind=kws.get('diag_kind'),
-                         palette=plot.handle.palette,
+                         palette=plotter.handle.palette,
                          plot_kws=pkws,
                          diag_kws={'linewidth': 1.25})
         # Set bottom values to zero, as no negatives in count data
@@ -55,78 +75,50 @@ def channel_matrix(plot, **kws):
         lg.logprint(LAM_logger, fullmsg, 'ex')
         print('ERROR: Pairplot singular matrix')
         print(msg)
-        plot.plot_error = True
+        plotter.plot_error = True
         return None
     return g
+
 
 def clusters():
     pass
 
-def heatmap(plot, **kws):
+
+def heatmap(plotter, **kws):
     """Creation of heat maps."""
-    data = plot.data.replace(np.nan, 0)
+    data = plotter.data.replace(np.nan, 0)
     rows = data.loc[:, kws.get('row')].unique()
-    for ind, ax in enumerate(plot.g.axes.flat):
+    for ind, ax in enumerate(plotter.g.axes.flat):
         sub_data = data.loc[data[kws.get('row')] == rows[ind],
                             data.columns != kws.get('row')]
         sns.heatmap(data=sub_data, cmap='coolwarm', robust=True,
                     linewidth=0.05, linecolor='dimgrey', ax=ax)
         ax.set_title(rows[ind])
     plt.subplots_adjust(left=0.25, right=0.99)
-    return plot.g
+    return plotter.g
 
-def bivariate_kde(plot, **kws):
-    b_kws = {'sharex': 'False', 'sharey': 'False'}
-    b_kws.update(kws)
-    plot_data = plot.data.drop('Channel', axis=1)
-    full_data = plot_data.merge(plot.sec_data, on=['Sample Group', 'Sample',
-                                                   'Linear Position'],
-                                how='outer')
-    
-    # id_cols = kws.get('col_ban')
-    # data_cols = plot.data.columns.difference(id_cols)
-    # sec_cols = plot.sec_data.columns.difference(id_cols)
-    
-    # shared_cols = plot.data.columns.intersection(plot.sec_data.columns)
-    # melt_cols = shared_cols.union(id_cols)
-    # plot_data = plot.data.merge(plot.sec_data, how='outer', copy=True,
-    #                             on=shared_cols.to_list())
-    # plot_data = plot_data.melt(id_vars=melt_cols)
-    
-    g = sns.FacetGrid(data=full_data, row='Channel', col='Type',
-                      hue="Sample Group", sharex=False, sharey=False)
-    g = g.map(sns.kdeplot, 'None_y', 'None_x')
-    
-    print('done')
-    # for ind, col in sec_cols:
-    #     for ind2, col2 in data_cols:
-    #         plot_data = data.loc[col2]
-    #         plot_sec_data = sec_data.loc[:, col]
-    #         sns.kdeplot()
-    # g = sns.FacetGrid(data, hue="Sample Group")
-    # g = g.map_diag(plt.hist)
-    # g = g.map_offdiag(plt.scatter)
-    return
 
-def lines(plot, **kws):
+def lines(plotter, **kws):
     err_dict = {'alpha': 0.3}
-    data = plot.data.dropna()
+    data = plotter.data.dropna()
     melt_kws = kws.get('melt')
-    g = (plot.g.map_dataframe(sns.lineplot, data=plot.data,
+    g = (plotter.g.map_dataframe(sns.lineplot, data=plotter.data,
                               x=data.loc[:, melt_kws.get('var_name')
                                          ].astype(int),
                               y=data.loc[:, melt_kws.get('value_name')],
                               ci='sd', err_style='band',
                               hue=kws.get('hue'), dashes=False, alpha=1,
-                              palette=plot.handle.palette,
+                              palette=plotter.handle.palette,
                               err_kws=err_dict))
     return g
+
 
 def totals():
     pass
 
+
 def vector_plots(savepath, samplename, vectordata, X, Y, binaryArray=None,
-                skeleton=None):
+                 skeleton=None):
     """Plot sample-specific vectors and skeleton plots."""
     ext = ".{}".format(Sett.saveformat)
     # Get vector creation settings and create string
@@ -138,7 +130,8 @@ def vector_plots(savepath, samplename, vectordata, X, Y, binaryArray=None,
         sett_dict = {'Type': 'Median', 'Simplif.': Sett.simplifyTol,
                      'Bins': Sett.medianBins}
     sett_string = '  |  '.join(["{} = {}".format(k, v) for k, v in
-                              sett_dict.items()])
+                                sett_dict.items()])
+
 
     # Create skeleton plots if using skeleton vectors
     if skeleton is not None and Sett.SkeletonVector:
@@ -172,6 +165,7 @@ def vector_plots(savepath, samplename, vectordata, X, Y, binaryArray=None,
     name = str('Vector_' + samplename + ext)
     fig.savefig(str(savepath.parent.joinpath(name)), format=Sett.saveformat)
     plt.close()
+
 
 def widths():
     pass

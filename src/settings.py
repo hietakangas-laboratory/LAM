@@ -82,7 +82,7 @@ class settings:
                }
     # If set to true, replaces the above mentioned (AddData) ID numbers with an
     # alternative moniker as defined in channelID
-    replaceID = False
+    replaceID = True
     channelID = {"Ch=1": "Pros",
                  "Ch=2": "GFP",
                  "Ch=3": "SuH",
@@ -147,11 +147,11 @@ class settings:
     Create_Cluster_Plots = False
 
     # Variable vs. variable plots:
-    Create_ChanVSAdd_Plots = True  # Pairs of channel and additional data
+    Create_ChanVSAdd_Plots = False  # Pairs of channel and additional data
     Create_AddVSAdd_Plots = True  # Pairs of additional data
     # Create plots of all possible pair combinations of the following:
     vs_channels = ['DAPI', 'GFP']
-    vs_adds = ['Intensity Mean']
+    vs_adds = ['Intensity Mean']  # Use the pre-defined keys
 
     # Whether to drop outliers from plots ONLY
     Drop_Outliers = True

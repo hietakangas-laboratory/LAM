@@ -6,7 +6,7 @@ Created on Tue Mar 10 11:45:48 2020
 @author: Arto I. Viitanen
 """
 # LAM modules
-from settings import settings as Sett
+from settings import settings as Sett, store
 import logger as lg
 import system
 # Standard libraries
@@ -32,8 +32,11 @@ class DataHandler:
     Data will be passed to MakePlot-class
     """
 
-    def __init__(self, samplegroups, paths):
-        self.savepath = samplegroups.paths.plotdir
+    def __init__(self, samplegroups, paths, savepath=None):
+        if savepath is None:
+            self.savepath = samplegroups.paths.plotdir
+        else:
+            self.savepath = savepath
         self.palette = samplegroups._grpPalette
         self.center = samplegroups._center
         self.total_length = samplegroups._length
@@ -41,14 +44,6 @@ class DataHandler:
         self.data = pd.DataFrame()
         self.paths = paths
 
-    # def data_array_index(self, data, indexer=None):
-    #     if indexer is not None:
-    #         data.index = data.loc[:, indexer]
-    #         data.drop(indexer, axis=1, inplace=True)
-    #     return data
-
-    def get_add_vars(self):
-        pass
 
     def get_data(self, *args, **kws):
         melt = False
@@ -79,15 +74,12 @@ class DataHandler:
                 if all_data.empty:
                     all_data = data
                 else:
-                    
                     all_data = all_data.merge(data, how='outer', copy=False,
                                               on=kws.get('merge_on'))
                 continue
             all_data = pd.concat([all_data, data], sort=True)
-        # if 'array' in args:
-        #     all_data = self.data_array_index(all_data, kws.get('array_index'))
+        all_data.index = pd.RangeIndex(stop=all_data.shape[0])
         if 'drop_outlier' in args and Sett.Drop_Outliers:
-            all_data.index = pd.RangeIndex(stop=all_data.shape[0])
             all_data = drop_outliers(all_data, melt, **kws)
         all_data = all_data.infer_objects()
         return all_data
@@ -138,13 +130,9 @@ class MakePlot:
             self.centerline()
         if 'ticks' in args:
             self.xticks()
-        if 'collect_labels' in args:
-            new_labels = self.get_labels(**kws)
-            kws.update({'ylabel': new_labels})
-	    #if 'copy_YtoX' in args:
-	        #kws.update({'xlabel': new_labels}
         if 'labels' in args:
-            self.labels(**kws)
+            self.collect_labels(kws.get('xlabel'), kws.get('ylabel'))
+            self.labels(kws.get('xlabel'), kws.get('ylabel'))
         if 'legend' in args:
             self.g.add_legend()
         if 'title' in args:
@@ -157,6 +145,21 @@ class MakePlot:
             ax.vlines(self.handle.center, 0, ytop, 'dimgrey', zorder=0,
                       linestyles='dashed')
 
+    def collect_labels(self, xlabel, ylabel):
+        if 'collect' not in (xlabel, ylabel):
+            return
+        for ax in self.g.axes.flat:
+            title = ax.get_title()
+            var_strs = title.split(' | ')
+            label_strs = [l.split(' = ')[1] for l in var_strs]
+            if ylabel == 'collect':
+                label = get_unit(label_strs[0])
+                ax.set_ylabel(label)
+            if xlabel == 'collect':
+                label = get_unit(label_strs[1])
+                ax.set_xlabel(label)
+            ax.set_title('')
+
     def get_facet(self, **kws):
         g = sns.FacetGrid(self.data, row=kws.get('row'),
                           col=kws.get('col'), hue=kws.get('hue'),
@@ -167,50 +170,18 @@ class MakePlot:
                           palette=self.handle.palette)
         return g
 
-    def get_labels(self, **kws):  # !!! FIX Y-LABELING
-        labels = {}
-        for path in self.handle.paths:
-            name = '_'.join(str(path.stem).split('_')[1:])
-            # Get unit of data
-            sub_names = name.split('_')
-            key_name = sub_names[1].split('-')[0]
-            if "Distance Means" in key_name:
-                label = "Distance"
-            else:
-                temp = Sett.AddData.get(key_name)
-                if temp is None:
-                    label = 'Value'
-                else:
-                    label = temp[1]
-            labels.update({key_name: label})
-        types = self.data[kws.get('row')].unique()
-        row_order = sorted([s.split('-')[0] for s in types])
-        new_labels = [labels.get(k) for k in row_order]
-        return new_labels
-
-    def xticks(self):#xticks=None, yticks=None, , **kws):
+    def xticks(self):
         """Set plot xticks & tick labels to be shown every 5 ticks."""
         xticks = np.arange(0, self.handle.total_length, 5)
         plt.setp(self.g.axes, xticks=xticks, xticklabels=xticks)
 
-    def labels(self, **kws):#xlabel=None, ylabel=None, title=None):
-        labels = kws.get('labels')  # !!! Finish
-        if 'xlabel' in kws.keys():
+    def labels(self, xlabel=None, ylabel=None):
+        if xlabel not in (None, 'collect'):
             for ax in self.g.axes.flat:
-                ax.set_xlabel(kws.get('xlabel'))
-        if 'ylabel' in kws.keys():
-            labels = kws.get('ylabel')
-            length_test = (isinstance(labels, list) and len(labels) > 1)
-            # Test whether multiple keys are present:
-            if not length_test:
-                for ax in self.g.axes.flat:
-                    ax.set_ylabel(labels)
-            else:  # Change labels dependently on grid position
-                nrows, ncols = self.g.axes.shape
-                index = [(i_1, i_2) for i_1 in np.arange(nrows) for i_2 in
-                          np.arange(ncols)]
-                for ind in index:
-                    self.g.axes[ind].set_ylabel(labels[ind[0]])
+                ax.set_xlabel(xlabel)
+        if ylabel not in (None, 'collect'):
+            for ax in self.g.axes.flat:
+                ax.set_ylabel(ylabel)
 
     def set_title(self, **kws):
         self.g.fig.suptitle(self.title, weight='bold', y=kws.get('title_y'))
@@ -269,6 +240,34 @@ def identifiers(data, path, ids):
         name = str(path.stem).split('_')[2:]
         data.loc['Type', :] = name
     return data
+
+
+def get_unit(string):
+    # If string is a LAM created value name:
+    if string in ("Distance Means", "Width"):
+        return "Units (coord system)"
+    sub_str = string.split('-')
+    if len(sub_str) == 3:
+        chan, key, key_c = sub_str
+    elif len(sub_str) == 2:
+        key, key_c = sub_str
+    else:
+        key = sub_str[0]
+    # If not user defined value:
+    if key not in Sett.AddData.keys():
+        if key in store.channels:
+            return '{} Count'.format(string)
+        else:
+            return 'Value'
+    # Otherwise, build label from the sub-units
+    label = Sett.AddData.get(key)[1]
+    if 'chan' in locals():
+        label = '{}, '.format(chan) + label
+    if 'key_c' in locals():
+        if Sett.replaceID:
+            key_c = Sett.channelID.get(key_c)
+        label = label + '-{}'.format(key_c)
+    return label
 
 
 def merge_kws(kws1, kws2):
