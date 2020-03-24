@@ -19,14 +19,13 @@ import pathlib as pl
 import shapely.geometry as gm
 
 from scipy.ndimage import morphology as mp
-from skimage.morphology import skeletonize, binary_dilation
+from skimage.morphology import skeletonize
 from skimage.filters import gaussian
 from skimage.transform import resize as resize_arr
 from skimage.measure import find_contours
-from skimage import img_as_bool
 # LAM modules
 from settings import store, settings as Sett
-from plot import plotter
+# from plot import plotter
 import plotfuncs as pfunc
 import logger as lg
 import system

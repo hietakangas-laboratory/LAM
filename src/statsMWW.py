@@ -15,7 +15,7 @@ import scipy.stats as ss
 import statsmodels.stats.multitest as multi
 # LAM modules
 from settings import settings as Sett
-from plot import plotter
+# from plot import plotter
 import system
 import analysis
 

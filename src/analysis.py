@@ -21,8 +21,8 @@ import system as system
 import process as process
 from settings import store, settings as Sett
 from statsMWW import statistics, Total_Stats
-from plot import plotter
 import plot
+from plot import plotting
 import plotfuncs as pfunc
 import logger as lg
 with warnings.catch_warnings():
@@ -75,141 +75,74 @@ class Samplegroups:
     def create_plots(self):
         """Handle data for the creation of most plots."""
 
-        def _clusters():
-            """Handle data for cluster plots."""
-            # Find paths to sample-specific data based on found cluster data:
-            # Find cluster channels
-            clchans = [str(p.stem).split('-')[1] for p in
-                       self.paths.datadir.glob('Clusters-*.csv')]
+        # def _clusters():
+        #     """Handle data for cluster plots."""
+        #     # Find paths to sample-specific data based on found cluster data:
+        #     # Find cluster channels
+        #     clchans = [str(p.stem).split('-')[1] for p in
+        #                 self.paths.datadir.glob('Clusters-*.csv')]
 
-            # Creation of sample-specific position plots:
-            if clchans:
-                # Find all channels of each sample
-                chanpaths = [c for p in Samplegroups._samplePaths for c in
-                             p.glob('*.csv')]
-                # Find all channel paths relevant to cluster channels
-                clpaths = [p for c in clchans for p in chanpaths if
-                           p.name == "{}.csv".format(c)]
-                # Create directory for cluster plots
-                savepath = self.paths.plotdir.joinpath('Clusters')
-                savepath.mkdir(exist_ok=True)
-                # Create sample-specific position plots:
-                for path in clpaths:
-                    data = system.read_data(path, header=0, test=False)
-                    if 'ClusterID' in data.columns:
-                        name = "{} clusters {}".format(path.parts[-2],
-                                                       path.stem)
-                        plot_maker = plotter(data, savepath, title=name)
-                        plot_maker.clustPlot()
-            else:
-                msg = 'No cluster count files found (Clusters_*)'
-                print('WARNING: {}'.format(msg))
-                lg.logprint(LAM_logger, msg, 'w')
+        #     # Creation of sample-specific position plots:
+        #     if clchans:
+        #         # Find all channels of each sample
+        #         chanpaths = [c for p in Samplegroups._samplePaths for c in
+        #                       p.glob('*.csv')]
+        #         # Find all channel paths relevant to cluster channels
+        #         clpaths = [p for c in clchans for p in chanpaths if
+        #                     p.name == "{}.csv".format(c)]
+        #         # Create directory for cluster plots
+        #         savepath = self.paths.plotdir.joinpath('Clusters')
+        #         savepath.mkdir(exist_ok=True)
+        #         # Create sample-specific position plots:
+        #         for path in clpaths:
+        #             data = system.read_data(path, header=0, test=False)
+        #             if 'ClusterID' in data.columns:
+        #                 name = "{} clusters {}".format(path.parts[-2],
+        #                                                 path.stem)
+        #                 # plot_maker = plotter(data, savepath, title=name)
+        #                 plot_maker.clustPlot()
+        #     else:
+        #         msg = 'No cluster count files found (Clusters_*)'
+        #         print('WARNING: {}'.format(msg))
+        #         lg.logprint(LAM_logger, msg, 'w')
 
-            # Creation of cluster heatmaps:
-            paths = list(self.paths.datadir.glob('ClNorm_*.csv'))
-            if paths:  # Only if cluster data is found
-                fullData = pd.DataFrame()
-                for path in paths:  # Read all cluster data and concatenate
-                    channel = str(path.stem).split('_')[1]
-                    data = system.read_data(path, header=0, test=False).T
-                    # Alter DF index to contain sample groups
-                    data.index = data.index.map(lambda x: str(x).split('_')[0])
-                    groups = data.index.unique()
-                    for grp in groups:  # for each group:
-                        # find means of each bin
-                        temp = data.loc[data.index == grp, :]
-                        avgs = temp.mean(axis=0, numeric_only=True,
-                                         skipna=True)
-                        # Add channel identification
-                        avgs['Channel'] = channel
-                        avgs.rename(grp, inplace=True)
-                        # Append the averages and channel to full data
-                        fullData = fullData.append(avgs.to_frame().T)
-                # The plotting can't handle NaN's, so they are changed to zero.
-                fullData = fullData.replace(np.nan, 0)
-                # Initialize plotting-class and plot all channel data.
-                name = "All Cluster Heatmaps"
-                cntr = Samplegroups._center
-                # Plotting
-                plot_maker = plotter(fullData, self.paths.plotdir, center=cntr,
-                                     title=name, palette=None)
-                kws = {'height': 3, 'aspect': 5, 'gridspec': {'hspace': 0.5},
-                       'row': 'Channel', 'title_y': 1.05, 'sharey': False,
-                       'center': plot_maker.MPbin, 'xlen': self._length}
-                plot_maker.plot_Data(plotter.Heatmap, savepath.parent, **kws)
-            else:  # When no cluster data is found
-                msg = 'No normalized cluster count files found (ClNorm_*)'
-                print('WARNING: {}'.format(msg))
-                lg.logprint(LAM_logger, msg, 'w')
-
-        def _distributions():
-            kws = {'hue': 'Sample Group', 'row': 'variable', 'col': 'Channel',
-                   'title_y': 0.95, 'gridspec': {'hspace': 0.7, 'wspace': 0.5},
-                   'sharey': False, 'sharex': False, 'height': 5, 'aspect': 1}
-
-            all_data = pd.DataFrame()
-            # Get feature count data:
-            for path in [p for p in self.paths.datadir.glob('All_*')]:
-                data, name, _ = self.read_channel(path, self._groups)
-                data = pd.melt(data, id_vars='Sample Group')
-                data.loc[:, 'variable'] = 'Feature count'
-                data.loc[:, 'Channel'] = name
-                if Sett.Drop_Outliers:
-                    data.loc[:, 'value'] = DropOutlier(data.loc[:, 'value'])
-                all_data = pd.concat([all_data, data])
-            # Get additional data:
-            for key in Sett.AddData.keys():
-                print("{}  ...".format(key))
-                paths = [p for s in self._samplePaths for p in s.glob('*.csv')
-                         if p.stem not in ['Vector', 'MPs']]
-                # read and concatenate all found data files:
-                temp = pd.DataFrame()
-                for path in paths:
-                    data = system.read_data(path, header=0, test=False,
-                                            index_col=False)
-                    values = data.loc[:, data.columns.str.contains(key)].copy()
-                    if values.empty:
-                        continue
-                    for col in values.columns:
-                        # If no variance, drop data
-                        if values.loc[:, col].nunique() == 1:
-                            values.drop(col, axis=1, inplace=True)
-                    group = path.parent.name.split('_')[0]
-                    # Assign identification columns
-                    values.loc[:, 'Sample Group'] = group
-                    values.loc[:, 'Channel'] = path.stem
-                    data = pd.melt(values, id_vars=['Channel', 'Sample Group'])
-                    temp = pd.concat([temp, data], sort=False)
-                if Sett.Drop_Outliers:
-                    for var in temp.variable.unique():
-                        temp.loc[(temp.variable == var), 'value'] =\
-                            DropOutlier(temp.loc[(temp.variable == var),
-                                                 'value'])
-                all_data = pd.concat([all_data, temp], sort=False)
-            plot_name = "All Distributions"
-            plot_maker = plotter(all_data, self.paths.plotdir, title=plot_name,
-                                 palette=self._grpPalette)
-            savepath = self.paths.plotdir
-            plot_maker.distPlot(savepath, **kws)
-
-        def _select(paths, adds=True):
-            """Find different types of data for versus plot."""
-            retPaths = []
-            # Find target names from settings
-            if adds:
-                targets = Sett.vs_adds
-            else:
-                targets = Sett.vs_channels
-            for trgt in targets:  # For each target, find corresponding file
-                if adds:  # File name dependent on data type
-                    namer = "^Avg_.*_{}.*".format(trgt)
-                else:
-                    namer = "^Norm_{}.*".format(trgt)
-                reg = re.compile(namer, re.I)
-                selected = [p for p in paths if reg.search(str(p.stem))]
-                retPaths.extend(selected)  # Add found paths to list
-            return retPaths
+        #     # Creation of cluster heatmaps:
+        #     paths = list(self.paths.datadir.glob('ClNorm_*.csv'))
+        #     if paths:  # Only if cluster data is found
+        #         fullData = pd.DataFrame()
+        #         for path in paths:  # Read all cluster data and concatenate
+        #             channel = str(path.stem).split('_')[1]
+        #             data = system.read_data(path, header=0, test=False).T
+        #             # Alter DF index to contain sample groups
+        #             data.index = data.index.map(lambda x: str(x).split('_')[0])
+        #             groups = data.index.unique()
+        #             for grp in groups:  # for each group:
+        #                 # find means of each bin
+        #                 temp = data.loc[data.index == grp, :]
+        #                 avgs = temp.mean(axis=0, numeric_only=True,
+        #                                   skipna=True)
+        #                 # Add channel identification
+        #                 avgs['Channel'] = channel
+        #                 avgs.rename(grp, inplace=True)
+        #                 # Append the averages and channel to full data
+        #                 fullData = fullData.append(avgs.to_frame().T)
+        #         # Cannot handle NaN's, so they are changed to zero.
+        #         fullData = fullData.replace(np.nan, 0)
+        #         # Initialize plotting-class and plot all channel data.
+        #         name = "All Cluster Heatmaps"
+        #         cntr = Samplegroups._center
+        #         # Plotting
+        #         plot_maker = plotter(fullData, self.paths.plotdir,
+        #                               center=cntr,
+        #         #                      title=name, palette=None)
+        #         kws = {'height': 3, 'aspect': 5, 'gridspec': {'hspace': 0.5},
+        #                 'row': 'Channel', 'title_y': 1.05, 'sharey': False,
+        #                 'center': plot_maker.MPbin, 'xlen': self._length}
+        #         # plot_maker.plot_Data(plotter.Heatmap, savepath.parent, **kws)
+        #     else:  # When no cluster data is found
+        #         msg = 'No normalized cluster count files found (ClNorm_*)'
+        #         print('WARNING: {}'.format(msg))
+        #         lg.logprint(LAM_logger, msg, 'w')
 
         # If no plots handled by this method are True, return
         plots = [Sett.Create_Channel_Plots, Sett.Create_AddData_Plots,
@@ -218,212 +151,66 @@ class Samplegroups:
                  Sett.Create_ChanVSAdd_Plots, Sett.Create_AddVSAdd_Plots]
         if not any(plots):
             return
+
         # Conditional function calls to create each of the plots.
         lg.logprint(LAM_logger, 'Begin plotting.', 'i')
         print("\n---Creating plots---")
         # Update addData variable to contain newly created average-files
         self._addData = list(self.paths.datadir.glob('Avg_*'))
 
-        handle_kws = {'IDs': ['Channel', 'Sample Group'],
-                      'melt': {'id_vars': ['Sample Group', 'Channel'],
-                               'var_name': 'Linear Position',
-                               'value_name': 'Value'},
-                      'array_index': 'Sample Group',
-                      'drop_grouper': 'Sample Group'}
-
         # CHANNEL PLOTTING
         if Sett.Create_Channel_Plots:
             lg.logprint(LAM_logger, 'Plotting channels', 'i')
             print('Plotting channels  ...')
-
-            # Collect data:
-            handle = plot.DataHandler(self, self._chanPaths)
-            all_data = handle.get_data('drop_outlier', **handle_kws)
-
-            # Make plot:
-            plotter = plot.MakePlot(all_data, handle, 'All Channels')
-            plotter(pfunc.lines, 'centerline', 'ticks', 'title', 'legend',
-                    'labels', **handle_kws)
+            plotting(self).channels()
             lg.logprint(LAM_logger, 'Channel plots done.', 'i')
 
         # ADDITIONAL DATA PLOTTING
         if Sett.Create_AddData_Plots:
             lg.logprint(LAM_logger, 'Plotting additional data', 'i')
             print('Plotting additional data  ...')
-
-            # Collect data:
-            data_vars = ['Channel', 'Sample Group', 'Type']
-            m_kws = {'IDs': data_vars, 'row': 'Type', 'col': 'Sample Group',
-                     'melt': {'id_vars': data_vars,
-                              'var_name': 'Linear Position',
-                              'value_name': 'Value'},
-                     'ylabel': 'collect'}
-            new_kws = plot.merge_kws(handle_kws, m_kws)
-            handle = plot.DataHandler(self, self._addData)
-            all_data = handle.get_data('drop_outlier', **new_kws)
-            grouped_data = all_data.groupby('Channel')
-
-            # Make plot:
-            for grp, data in grouped_data:
-                plotter = plot.MakePlot(data, handle,
-                                        '{} Additional Data'.format(grp))
-                plotter(pfunc.lines, 'centerline', 'ticks', 'title', 'legend',
-                        'labels', **new_kws)
+            plotting(self).add_data()
             lg.logprint(LAM_logger, 'Additional data plots done.', 'i')
 
         # CHANNEL MATRIX PLOTTING
         if Sett.Create_Channel_PairPlots:  # Plot pair plot
             lg.logprint(LAM_logger, 'Plotting channel matrix', 'i')
             print('Plotting channel matrix  ...')
-
-            # Collect data:
-            paths = self.paths.datadir.glob('ChanAvg_*')
-            handle = plot.DataHandler(self, paths)
-            m_kws = {'id_sep': 1, 'IDs': ['Sample Group'], 'kind': 'reg',
-                     'diag_kind': 'kde', 'title_y': 1,
-                     'xlabel': 'Feature Count',
-                     'melt': {'id_vars': ['Sample Group'],
-                              'var_name': 'Linear Position'},
-                              'merge_on': ['Sample Group', 'Linear Position']}
-            new_kws = plot.merge_kws(handle_kws, m_kws)
-            all_data = handle.get_data('path_id', 'merge', **new_kws)
-
-            # Make plot:
-            plotter = plot.MakePlot(all_data, handle, 'Channel Matrix')
-            plotter(pfunc.channel_matrix, 'title', 'legend', 'no_grid',
-                    **new_kws)
+            plotting(self).channel_matrix()
             lg.logprint(LAM_logger, 'Channel matrix done.', 'i')
 
         # SAMPLE AND SAMPLE GROUP HEATMAPS
         if Sett.Create_Heatmaps:  # Plot channel heatmaps
             lg.logprint(LAM_logger, 'Plotting heatmaps', 'i')
             print('Plotting heatmaps  ...')
-            # Get and plot _sample group averages_
-            HMpaths = self.paths.datadir.glob("ChanAvg_*")
-            handle = plot.DataHandler(self, HMpaths)
-            new_kws = plot.remove_from_kws(handle_kws, 'melt')
-            new_kws.update({'IDs': ['Channel']})
-            all_data = handle.get_data(array='Sample Group', **new_kws)
-            plotter = plot.MakePlot(all_data, handle, 'Heatmaps by Group')
-            p_kws = {'col': None, 'hue': None}
-            plotter(pfunc.heatmap, 'centerline', 'ticks', 'title', **p_kws)
-
-            # Get and plot heatmap with _samples_
-            HMpaths = self.paths.datadir.glob("Norm_*")
-            handle = plot.DataHandler(self, HMpaths)
-            all_data = handle.get_data(array=False, **new_kws)
-            plotter = plot.MakePlot(all_data, handle, 'Heatmaps by Sample')
-            val = all_data.index.unique().size / 2  # Plot height size depend.
-            p_kws.update({'height': val})
-            plotter(pfunc.heatmap, 'centerline', 'ticks', 'title', **p_kws)
+            plotting(self).heatmaps()
             lg.logprint(LAM_logger, 'Heatmaps done.', 'i')
 
         # CHANNEL VS ADDITIONAL BIVARIATE
         if Sett.Create_ChanVSAdd_Plots:
             lg.logprint(LAM_logger, 'Plotting channel VS additional data', 'i')
             print('Plotting channel VS additional data  ...')
-            savepath = self.paths.plotdir.joinpath('Versus')
-            savepath.mkdir(exist_ok=True)
-            paths1 = _select(self._addData)
-            paths2 = _select(self._chanPaths, adds=False)
-
-            # Get Add data
-            all_add_data = pd.DataFrame()
-            for channel in store.channels:
-                paths = [p for p in paths1 if channel == str(p.name)
-                         .split('_')[1]]
-                handle = plot.DataHandler(self, paths, savepath)
-                data_vars = ['Channel', 'Sample Group', 'Sample', 'Type']
-                m_kws = {'IDs': data_vars, 'ylabel': 'collect',
-                         'xlabel': 'collect', 'title_y': 1,
-                         'melt': {'id_vars': data_vars,
-                                  'var_name': 'Linear Position'},
-                         'plot_kws': {'col': 'Channel', 'row': 'Type'}}
-                new_kws = plot.merge_kws(handle_kws, m_kws)
-                add_data = handle.get_data(**new_kws)
-                all_add_data = pd.concat([all_add_data, add_data])
-
-            # Get Channel data
-            data_vars = ['Channel', 'Sample Group', 'Sample']
-            new_kws.update({'IDs': data_vars})
-            new_kws['melt'].update({'id_vars': data_vars})
-            ch_handle = plot.DataHandler(self, paths2)
-            all_chan_data = ch_handle.get_data(**new_kws)
-
-            # Make plot:
-            grouped = all_add_data.groupby('Channel')
-            for grp, data in grouped:
-                print("  {}  ...".format(grp))
-                full_title = 'Channels VS Add {} Data Matrix'.format(grp)
-                plotter = plot.MakePlot(data, handle, full_title,
-                                        sec_data=all_chan_data)
-                plotter(pfunc.bivariate_kde, 'title', 'legend', 'no_grid',
-                        'labels', **new_kws)
+            plotting(self).chan_bivariate()
             lg.logprint(LAM_logger, 'Channels VS Add Data done.', 'i')
 
         # ADDITIONAL VS ADDITIONAL BIVARIATE
         if Sett.Create_AddVSAdd_Plots:  # Plot additional data against self
             lg.logprint(LAM_logger, 'Plotting add. data vs add. data', 'i')
             print('Plotting additional data VS additional data  ...')
-            m_kws = {'IDs': data_vars, 'ylabel': 'collect',
-                     'xlabel': 'collect', 'title_y': 1,
-                     'melt': {'id_vars': data_vars,
-                              'var_name': 'Linear Position'},
-                     'plot_kws': {'col': 'Type_X', 'row': 'Type_Y'}}
-            new_kws = plot.merge_kws(handle_kws, m_kws)
-            # If required data hasn't been yet collected
-            if 'all_add_data' not in locals():
-                savepath = self.paths.plotdir.joinpath('Versus')
-                savepath.mkdir(exist_ok=True)
-                add_paths = _select(self._addData)
-
-                # Get Add data
-                all_add_data = pd.DataFrame()
-                for channel in store.channels:
-                    paths = [p for p in add_paths if channel == str(p.name)
-                             .split('_')[1]]
-                    handle = plot.DataHandler(self, paths, savepath)
-                    data_vars = ['Channel', 'Sample Group', 'Sample', 'Type']
-                    add_data = handle.get_data(**new_kws)
-                    all_add_data = pd.concat([all_add_data, add_data])
-                grouped = all_add_data.groupby('Channel')
-
-            # Make plot:
-            for grp, data in grouped:
-                for grp2, data2 in grouped:
-                    if grp == grp2:
-                        continue
-                    print("  {} vs. {}  ...".format(grp, grp2))
-                    full_title = 'Add {} Data VS Add {} Data Matrix'.format(
-                        grp, grp2)
-                    # Take only data types present in both channels:
-                    d_types = set(data.Type.unique())
-                    sd_types = set(data2.Type.unique())
-                    diff = d_types.symmetric_difference(sd_types)
-                    p_d = data[~data.Type.isin(diff)].index
-                    p_d2 = data2[~data2.Type.isin(diff)].index
-                    # Define identifier columns that are in plottable format
-                    join = ['Channel', 'Type']
-                    data = data.assign(Type_Y=lambda x: '-'.join(x[join]))
-                    data2 = data2.assign(Type_X=lambda x: '-'.join(x[join]))
-                    # Make plot
-                    plotter = plot.MakePlot(data.loc[p_d, :], handle,
-                                            full_title,
-                                            sec_data=data2.loc[p_d2, :])
-                    plotter(pfunc.bivariate_kde, 'title', 'legend', 'no_grid',
-                            'labels', **new_kws)
+            plotting(self).add_bivariate()
             lg.logprint(LAM_logger, 'Add Data VS Add Data done', 'i')
 
+        # CHANNEL AND ADD DISTRIBUTIONS
         if Sett.Create_Distribution_Plots:  # Plot distributions
             lg.logprint(LAM_logger, 'Plotting distributions', 'i')
             print('-Distributions-')
-            _distributions()
+            plotting(self).distributions()
             lg.logprint(LAM_logger, 'Distributions done', 'i')
 
         if Sett.Create_Cluster_Plots:  # Plot cluster data
             lg.logprint(LAM_logger, 'Plotting clusters', 'i')
             print('Plotting clusters  ...')
-            _clusters()  # Plots specific to clusters
+            # _clusters()  # Plots specific to clusters
             kws = {'ylabel': 'Clustered Cells'}
             paths = list(self.paths.datadir.glob('ClNorm_*'))
             if paths:  # Plotting of regular count plots for clusters

@@ -69,6 +69,8 @@ def channel_matrix(plotter, **kws):
             ax.set_ylim(bottom=0)
             ax.set_xlim(left=0)
     # In case of missing or erroneous data, linalgerror can be raised
+    # except RuntimeError:
+    #     print('WARNING: {}')
     except np.linalg.LinAlgError:  # Then, exit plotting
         msg = '-> Confirm that all samples have proper channel data'
         fullmsg = 'Pairplot singular matrix\n{}'.format(msg)
@@ -82,6 +84,28 @@ def channel_matrix(plotter, **kws):
 
 def clusters():
     pass
+
+
+def distribution(plotter, **kws):
+    try:
+        g = (plotter.g.map(sns.distplot, 'Value', kde=True, hist=True,
+                           norm_hist=True, hist_kws={"alpha": 0.3,
+                                                     "linewidth": 1}))
+    except RuntimeError:
+        g = (plotter.g.map(sns.distplot, 'Value', kde=True, hist=True,
+                           norm_hist=True, hist_kws={"alpha": 0.3,
+                                                     "linewidth": 1},
+                           kde_kws={'bw': 20}))
+    except np.linalg.LinAlgError:
+        msg = '-> Confirm that all samples have proper channel data'
+        fullmsg = 'Distribution plot singular matrix\n{}'.format(msg)
+        lg.logprint(LAM_logger, fullmsg, 'ex')
+        print('ERROR: Distribution plot singular matrix')
+        print(msg)
+        return
+    for ax in g.axes.flat:
+        ax.set_xlim(left=0)
+    return g
 
 
 def heatmap(plotter, **kws):
@@ -103,13 +127,13 @@ def lines(plotter, **kws):
     data = plotter.data.dropna()
     melt_kws = kws.get('melt')
     g = (plotter.g.map_dataframe(sns.lineplot, data=plotter.data,
-                              x=data.loc[:, melt_kws.get('var_name')
-                                         ].astype(int),
-                              y=data.loc[:, melt_kws.get('value_name')],
-                              ci='sd', err_style='band',
-                              hue=kws.get('hue'), dashes=False, alpha=1,
-                              palette=plotter.handle.palette,
-                              err_kws=err_dict))
+                                 x=data.loc[:, melt_kws.get('var_name')
+                                            ].astype(float),
+                                 y=data.loc[:, melt_kws.get('value_name')],
+                                 ci='sd', err_style='band',
+                                 hue=kws.get('hue'), dashes=False, alpha=1,
+                                 palette=plotter.handle.palette,
+                                 err_kws=err_dict))
     return g
 
 
