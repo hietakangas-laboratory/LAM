@@ -30,7 +30,7 @@ class settings:
     # Set True/False to set all plotting functionalities ON/OFF
     Create_Plots = True     # ON / OFF switch for plots
     # Whether to calculate statistics
-    statistics = False
+    statistics = True
     ##################################################################
 
     # -#-#-#-#-#-#-#-# VECTOR CREATION & PROJECTION #-#-#-#-#-#-#-#-#- #
@@ -90,7 +90,6 @@ class settings:
                  }
     ###################################################################
 
-
     # ------ANALYSIS OPTIONS------ #
     # ---DISTANCE MEANS--- #
     # Find nearest cell of each cell. Distance estimation is performed for all
@@ -142,8 +141,8 @@ class settings:
     Create_AddData_Plots = False     # Plots also nearest distance & clusters
     Create_Channel_PairPlots = False
     Create_Heatmaps = False
-    Create_Distribution_Plots = True
-    Create_Statistics_Plots = False  # requires statistics to be True
+    Create_Distribution_Plots = False
+    Create_Statistics_Plots = True  # requires statistics to be True
     Create_Cluster_Plots = False
 
     # Variable vs. variable plots:

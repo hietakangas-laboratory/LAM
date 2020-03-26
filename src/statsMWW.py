@@ -32,12 +32,12 @@ class statistics:
         self.center = control._center
         self.length = control._length
         self.title = '{} VS. {}'.format(self.ctrlGroup, self.tstGroup)
-        self.statsDir = control._statsDir
-        self.plotDir = control._plotDir.joinpath("Stat Plots")
+        self.statsDir = control.paths.statsdir
+        self.plotDir = control.paths.plotdir.joinpath("Stats")
         self.plotDir.mkdir(exist_ok=True)
-        self.chanPaths = control._dataDir.glob('Norm_*')  # Cell counts
-        self.avgPaths = control._dataDir.glob('Avg_*')  # Additional data avgs
-        self.clPaths = control._dataDir.glob('ClNorm_*')  # Cluster data
+        # self.chanPaths = control._dataDir.glob('Norm_*')  # Cell counts
+        # self.avgPaths = control._dataDir.glob('Avg_*')  # Additional data avgs
+        # self.clPaths = control._dataDir.glob('ClNorm_*')  # Cluster data
         self.palette = {control: control.color, group2.group: group2.color}
         # Statistics and data
         self.statData = None
@@ -48,41 +48,6 @@ class statistics:
 
     def MWW_test(self, Path):
         """Perform MWW-test for a data set of two groups."""
-        def __get_stats(row, row2, ind, statData):
-            """Compare respective bins of both groups."""
-            unqs = np.unique(np.hstack((row, row2))).size
-            if ((row.any() or row2.any()) and not np.array_equal(
-                    np.unique(row), np.unique(row2)) and unqs > 1):
-                with warnings.catch_warnings():
-                    warnings.simplefilter('ignore', category=RuntimeWarning)
-                    # Whether ctrl is greater
-                    stat, pval = ss.mannwhitneyu(row, row2,
-                                                 alternative='greater')
-                    statData.iat[ind, 0], statData.iat[ind, 2] = stat, pval
-                    # Whether ctrl is lesser
-                    __, pval = ss.mannwhitneyu(row, row2, alternative='less')
-                    statData.iat[ind, 5] = pval
-                    # Whether significant difference exists
-                    __, pval = ss.mannwhitneyu(row, row2,
-                                               alternative='two-sided')
-                    statData.iat[ind, 8] = pval
-            else:
-                statData.iat[ind, 0], statData.iat[ind, 2] = 0, 0
-                statData.iat[ind, 5] = 0
-                statData.iat[ind, 8] = 0
-            return statData
-
-        def __correct(Pvals, corrInd, rejInd):
-            """Perform multipletest correction."""
-            vals = Pvals.values
-            with warnings.catch_warnings():
-                warnings.simplefilter('ignore', category=RuntimeWarning)
-                Reject, CorrP, _, _ = multi.multipletests(vals,
-                                                          method='fdr_bh',
-                                                          alpha=Sett.alpha)
-            statData.iloc[:, corrInd], statData.iloc[:, rejInd] = CorrP, Reject
-            return statData
-
         self.error = False
         self.channel = ' '.join(str(Path.stem).split('_')[1:])
         Data = system.read_data(Path, header=0, test=False)
@@ -111,21 +76,21 @@ class statistics:
                 ctrlVals = ctrlVals[~np.isnan(ctrlVals)]
                 tstVals = self.tstData.iloc[sInd:eInd, :].values.flatten()
                 tstVals = tstVals[~np.isnan(tstVals)]
-                statData = __get_stats(ctrlVals, tstVals, ind, statData)
+                statData = get_stats(ctrlVals, tstVals, ind, statData)
         else:
             for ind, row in self.ctrlData.iterrows():
                 ctrlVals = row.dropna().values
                 tstVals = self.tstData.loc[ind, :].dropna().values
-                statData = __get_stats(ctrlVals, tstVals, ind, statData)
-        statData = __correct(statData.iloc[:, 2], 1, 3)
-        statData = __correct(statData.iloc[:, 5], 4, 6)
-        statData = __correct(statData.iloc[:, 8], 7, 9)
+                statData = get_stats(ctrlVals, tstVals, ind, statData)
+        statData = correct(statData, statData.iloc[:, 2], 1, 3)
+        statData = correct(statData, statData.iloc[:, 5], 4, 6)
+        statData = correct(statData, statData.iloc[:, 8], 7, 9)
         filename = 'Stats_{} = {}.csv'.format(self.title, self.channel)
         system.saveToFile(statData, self.statsDir, filename, append=False)
         self.statData = statData
         return self
 
-    def Create_Plots(self, stats, unit="Count", palette=None):
+    def Create_Plots(self, stats, unit="Count", palette=None):  # !!!
         """Handle statistical data for plots."""
         if Sett.Drop_Outliers:
             ctrlData = analysis.DropOutlier(self.ctrlData)
@@ -216,7 +181,7 @@ class Total_Stats:
                           append=False, w_index=True)
         self.statData = TotalStats
 
-    def Create_Plots(self):
+    def Create_Plots(self):  # !!!
         """Handle statistical data for plotting."""
         plotData = self.data
         ctrlN = int(len(self.groups) / 2)
@@ -226,3 +191,37 @@ class Total_Stats:
                              title=self.filename, palette=self.palette,
                              color='b')
         plot_maker.total_plot(self.statData, order)
+
+def get_stats(row, row2, ind, statData):
+    """Compare respective bins of both groups."""
+    unqs = np.unique(np.hstack((row, row2))).size
+    if ((row.any() or row2.any()) and not np.array_equal(
+            np.unique(row), np.unique(row2)) and unqs > 1):
+        with warnings.catch_warnings():
+            warnings.simplefilter('ignore', category=RuntimeWarning)
+            # Whether ctrl is greater
+            stat, pval = ss.mannwhitneyu(row, row2,
+                                         alternative='greater')
+            statData.iat[ind, 0], statData.iat[ind, 2] = stat, pval
+            # Whether ctrl is lesser
+            __, pval = ss.mannwhitneyu(row, row2, alternative='less')
+            statData.iat[ind, 5] = pval
+            # Whether significant difference exists
+            __, pval = ss.mannwhitneyu(row, row2,
+                                       alternative='two-sided')
+            statData.iat[ind, 8] = pval
+    else:
+        statData.iat[ind, 0], statData.iat[ind, 2] = 0, 0
+        statData.iat[ind, 5] = 0
+        statData.iat[ind, 8] = 0
+    return statData
+
+def correct(statData, Pvals, corrInd, rejInd):
+    """Perform multipletest correction."""
+    vals = Pvals.values
+    with warnings.catch_warnings():
+        warnings.simplefilter('ignore', category=RuntimeWarning)
+        Reject, CorrP, _, _ = multi.multipletests(vals, method='fdr_bh',
+                                                  alpha=Sett.alpha)
+    statData.iloc[:, corrInd], statData.iloc[:, rejInd] = CorrP, Reject
+    return statData

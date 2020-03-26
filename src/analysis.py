@@ -9,7 +9,7 @@ Created on Wed Mar  6 12:42:28 2019
 # Standard libraries
 import re
 import warnings
-from itertools import product, combinations, chain
+from itertools import product, chain
 from tkinter import simpledialog as sd
 # Other packages
 import numpy as np
@@ -21,13 +21,9 @@ import system as system
 import process as process
 from settings import store, settings as Sett
 from statsMWW import statistics, Total_Stats
-import plot
 from plot import plotting
-import plotfuncs as pfunc
 import logger as lg
-with warnings.catch_warnings():
-    warnings.simplefilter('ignore', category=FutureWarning)
-    import pandas as pd
+import pandas as pd
 try:
     LAM_logger = lg.get_logger(__name__)
 except AttributeError:
@@ -74,75 +70,6 @@ class Samplegroups:
     @property
     def create_plots(self):
         """Handle data for the creation of most plots."""
-
-        # def _clusters():
-        #     """Handle data for cluster plots."""
-        #     # Find paths to sample-specific data based on found cluster data:
-        #     # Find cluster channels
-        #     clchans = [str(p.stem).split('-')[1] for p in
-        #                 self.paths.datadir.glob('Clusters-*.csv')]
-
-        #     # Creation of sample-specific position plots:
-        #     if clchans:
-        #         # Find all channels of each sample
-        #         chanpaths = [c for p in Samplegroups._samplePaths for c in
-        #                       p.glob('*.csv')]
-        #         # Find all channel paths relevant to cluster channels
-        #         clpaths = [p for c in clchans for p in chanpaths if
-        #                     p.name == "{}.csv".format(c)]
-        #         # Create directory for cluster plots
-        #         savepath = self.paths.plotdir.joinpath('Clusters')
-        #         savepath.mkdir(exist_ok=True)
-        #         # Create sample-specific position plots:
-        #         for path in clpaths:
-        #             data = system.read_data(path, header=0, test=False)
-        #             if 'ClusterID' in data.columns:
-        #                 name = "{} clusters {}".format(path.parts[-2],
-        #                                                 path.stem)
-        #                 # plot_maker = plotter(data, savepath, title=name)
-        #                 plot_maker.clustPlot()
-        #     else:
-        #         msg = 'No cluster count files found (Clusters_*)'
-        #         print('WARNING: {}'.format(msg))
-        #         lg.logprint(LAM_logger, msg, 'w')
-
-        #     # Creation of cluster heatmaps:
-        #     paths = list(self.paths.datadir.glob('ClNorm_*.csv'))
-        #     if paths:  # Only if cluster data is found
-        #         fullData = pd.DataFrame()
-        #         for path in paths:  # Read all cluster data and concatenate
-        #             channel = str(path.stem).split('_')[1]
-        #             data = system.read_data(path, header=0, test=False).T
-        #             # Alter DF index to contain sample groups
-        #             data.index = data.index.map(lambda x: str(x).split('_')[0])
-        #             groups = data.index.unique()
-        #             for grp in groups:  # for each group:
-        #                 # find means of each bin
-        #                 temp = data.loc[data.index == grp, :]
-        #                 avgs = temp.mean(axis=0, numeric_only=True,
-        #                                   skipna=True)
-        #                 # Add channel identification
-        #                 avgs['Channel'] = channel
-        #                 avgs.rename(grp, inplace=True)
-        #                 # Append the averages and channel to full data
-        #                 fullData = fullData.append(avgs.to_frame().T)
-        #         # Cannot handle NaN's, so they are changed to zero.
-        #         fullData = fullData.replace(np.nan, 0)
-        #         # Initialize plotting-class and plot all channel data.
-        #         name = "All Cluster Heatmaps"
-        #         cntr = Samplegroups._center
-        #         # Plotting
-        #         plot_maker = plotter(fullData, self.paths.plotdir,
-        #                               center=cntr,
-        #         #                      title=name, palette=None)
-        #         kws = {'height': 3, 'aspect': 5, 'gridspec': {'hspace': 0.5},
-        #                 'row': 'Channel', 'title_y': 1.05, 'sharey': False,
-        #                 'center': plot_maker.MPbin, 'xlen': self._length}
-        #         # plot_maker.plot_Data(plotter.Heatmap, savepath.parent, **kws)
-        #     else:  # When no cluster data is found
-        #         msg = 'No normalized cluster count files found (ClNorm_*)'
-        #         print('WARNING: {}'.format(msg))
-        #         lg.logprint(LAM_logger, msg, 'w')
 
         # If no plots handled by this method are True, return
         plots = [Sett.Create_Channel_Plots, Sett.Create_AddData_Plots,
@@ -203,23 +130,17 @@ class Samplegroups:
         # CHANNEL AND ADD DISTRIBUTIONS
         if Sett.Create_Distribution_Plots:  # Plot distributions
             lg.logprint(LAM_logger, 'Plotting distributions', 'i')
-            print('-Distributions-')
+            print('Plotting distributions')
             plotting(self).distributions()
             lg.logprint(LAM_logger, 'Distributions done', 'i')
 
+        # CLUSTER PLOTS
         if Sett.Create_Cluster_Plots:  # Plot cluster data
             lg.logprint(LAM_logger, 'Plotting clusters', 'i')
             print('Plotting clusters  ...')
-            # _clusters()  # Plots specific to clusters
-            kws = {'ylabel': 'Clustered Cells'}
-            paths = list(self.paths.datadir.glob('ClNorm_*'))
-            if paths:  # Plotting of regular count plots for clusters
-                lg.logprint(LAM_logger, 'Plotting cluster counts', 'i')
-                # _base(paths, plotter.boxPlot, **kws)
-                lg.logprint(LAM_logger, 'Clusters done', 'i')
-            else:
-                print('No cluster files found')
-                lg.logprint(LAM_logger, 'No cluster files found', 'e')
+            plotting(self).clusters()
+            lg.logprint(LAM_logger, 'Clusters done', 'i')
+
         lg.logprint(LAM_logger, 'Plotting completed', 'i')
 
     def read_channel(self, path, groups, drop=False, name_sep=1):
@@ -296,68 +217,22 @@ class Samplegroups:
 
     def Get_Statistics(self):
         """Handle data for group-wise statistical analysis."""
-        def _test_control():
-            """Assert that control group exists, and if not, handle it."""
-            # If control group is not found:
-            if Sett.cntrlGroup not in store.samplegroups:
-                lg.logprint(LAM_logger, 'Set control group not found', 'c')
-                test = 0
-                # Test if entry is due to capitalization error:
-                namer = re.compile(r"{}$".format(re.escape(Sett.cntrlGroup)),
-                                   re.I)
-                for group in store.samplegroups:
-                    if re.match(namer, group):  # If different capitalization:
-                        msg = "Control group-setting is case-sensitive!"
-                        print("WARNING: {}".format(msg))
-                        # Change control to found group
-                        Sett.cntrlGroup = group
-                        msg = "Control group has been changed to"
-                        print("{} '{}'\n".format(msg, group))
-                        lg.logprint(LAM_logger, '-> Changed to group {}'
-                                    .format(group), 'i')
-                        test += 1
-                # If control not found at all:
-                if test == 0:
-                    msg = "control group NOT found in sample groups!"
-                    print("WARNING: {}\n".format(msg))
-                    flag = 1
-                    # Print groups and demand input for control:
-                    while flag:
-                        print('Found groups:')
-                        for i, grp in enumerate(store.samplegroups):
-                            print('{}: {}'.format(i, grp))
-                        msg = "Select the number of control group: "
-                        print('\a')
-                        ans = sd.askinteger(title="Dialog", prompt=msg)
-                        if ans is None:
-                            raise KeyboardInterrupt
-                        elif 0 <= ans <= len(store.samplegroups):
-                            # Change control based on input
-                            Sett.cntrlGroup = store.samplegroups[ans]
-                            print("Control group set as '{}'.\n".format(
-                                                            Sett.cntrlGroup))
-                            flag = 0
-                        else:
-                            print('Command not understood.')
-                    msg = "-> Changed to group '{}' by user".format(
-                        Sett.cntrlGroup)
-                    lg.logprint(LAM_logger, msg, 'i')
 
-        def _get_ylabel():
-            """Find unit of data based on name."""
-            if 'Clusters' in addChan_name[1]:
-                ylabel = 'Clustered Cells'
-            # If name is longer, the data is not cell counts but e.g.
-            # intensities, and consequently requires different naming
-            elif len(addChan_name) >= 3:
-                if 'Distance Means' in addChan_name[2]:
-                    ylabel = 'Cell-to-cell distance'
-                else:
-                    datakey = addChan_name[2].split('-')[0]
-                    ylabel = Sett.AddData.get(datakey)[1]
-            else:
-                ylabel = "Count"
-            return ylabel
+        # def _get_ylabel():
+        #     """Find unit of data based on name."""
+        #     if 'Clusters' in addChan_name[1]:
+        #         ylabel = 'Clustered Cells'
+        #     # If name is longer, the data is not cell counts but e.g.
+        #     # intensities, and consequently requires different naming
+        #     elif len(addChan_name) >= 3:
+        #         if 'Distance Means' in addChan_name[2]:
+        #             ylabel = 'Cell-to-cell distance'
+        #         else:
+        #             datakey = addChan_name[2].split('-')[0]
+        #             ylabel = Sett.AddData.get(datakey)[1]
+        #     else:
+        #         ylabel = "Count"
+        #     return ylabel
 
         if len(self._groups) <= 1:
             print("Statistics require multiple sample groups. Stats passed.")
@@ -369,9 +244,8 @@ class Samplegroups:
             print('\n---Calculating and plotting statistics---')
         else:
             print('\n---Calculating statistics---')
-        _test_control()  # Test if given control group is found
 
-        # Create stats of control vs. other groups if stat_versus set to True
+        # VERSUS STATS
         if Sett.stat_versus:
             lg.logprint(LAM_logger, '-> Versus statistics', 'i')
             print('-Versus-')
@@ -394,26 +268,29 @@ class Samplegroups:
                 Stats = statistics(ctrl, Grp)
                 # Find stats of cell counts and additional data by looping
                 # through each.
-                for path in chain(Stats.chanPaths, Stats.avgPaths,
-                                  Stats.clPaths):
+                for path in chain(self.paths.datadir.glob('Norm_*'),
+                                  self.paths.datadir.glob('Avg_*'),
+                                  self.paths.datadir.glob('ClNorm_*')):
                     Stats = Stats.MWW_test(path)
                     if Stats.error:
                         msg = "Missing or faulty data for {}".format(path.name)
                         lg.logprint(LAM_logger, msg, 'e')
                         continue
                     # If plotting set to True, make plots of current stats
+                    # !!!
                     if Sett.Create_Statistics_Plots and Sett.Create_Plots:
+                        plotting(self).stat_versus(Stats, path)
                         # Find name of data and make title and y-label
-                        addChan_name = str(path.stem).split('_')
-                        titlep = '-'.join(addChan_name[1:])
-                        Stats.plottitle = "{} = {}".format(Stats.title, titlep)
-                        ylabel = _get_ylabel()
-                        # Create statistical plots
-                        Stats.Create_Plots(Stats.statData, ylabel,
-                                           palette=self._grpPalette)
+                        # addChan_name = str(path.stem).split('_')
+                        # titlep = '-'.join(addChan_name[1:])
+                        # Stats.plottitle = "{} = {}".format(Stats.title, titlep)
+                        # ylabel = _get_ylabel()
+                        # # Create statistical plots
+                        # Stats.Create_Plots(Stats.statData, ylabel,
+                        #                    palette=self._grpPalette)
             lg.logprint(LAM_logger, '--> Versus done', 'i')
 
-        # Create stats of total cell numbers if stat_total set to True
+        # TOTAL STATS
         if Sett.stat_total:
             lg.logprint(LAM_logger, '-> Total statistics', 'i')
             print('-Totals-')
@@ -431,6 +308,7 @@ class Samplegroups:
                     errVars = ', '.join(TCounts.errorVars.get(key))
                     lg.logprint(LAM_logger, '{} {}'.format(msg, errVars), 'e')
                 # If wanted, create plots of the stats
+                # !!!
                 if Sett.Create_Plots and Sett.Create_Statistics_Plots:
                     TCounts.Create_Plots()
             lg.logprint(LAM_logger, '--> Totals done', 'i')
@@ -812,3 +690,46 @@ def DropOutlier(Data):
             Data = Data.apply(lambda x, dropval=dropval: x if np.abs(x - mean)
                               <= dropval else np.nan)
     return Data
+
+def test_control():
+    """Assert that control group exists, and if not, handle it."""
+    # If control group is not found:
+    if Sett.cntrlGroup in store.samplegroups:
+        return
+    lg.logprint(LAM_logger, 'Set control group not found', 'c')
+    # Test if entry is due to capitalization error:
+    namer = re.compile(r"{}$".format(re.escape(Sett.cntrlGroup)), re.I)
+    for group in store.samplegroups:
+        if re.match(namer, group):  # If different capitalization:
+            msg = "Control group-setting is case-sensitive!"
+            print("WARNING: {}".format(msg))
+            # Change control to found group
+            Sett.cntrlGroup = group
+            msg = "Control group has been changed to"
+            print("{} '{}'\n".format(msg, group))
+            lg.logprint(LAM_logger, '-> Changed to {}'.format(group), 'i')
+            return
+    # If control not found at all:
+    msg = "control group NOT found in sample groups!"
+    print("WARNING: {}\n".format(msg))
+    flag = 1
+    # Print groups and demand input for control:
+    while flag:
+        print('Found groups:')
+        for i, grp in enumerate(store.samplegroups):
+            print('{}: {}'.format(i, grp))
+        msg = "Select the number of control group: "
+        print('\a')
+        ans = sd.askinteger(title="Dialog", prompt=msg)
+        if ans is None:
+            raise KeyboardInterrupt
+        if 0 <= ans <= len(store.samplegroups):
+            # Change control based on input
+            Sett.cntrlGroup = store.samplegroups[ans]
+            print("Control group set as '{}'.\n".format(Sett.cntrlGroup))
+            flag = 0
+        else:
+            print('Command not understood.')
+    msg = "-> Changed to group '{}' by user".format(
+        Sett.cntrlGroup)
+    lg.logprint(LAM_logger, msg, 'i')

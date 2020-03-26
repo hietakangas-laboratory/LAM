@@ -129,6 +129,7 @@ def main():
         SampleGroups.Get_Totals()
     # Calculation of MWW-statistics for cell counts and other data
     if Sett.statistics:
+        analysis.test_control()
         SampleGroups.Get_Statistics()
     # Creation of plots from various data (excluding statistical plots)
     if Sett.Create_Plots:

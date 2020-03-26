@@ -7,17 +7,15 @@ Created on Mon Mar 16 16:34:33 2020
 # LAM modules
 from settings import settings as Sett
 import logger as lg
-import plot
 # Standard libraries
 import warnings
-# from random import shuffle
+from random import shuffle
 # Packages
 import matplotlib.pyplot as plt
 import numpy as np
 import seaborn as sns
-with warnings.catch_warnings():
-    warnings.simplefilter('ignore', category=FutureWarning)
-    import pandas as pd
+import pandas as pd
+
 try:
     LAM_logger = lg.get_logger(__name__)
 except AttributeError:
@@ -36,9 +34,9 @@ def bivariate_kde(plotter, **in_kws):
     g = sns.FacetGrid(data=plot_data, row=kws.get('row'), col=kws.get('col'),
                       hue="Sample Group", sharex=False, sharey=False,
                       height=4.5)
-    with warnings.catch_warnings():  # If 
+    with warnings.catch_warnings():  # If
         warnings.simplefilter('ignore', category=UserWarning)
-        g = g.map(sns.kdeplot, 'None_y', 'None_x', shade_lowest=False,
+        g = g.map(sns.kdeplot, 'Value_y', 'Value_x', shade_lowest=False,
                   shade=False, linewidths=2.5, alpha=0.5)
     return g
 
@@ -82,8 +80,30 @@ def channel_matrix(plotter, **kws):
     return g
 
 
-def clusters():
-    pass
+def cluster_positions(plotter, **kws):
+    """Creation of sample-specific cluster position plots."""
+    p_kws = dict(linewidth=0.1, edgecolor='dimgrey')
+
+    # Create unique color for each cluster
+    IDs = pd.unique(plotter.data.ClusterID)
+    colors = sns.color_palette("hls", len(IDs))
+    shuffle(colors)
+    palette = {}
+    for ind, ID in enumerate(IDs):
+        palette.update({ID: colors[ind]})
+    # Get non-clustered cells for background plotting
+    b_data = kws.get('b_data')
+    chans = plotter.data.Channel.unique()
+    for ind, ax in enumerate(plotter.g.axes.flat):  # Plot background
+        ax.axis('equal')
+        ax.scatter(b_data.loc[:, "Position X"], b_data.loc[:, "Position Y"],
+                   s=10, c='xkcd:tan')
+        # Plot clusters
+        plot_data = plotter.data.loc[plotter.data.Channel == chans[ind], :]
+        sns.scatterplot(data=plot_data, x="Position X", y="Position Y",
+                        hue="ClusterID", palette=palette, s=20, legend=False,
+                        ax=ax, **p_kws)
+    return plotter.g
 
 
 def distribution(plotter, **kws):
@@ -124,9 +144,10 @@ def heatmap(plotter, **kws):
 
 def lines(plotter, **kws):
     err_dict = {'alpha': 0.3}
-    data = plotter.data.dropna()
+    data = plotter.data
+    # data = plotter.data.dropna()
     melt_kws = kws.get('melt')
-    g = (plotter.g.map_dataframe(sns.lineplot, data=plotter.data,
+    g = (plotter.g.map_dataframe(sns.lineplot, data=data,
                                  x=data.loc[:, melt_kws.get('var_name')
                                             ].astype(float),
                                  y=data.loc[:, melt_kws.get('value_name')],
@@ -155,7 +176,6 @@ def vector_plots(savepath, samplename, vectordata, X, Y, binaryArray=None,
                      'Bins': Sett.medianBins}
     sett_string = '  |  '.join(["{} = {}".format(k, v) for k, v in
                                 sett_dict.items()])
-
 
     # Create skeleton plots if using skeleton vectors
     if skeleton is not None and Sett.SkeletonVector:
