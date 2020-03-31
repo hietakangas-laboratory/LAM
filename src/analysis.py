@@ -218,22 +218,6 @@ class Samplegroups:
     def Get_Statistics(self):
         """Handle data for group-wise statistical analysis."""
 
-        # def _get_ylabel():
-        #     """Find unit of data based on name."""
-        #     if 'Clusters' in addChan_name[1]:
-        #         ylabel = 'Clustered Cells'
-        #     # If name is longer, the data is not cell counts but e.g.
-        #     # intensities, and consequently requires different naming
-        #     elif len(addChan_name) >= 3:
-        #         if 'Distance Means' in addChan_name[2]:
-        #             ylabel = 'Cell-to-cell distance'
-        #         else:
-        #             datakey = addChan_name[2].split('-')[0]
-        #             ylabel = Sett.AddData.get(datakey)[1]
-        #     else:
-        #         ylabel = "Count"
-        #     return ylabel
-
         if len(self._groups) <= 1:
             print("Statistics require multiple sample groups. Stats passed.")
             lg.logprint(LAM_logger, 'Stats passed. Not enough sample groups',
@@ -277,17 +261,8 @@ class Samplegroups:
                         lg.logprint(LAM_logger, msg, 'e')
                         continue
                     # If plotting set to True, make plots of current stats
-                    # !!!
                     if Sett.Create_Statistics_Plots and Sett.Create_Plots:
                         plotting(self).stat_versus(Stats, path)
-                        # Find name of data and make title and y-label
-                        # addChan_name = str(path.stem).split('_')
-                        # titlep = '-'.join(addChan_name[1:])
-                        # Stats.plottitle = "{} = {}".format(Stats.title, titlep)
-                        # ylabel = _get_ylabel()
-                        # # Create statistical plots
-                        # Stats.Create_Plots(Stats.statData, ylabel,
-                        #                    palette=self._grpPalette)
             lg.logprint(LAM_logger, '--> Versus done', 'i')
 
         # TOTAL STATS
@@ -298,8 +273,8 @@ class Samplegroups:
             datapaths = self.paths.datadir.glob('Total*.csv')
             for path in datapaths:
                 TCounts = Total_Stats(path, self._groups, self.paths.plotdir,
-                                      self.paths.statsdir, self._grpPalette)
-                # If error in data, continue to next total file
+                                      self.paths.statsdir)
+                # If error in data, continue to next totals file
                 if TCounts.dataerror:
                     continue
                 TCounts.stats()
@@ -310,7 +285,8 @@ class Samplegroups:
                 # If wanted, create plots of the stats
                 # !!!
                 if Sett.Create_Plots and Sett.Create_Statistics_Plots:
-                    TCounts.Create_Plots()
+                    plotting(self).stat_totals(TCounts, path)
+                    # TCounts.Create_Plots()
             lg.logprint(LAM_logger, '--> Totals done', 'i')
         lg.logprint(LAM_logger, 'All statistics done', 'i')
 

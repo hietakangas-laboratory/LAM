@@ -46,7 +46,7 @@ def channel_matrix(plotter, **kws):
     # Settings for plotting:
     pkws = {'x_ci': None, 'truncate': True, 'order': 2,
             'scatter_kws': {'linewidth': 0.1, 's': 15, 'alpha': 0.4},
-            'line_kws': {'alpha': 0.6, 'linewidth': 1}}
+            'line_kws': {'alpha': 0.45, 'linewidth': 1}}
     if Sett.plot_jitter:
         pkws.update({'x_jitter': 0.49, 'y_jitter': 0.49})
 
@@ -122,7 +122,7 @@ def distribution(plotter, **kws):
         lg.logprint(LAM_logger, fullmsg, 'ex')
         print('ERROR: Distribution plot singular matrix')
         print(msg)
-        return
+        return None
     for ax in g.axes.flat:
         ax.set_xlim(left=0)
     return g
@@ -138,7 +138,17 @@ def heatmap(plotter, **kws):
         sns.heatmap(data=sub_data, cmap='coolwarm', robust=True,
                     linewidth=0.05, linecolor='dimgrey', ax=ax)
         ax.set_title(rows[ind])
-    plt.subplots_adjust(left=0.25, right=0.99)
+        if kws.get('Sample_plot'):
+            ylabels = ax.get_yticklabels()
+            ax.set_yticklabels(ylabels, rotation=35, fontsize=8)
+            strings = [x[0] for x in sub_data.index.str.split('_')]
+            inds = [strings.index(i) for i in sorted(set(strings))[1:]]
+            left, right = ax.get_xlim()
+            for idx in inds:
+                ax.hlines(idx, xmin=left, xmax=right, linestyles='dotted',
+                          color=plotter.handle.palette.get(strings[idx]),
+                          linewidth=1.5)
+    plt.subplots_adjust(left=0.2, right=0.99)
     return plotter.g
 
 
@@ -156,10 +166,6 @@ def lines(plotter, **kws):
                                  palette=plotter.handle.palette,
                                  err_kws=err_dict))
     return g
-
-
-def totals():
-    pass
 
 
 def vector_plots(savepath, samplename, vectordata, X, Y, binaryArray=None,
@@ -209,6 +215,16 @@ def vector_plots(savepath, samplename, vectordata, X, Y, binaryArray=None,
     name = str('Vector_' + samplename + ext)
     fig.savefig(str(savepath.parent.joinpath(name)), format=Sett.saveformat)
     plt.close()
+
+
+def violin(plotter, **kws):
+    plotter.g = sns.catplot(x='Sample Group', y='Value',
+                            data=plotter.data, row=kws.get('row'),
+                            col=kws.get('col'),
+                            height=kws.get('height'), aspect=kws.get('aspect'),
+                            palette=plotter.handle.palette, kind='violin',
+                            sharey=False, saturation=0.5)
+    return plotter.g
 
 
 def widths():
