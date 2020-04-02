@@ -23,6 +23,7 @@ except AttributeError:
 
 
 def bivariate_kde(plotter, **in_kws):
+    """Plot bivariate density estimations."""
     kws = in_kws.get('plot_kws')
     data = plotter.data.drop('Channel', axis=1)
     if plotter.sec_data is not None:
@@ -67,8 +68,6 @@ def channel_matrix(plotter, **kws):
             ax.set_ylim(bottom=0)
             ax.set_xlim(left=0)
     # In case of missing or erroneous data, linalgerror can be raised
-    # except RuntimeError:
-    #     print('WARNING: {}')
     except np.linalg.LinAlgError:  # Then, exit plotting
         msg = '-> Confirm that all samples have proper channel data'
         fullmsg = 'Pairplot singular matrix\n{}'.format(msg)
@@ -107,6 +106,7 @@ def cluster_positions(plotter, **kws):
 
 
 def distribution(plotter, **kws):
+    """Plot distributions."""
     try:
         g = (plotter.g.map(sns.distplot, 'Value', kde=True, hist=True,
                            norm_hist=True, hist_kws={"alpha": 0.3,
@@ -153,6 +153,7 @@ def heatmap(plotter, **kws):
 
 
 def lines(plotter, **kws):
+    """Plot lines."""
     err_dict = {'alpha': 0.3}
     data = plotter.data
     # data = plotter.data.dropna()
@@ -218,6 +219,7 @@ def vector_plots(savepath, samplename, vectordata, X, Y, binaryArray=None,
 
 
 def violin(plotter, **kws):
+    """Plot violins."""
     plotter.g = sns.catplot(x='Sample Group', y='Value',
                             data=plotter.data, row=kws.get('row'),
                             col=kws.get('col'),
@@ -225,7 +227,3 @@ def violin(plotter, **kws):
                             palette=plotter.handle.palette, kind='violin',
                             sharey=False, saturation=0.5)
     return plotter.g
-
-
-def widths():
-    pass

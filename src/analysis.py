@@ -172,25 +172,20 @@ class Samplegroups:
         center = self._center  # Getting the bin to which samples are centered
         return readData, name, center
 
-    def subset_data(self, Data, compare, volIncl):
-        """Get indexes of cells based on volume."""
-        if not isinstance(Data, pd.DataFrame):
-            lg.logprint(LAM_logger, 'Wrong data type for subset_data()', 'e')
-            C = 'Wrong datatype for find_distance, Has to be pandas DataFrame.'
-            print(C)
-            return None
-        ErrorM = "Volume not found for {}".format(Data.name)
-        if compare.lower() == 'greater':
-            try:  # Get only cells that are of greater volume
-                subInd = Data[(Data['Volume'] >= volIncl)].index
-            except KeyError:
-                print(ErrorM)
-        else:
-            try:  # Get only cells that are of lesser volume
-                subInd = Data[(Data['Volume'] <= volIncl)].index
-            except KeyError:
-                print(ErrorM)
-        return subInd
+    def Get_Clusters(self):
+        """Gather sample data to compute cell clusters."""
+        lg.logprint(LAM_logger, 'Finding clusters', 'i')
+#        allpaths = [] ???
+        for grp in self._groups:  # Get one sample group
+            lg.logprint(LAM_logger, '-> clusters for group {}'.format(grp),
+                        'i')
+            print('\n---Finding clusters for group {}---'.format(grp))
+            SampleGroup = Group(grp)
+            for path in SampleGroup.groupPaths:  # Get one sample of the group
+                Smpl = Sample(path, SampleGroup)
+                print('{}  ...'.format(Smpl.name))
+                Smpl.Clusters(Sett.Cl_maxDist)  # Find clusters
+        lg.logprint(LAM_logger, 'Clusters calculated', 'i')
 
     def Get_DistanceMean(self):
         """Get sample data and pass for cell-to-cell distance calculation."""
@@ -206,21 +201,6 @@ class Samplegroups:
                 # Find distances between nuclei within the sample
                 Smpl.DistanceMean(Sett.maxDist)
         lg.logprint(LAM_logger, 'Distances calculated', 'i')
-
-    def Get_Clusters(self):
-        """Gather sample data to compute cell clusters."""
-        lg.logprint(LAM_logger, 'Finding clusters', 'i')
-#        allpaths = [] ???
-        for grp in self._groups:  # Get one sample group
-            lg.logprint(LAM_logger, '-> clusters for group {}'.format(grp),
-                        'i')
-            print('\n---Finding clusters for group {}---'.format(grp))
-            SampleGroup = Group(grp)
-            for path in SampleGroup.groupPaths:  # Get one sample of the group
-                Smpl = Sample(path, SampleGroup)
-                print('{}  ...'.format(Smpl.name))
-                Smpl.Clusters(Sett.Cl_maxDist)  # Find clusters
-        lg.logprint(LAM_logger, 'Clusters calculated', 'i')
 
     def Get_Statistics(self):
         """Handle data for group-wise statistical analysis."""
@@ -393,43 +373,29 @@ class Sample(Group):
         self.color = grp.color
         self.MP = grp.MPs.loc[0, self.name]
 
-    def DistanceMean(self, dist=25):
-        """Prepare and handle data for cell-to-cell distances."""
-        kws = {'Dist': dist}  # Maximum distance used to find cells
-        # List paths of channels where distances are to be found
-        distChans = [p for p in self.channelPaths for t in
-                     Sett.Distance_Channels if t.lower() == p.stem.lower()]
-
-        if Sett.use_target:  # If distances are found against other channel:
-            target = Sett.target_chan  # Get the name of the target channel
-            try:  # Find target's data file, read, and update data to keywords
-                file = '{}.csv'.format(target)
-                tNamer = re.compile(file, re.I)
-                targetPath = [p for p in self.channelPaths if
-                              tNamer.fullmatch(str(p.name))]
-                tData = system.read_data(targetPath[0], header=0)
-                kws.update({'tData': tData})
-            except (FileNotFoundError, IndexError):
-                msg = "No file for channel {}".format(target)
-                lg.logprint(LAM_logger, "{}: {}".format(self.name, msg), 'w')
-                print("-> {}".format(msg))
-                return
-
-        # Loop through the channels, read, and find distances
-        for path in distChans:
-            try:
-                Data = system.read_data(path, header=0)
-            except FileNotFoundError:
-                msg = "No file for channel {}".format(path.stem)
-                lg.logprint(LAM_logger, "{}: {}".format(self.name, msg), 'w')
-                print("-> {}".format(msg))
-                return
-            # Discard earlier versions of calculated distances, if present
-            Data = Data.loc[:, ~Data.columns.str.startswith('Nearest_')]
-            # Find distances
-            Data.name = path.stem
-            self.find_distances(Data, volIncl=Sett.Vol_inclusion,
-                                compare=Sett.incl_type, **kws)
+    def Count_clusters(self, Data, name):
+        """Count total clustered cells per bin."""
+        # Find bins of the clustered cells to find counts per bin
+        idx = Data.loc[:, 'ClusterID'].notna().index
+        binnedData = Data.loc[Data.dropna(subset=['ClusterID']).index,
+                              'DistBin']
+        # Sort values and then get counts
+        bins = binnedData.sort_values().to_numpy()
+        unique, counts = np.unique(bins, return_counts=True)
+        idx = np.arange(0, Sett.projBins)
+        # Create series to store the cell count data
+        binnedCounts = pd.Series(np.full(len(idx), np.nan), index=idx,
+                                 name=self.name)
+        binnedCounts.loc[unique] = counts
+        filename = 'Clusters-{}.csv'.format(name)
+        system.saveToFile(binnedCounts, self.paths.datadir, filename)
+        # Relate the counts to context, i.e. anchor them at the MP
+        insert, _ = process.relate_data(binnedCounts, self.MP,
+                                        self._center, self._length)
+        # Save the data
+        SCounts = pd.Series(data=insert, name=self.name)
+        filename = 'ClNorm_Clusters-{}.csv'.format(name)
+        system.saveToFile(SCounts, self.paths.datadir, filename)
 
     def Clusters(self, dist=10):
         """Handle data for finding clusters of cells."""
@@ -585,11 +551,11 @@ class Sample(Group):
             return NewData, means, filename
 
         if volIncl > 0:  # Subsetting of data based on cell volume
-            dInd = self.subset_data(Data, compare, volIncl)
+            dInd = subset_data(Data, compare, volIncl)
             if 'tData' in kws.keys():  # Obtain target channel if used
                 tData = kws.pop('tData')
                 tData.name = Data.name
-                tInd = self.subset_data(tData, compare, volIncl)
+                tInd = subset_data(tData, compare, volIncl)
         elif 'tData' in kws.keys():
             tData = kws.pop('tData')
             tInd = tData.index
@@ -632,29 +598,43 @@ class Sample(Group):
         OW_name = '{}.csv'.format(Data.name)
         system.saveToFile(NewData, self.path, OW_name, append=False)
 
-    def Count_clusters(self, Data, name):
-        """Count total clustered cells per bin."""
-        # Find bins of the clustered cells to find counts per bin
-        idx = Data.loc[:, 'ClusterID'].notna().index
-        binnedData = Data.loc[Data.dropna(subset=['ClusterID']).index,
-                              'DistBin']
-        # Sort values and then get counts
-        bins = binnedData.sort_values().to_numpy()
-        unique, counts = np.unique(bins, return_counts=True)
-        idx = np.arange(0, Sett.projBins)
-        # Create series to store the cell count data
-        binnedCounts = pd.Series(np.full(len(idx), np.nan), index=idx,
-                                 name=self.name)
-        binnedCounts.loc[unique] = counts
-        filename = 'Clusters-{}.csv'.format(name)
-        system.saveToFile(binnedCounts, self.paths.datadir, filename)
-        # Relate the counts to context, i.e. anchor them at the MP
-        insert, _ = process.relate_data(binnedCounts, self.MP,
-                                        self._center, self._length)
-        # Save the data
-        SCounts = pd.Series(data=insert, name=self.name)
-        filename = 'ClNorm_Clusters-{}.csv'.format(name)
-        system.saveToFile(SCounts, self.paths.datadir, filename)
+    def DistanceMean(self, dist=25):
+        """Prepare and handle data for cell-to-cell distances."""
+        kws = {'Dist': dist}  # Maximum distance used to find cells
+        # List paths of channels where distances are to be found
+        distChans = [p for p in self.channelPaths for t in
+                     Sett.Distance_Channels if t.lower() == p.stem.lower()]
+
+        if Sett.use_target:  # If distances are found against other channel:
+            target = Sett.target_chan  # Get the name of the target channel
+            try:  # Find target's data file, read, and update data to keywords
+                file = '{}.csv'.format(target)
+                tNamer = re.compile(file, re.I)
+                targetPath = [p for p in self.channelPaths if
+                              tNamer.fullmatch(str(p.name))]
+                tData = system.read_data(targetPath[0], header=0)
+                kws.update({'tData': tData})
+            except (FileNotFoundError, IndexError):
+                msg = "No file for channel {}".format(target)
+                lg.logprint(LAM_logger, "{}: {}".format(self.name, msg), 'w')
+                print("-> {}".format(msg))
+                return
+
+        # Loop through the channels, read, and find distances
+        for path in distChans:
+            try:
+                Data = system.read_data(path, header=0)
+            except FileNotFoundError:
+                msg = "No file for channel {}".format(path.stem)
+                lg.logprint(LAM_logger, "{}: {}".format(self.name, msg), 'w')
+                print("-> {}".format(msg))
+                return
+            # Discard earlier versions of calculated distances, if present
+            Data = Data.loc[:, ~Data.columns.str.startswith('Nearest_')]
+            # Find distances
+            Data.name = path.stem
+            self.find_distances(Data, volIncl=Sett.Vol_inclusion,
+                                compare=Sett.incl_type, **kws)
 
 
 def DropOutlier(Data):
@@ -671,6 +651,27 @@ def DropOutlier(Data):
             Data = Data.apply(lambda x, dropval=dropval: x if np.abs(x - mean)
                               <= dropval else np.nan)
     return Data
+
+
+def subset_data(Data, compare, volIncl):
+    """Get indexes of cells based on volume."""
+    if not isinstance(Data, pd.DataFrame):
+        lg.logprint(LAM_logger, 'Wrong data type for subset_data()', 'e')
+        C = 'Wrong datatype for find_distance, Has to be pandas DataFrame.'
+        print(C)
+        return None
+    ErrorM = "Volume not found for {}".format(Data.name)
+    if compare.lower() == 'greater':
+        try:  # Get only cells that are of greater volume
+            subInd = Data[(Data['Volume'] >= volIncl)].index
+        except KeyError:
+            print(ErrorM)
+    else:
+        try:  # Get only cells that are of lesser volume
+            subInd = Data[(Data['Volume'] <= volIncl)].index
+        except KeyError:
+            print(ErrorM)
+    return subInd
 
 
 def test_control():

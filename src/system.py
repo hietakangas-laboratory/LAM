@@ -11,11 +11,14 @@ import inspect
 import re
 import shutil
 from tkinter import simpledialog as sd
+import warnings
 # Other packages
 import pandas as pd
 import pathlib as pl
+import numpy as np
 # LAM modules
 import logger as lg
+import plot
 from settings import store, settings as Sett
 try:
     LAM_logger = lg.get_logger(__name__)
@@ -42,7 +45,7 @@ class paths:
                 files = list(self.datadir.glob('*'))
                 if files:
                     flag = 1
-                    msg = "'Data Files'-folder will be cleared. Continue? [y/n]"
+                    msg = "Data Files-folder will be cleared. Continue? [y/n]"
                     print('\a')
                     while flag:
                         ans = sd.askstring(title="Dialog", prompt=msg)
@@ -74,6 +77,99 @@ class paths:
         pd.DataFrame(channels).to_csv(self.outputdir.joinpath('Channels.csv'),
                                       index=False, header=False)
         lg.logprint(LAM_logger, 'All metadata successfully saved.', 'i')
+
+
+class DataHandler:
+    """
+    Handle data for plotting.
+
+    Data will be passed to plot.MakePlot-class
+    """
+
+    def __init__(self, samplegroups, in_paths, savepath=None):
+        if savepath is None:
+            self.savepath = samplegroups.paths.plotdir
+        else:
+            self.savepath = savepath
+        self.palette = samplegroups._grpPalette
+        self.center = samplegroups._center
+        self.total_length = samplegroups._length
+        self.MPs = samplegroups._AllMPs
+        self.paths = in_paths
+
+    def get_data(self, *args, **kws):
+        """Collect data from files and modify."""
+        melt = False
+        all_data = pd.DataFrame()
+        for path in self.paths:
+            data = read_data(path, header=0, test=False)
+            if 'IDs' in kws.keys():
+                data = plot.identifiers(data, path, kws.get('IDs'))
+            if 'melt' in kws.keys():
+                m_kws = kws.get('melt')
+                if 'path_id' in args:
+                    id_sep = kws.get('id_sep')
+                    try:
+                        id_var = path.stem.split('_')[id_sep]
+                        m_kws.update({'value_name': id_var})
+                    except IndexError:
+                        msg = 'Faulty list index. Incorrect file names?'
+                        print('ERROR: {}'.format(msg))
+                        lg.logprint(LAM_logger, msg, 'e')
+                data = data.T.melt(id_vars=m_kws.get('id_vars'),
+                                   value_vars=m_kws.get('value_vars'),
+                                   var_name=m_kws.get('var_name'),
+                                   value_name=m_kws.get('value_name'))
+                data = data.dropna(subset=[m_kws.get('value_name')])
+                melt = True
+            else:
+                data = data.T
+            if 'merge' in args:
+                if all_data.empty:
+                    all_data = data
+                else:
+                    all_data = all_data.merge(data, how='outer', copy=False,
+                                              on=kws.get('merge_on'))
+                continue
+            all_data = pd.concat([all_data, data], sort=True)
+        all_data.index = pd.RangeIndex(stop=all_data.shape[0])
+        if 'drop_outlier' in args and Sett.Drop_Outliers:
+            all_data = drop_outliers(all_data, melt, **kws)
+        all_data = all_data.infer_objects()
+        return all_data
+
+    def get_sample_data(self, col_ids, *args, **kws):
+        """Collect data from channel-specific sample files."""
+        melt = False
+        all_data = pd.DataFrame()
+        for path in self.paths:
+            data = read_data(path, header=0, test=False)
+            col_list = ['DistBin']
+            for key in col_ids:
+                col_list.extend([c for c in data.columns if key in c])
+                # temp = data.loc[:, data.columns.str.contains(key)]
+            sub_data = data.loc[:, col_list].sort_values('DistBin')
+            # Test for missing variables:
+            for col in sub_data.columns:
+                # If no variance, drop data
+                if sub_data.loc[:, col].nunique() == 1:
+                    sub_data.drop(col, axis=1, inplace=True)
+            # Add identifier columns and melt data
+            sub_data.loc[:, 'Channel'] = path.stem
+            sub_data.loc[:, 'Sample Group'] = str(path.parent.name
+                                                  ).split('_')[0]
+            if 'melt' in kws.keys():
+                m_kws = kws.get('melt')
+                sub_data = sub_data.melt(id_vars=m_kws.get('id_vars'),
+                                         value_vars=m_kws.get('value_vars'),
+                                         var_name=m_kws.get('var_name'),
+                                         value_name=m_kws.get('value_name'))
+                melt = True
+            all_data = pd.concat([all_data, sub_data], sort=True)
+        if 'drop_outlier' in args and Sett.Drop_Outliers:
+            all_data = drop_outliers(all_data, melt, **kws)
+        all_data = all_data.infer_objects()
+        return all_data
 
 
 def read_data(filepath, header=Sett.header_row, test=True, index_col=False):
@@ -186,3 +282,48 @@ def test_vector_ext(dir_path):
                     raise KeyboardInterrupt
                 else:
                     print('Command not understood.')
+
+
+def drop_outliers(all_data, melted=False, raw=False, **kws):
+    def drop(data, col):
+        """Drop outliers from a dataframe."""
+        # Get mean and std of input data
+        if raw:
+            values = data
+        else:
+            values = data.loc[:, col].sort_values(ascending=False)
+        with warnings.catch_warnings():  # Ignore empty bin warnings
+            warnings.simplefilter('ignore', category=RuntimeWarning)
+            mean = np.nanmean(values.astype('float'))
+            std = np.nanstd(values.astype('float'))
+        drop_val = Sett.dropSTD * std
+        if raw:  # If data is not melted, replace outliers with NaN
+            data.where(np.abs(values - mean) <= drop_val, other=np.nan,
+                       inplace=True)
+        else:  # If data is melted and sorted, find indexes until val < drop
+            idx = []
+            for ind, val in values.iteritems():
+                if np.abs(val - mean) < drop_val:
+                    break
+                idx.append(ind)
+            # Select data that fills criteria for validity
+            data = data.loc[(data.index.difference(idx)), :]
+        return data
+
+    if raw:
+        all_data = drop(all_data, col=None)
+        return all_data
+    # Handle data for dropping
+    if 'drop_grouper' in kws.keys():
+        grouper = kws.get('drop_grouper')
+    else:
+        grouper = 'Sample Group'
+    grp_data = all_data.groupby(by=grouper)
+    if melted:
+        names = kws['melt'].get('value_name')
+    else:
+        names = all_data.loc[:, all_data.columns != grouper].columns
+    all_data = grp_data.apply(lambda grp: drop(grp, col=names))
+    if isinstance(all_data.index, pd.MultiIndex):
+        all_data = all_data.droplevel(grouper)
+    return all_data

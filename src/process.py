@@ -35,174 +35,6 @@ except AttributeError:
     print('Cannot get logger')
 
 
-def Create_Samples(PATHS):
-    """Create vectors for the samples."""
-    lg.logprint(LAM_logger, 'Begin vector creation.', 'i')
-    # Test that resize-setting is in step of 0.1:
-    resize = Sett.SkeletonResize
-    if Sett.SkeletonVector and dl.Decimal(str(resize)) % dl.Decimal(str(0.10))\
-            != dl.Decimal('0.0'):
-        msg = 'Resizing not in step of 0.1'
-        print("WARNING: {}".format(msg))
-        # Round setting down to nearest 0.1.
-        Sett.SkeletonResize = math.floor(resize*10) / 10
-        msg2 = 'SkeletonResize changed to {}'.format(Sett.SkeletonResize)
-        print("-> {}".format(msg2))
-        lg.logprint(LAM_logger, msg, 'w')
-        lg.logprint(LAM_logger, msg2, 'i')
-    # Loop Through samples to create vectors
-    print("---Processing samples---")
-    for path in [p for p in Sett.workdir.iterdir() if p.is_dir() and p.stem
-                 != 'Analysis Data']:
-        sample = get_sample(path, PATHS)
-        print("{}  ...".format(sample.name))
-        sample.vectData = sample.get_vectData(Sett.vectChannel)
-        # Creation of vector for projection
-        sample.create_vector(Sett.medianBins, PATHS.datadir,
-                             Sett.SkeletonVector, Sett.SkeletonResize,
-                             Sett.BDiter, Sett.SigmaGauss)
-    lg.logprint(LAM_logger, 'Vectors created.', 'i')
-
-
-def vector_test(path):
-    """Test that vector-files are found."""
-    paths = [p for p in path.iterdir() if p.is_dir()]
-    miss_vector = []
-    for samplepath in paths:
-        try:
-            _ = next(samplepath.glob("Vector.*"))
-        except StopIteration:
-            miss_vector.append(samplepath.name)
-            continue
-    if len(miss_vector) == 0:
-        return
-    msg = "Missing vector-files."
-    print("CRITICAL: {}".format(msg))
-    for smpl in miss_vector:
-        print("-> {}".format(smpl))
-    lg.logprint(LAM_logger, msg, 'c')
-    raise AssertionError
-
-
-def Project(PATHS):
-    """Project features onto the vector."""
-    lg.logprint(LAM_logger, 'Begin channel projection and counting.', 'i')
-    print("\n---Projecting and counting channels---")
-    # Loop through all directories in the root directory
-    for path in [p for p in Sett.workdir.iterdir() if p.is_dir() and p.stem
-                 != 'Analysis Data']:
-        # Initialize sample variables
-        sample = get_sample(path, PATHS, process=False, project=True)
-        print("{}  ...".format(sample.name))
-        # Find anchoring point of the sample
-        sample.MP = sample.get_MPs(Sett.MPname, Sett.useMP, PATHS.datadir)
-        # Collection of data for each channel of the sample
-        for path2 in [p for p in sample.channelpaths if Sett.MPname
-                      != str(p).split('_')[-2]]:
-            channel = get_channel(path2, sample, Sett.AddData, PATHS.datadir)
-            # If no variance in found additional data, it is discarded.
-            if channel.datafail:
-                datatypes = ', '.join(channel.datafail)
-                info = "No variance, data discarded"
-                msg = "-> {} - {}: {}".format(info, channel.name, datatypes)
-                print(msg)
-            # Project features of channel onto vector
-            sample.data = sample.project_channel(channel)
-            if channel.name == Sett.vectChannel:
-                sample.data = sample.point_handedness(channel.name)
-                sample.average_width(PATHS.datadir)
-                # !!! TEST PLOT
-                import seaborn as sns
-                g = sns.FacetGrid(data=sample.data, height=3, aspect=2.5)
-                g = g.map(sns.scatterplot, data=sample.data, x='Position X',
-                          y='Position Y', hue='hand', **{'linewidth': 0,
-                                                          's': 10})
-                g = g.add_legend()
-                g.savefig(sample.sampledir.joinpath("DAPI_hands.pdf"),
-                          format='pdf')
-                plt.close('all')
-                # !!! END TEST PLOT
-            # Count occurrences in each bin
-            if channel.name not in ["MPs"]:
-                sample.find_counts(channel.name, PATHS.datadir)
-    lg.logprint(LAM_logger, 'All channels projected and counted.', 'i')
-
-
-def Get_Counts(PATHS):
-    """Handle data to anchor samples and find cell counts."""
-    try:  # Test that MPs are found for the sample
-        MPs = system.read_data(next(PATHS.datadir.glob('MPs.csv')),
-                               header=0, test=False)
-    except (FileNotFoundError, StopIteration):
-        msg = "MPs.csv NOT found!"
-        print("ERROR: {}".format(msg))
-        lg.logprint(LAM_logger, msg, 'c')
-        msg = "-> Perform 'Count' before continuing.\n"
-        print("{}".format(msg))
-        lg.logprint(LAM_logger, msg, 'i')
-        raise SystemExit
-    # Find the smallest and largest bin-number of the dataset
-    MPmax, MPmin = MPs.max(axis=1).values[0], MPs.min(axis=1).values[0]
-    # Store the bin number of the row onto which samples are anchored to
-    store.center = MPmax
-    # Find the size of needed dataframe, i.e. so that all anchored samples fit
-    MPdiff = MPmax - MPmin
-    if not any([Sett.process_counts, Sett.process_samples]):
-        # Find all sample groups in the analysis from the found MPs.
-        FSamples = [p for p in PATHS.samplesdir.iterdir() if p.is_dir()]
-        samples = MPs.columns.tolist()
-        if len(FSamples) != len(samples):  # Test whether sample numbers match
-            msg = "Mismatch of sample N between MPs.csv and sample folders"
-            print('WARNING: {}'.format(msg))
-            lg.logprint(LAM_logger, msg, 'w')
-        Groups = set({s.casefold(): s.split('_')[0] for s in samples}.values())
-        store.samplegroups = sorted(Groups)
-        store.channels = [c.stem.split('_')[1] for c in
-                          PATHS.datadir.glob("All_*.csv")]
-        try:  # If required lengths of matrices haven't been defined because
-            # Process and Count are both False, get the sizes from files.
-            chan = Sett.vectChannel
-            path = PATHS.datadir.joinpath("Norm_{}.csv".format(chan))
-            temp = system.read_data(path, test=False, header=0)
-            store.totalLength = temp.shape[0]  # Length of anchored matrices
-            path = PATHS.datadir.joinpath("All_{}.csv".format(chan))
-            temp = system.read_data(path, test=False, header=0)
-            Sett.projBins = temp.shape[0]
-        except AttributeError:
-            msg = "Cannot determine length of sample matrix\n" +\
-                    "-> Must perform 'Count' before continuing."
-            lg.logprint(LAM_logger, msg, 'c')
-            print("ERROR: {}".format(msg))
-        return
-    # The total length of needed matrix when using 'Count'
-    store.totalLength = int(Sett.projBins + MPdiff)
-    if Sett.process_counts:  # Begin anchoring of data
-        lg.logprint(LAM_logger, 'Begin normalization of channels.', 'i')
-        print('\n---Normalizing sample data---')
-        # Get combined channel files of all samples
-        countpaths = PATHS.datadir.glob('All_*')
-        for path in countpaths:
-            name = str(path.stem).split('_')[1]
-            print('{}  ...'.format(name))
-            # Aforementionad data is used to create dataframes onto which each
-            # sample's MP is anchored to one row, with bin-respective (index)
-            # cell counts in each element of a sample (column) to allow
-            # relative comparison.
-            ch_counts = normalize(path)
-            ch_counts.starts, norm_counts = ch_counts.normalize_samples(
-                MPs, store.totalLength, store.center)
-            ch_counts.averages(norm_counts)
-            ch_counts.Avg_AddData(PATHS, Sett.AddData, store.totalLength)
-        if Sett.measure_width:
-            print('Width  ...')
-            width_path = PATHS.datadir.joinpath('Sample_widths.csv')
-            width_counts = normalize(str(width_path))
-            _, _ = width_counts.normalize_samples(
-                MPs * 2, store.totalLength * 2, store.center*2,
-                name='Sample_widths_norm')
-        lg.logprint(LAM_logger, 'Channels normalized.', 'i')
-
-
 class get_sample:
     """Collect sample data and process for analysis."""
 
@@ -339,9 +171,9 @@ class get_sample:
                                             structure=
                                             mp.generate_binary_structure(2, 2))
             except TypeError:
-                    msg = 'BDiter in settings has to be an integer.'
-                    lg.logprint(LAM_logger, msg, 'e')
-                    print("TypeError: {}".format(msg))
+                msg = 'BDiter in settings has to be an integer.'
+                lg.logprint(LAM_logger, msg, 'e')
+                print("TypeError: {}".format(msg))
             # SMOOTHING
             if SigmaGauss > 0:  # Gaussian smoothing
                 BA = gaussian(BA, sigma=SigmaGauss)
@@ -460,7 +292,6 @@ class get_sample:
                 # Create a test point (used to score nearby pixels)
                 shiftx = point2[0] - point1[0]  # shift in x for test point
                 shifty = point2[1] - point1[1]  # shift in y for test point
-                heading = math.atan2(shifty, shiftx)
                 testP = gm.Point(sx+shiftx, sy+shifty)
                 # Calculate scoring of points
                 distances = _score_nearest()
@@ -571,7 +402,6 @@ class get_sample:
 
     def project_channel(self, channel):
         """For projecting coordinates onto the vector."""
-        # import seaborn as sns  # !!!
         data = channel.data
         XYpos = list(zip(data['Position X'], data['Position Y']))
         # The shapely packages reguires transformation into Multipoints for the
@@ -664,7 +494,7 @@ class get_sample:
         # Create series to hold width results
         res = pd.Series(name=self.name, index=pd.RangeIndex(stop=len(edges)))
         # Loop segments and get widths:
-        for ind, dist in enumerate(edges[:-1]):
+        for ind, _ in enumerate(edges[:-1]):
             d_index = data.loc[(data.NormDist >= edges[ind]) &
                                (data.NormDist < edges[ind+1])].index
             res.iat[ind] = _get_approx_width(data.loc[d_index, :])
@@ -850,29 +680,33 @@ class normalize:
         return SampleStart, data
 
 
-def relate_data(data, MP=0, center=50, TotalLength=100):
-    """Place sample data in context of all data, i.e. anchoring."""
-    try:
-        length = data.shape[0]
-    except AttributeError:
-        length = len(data)
-    # Insert smaller input data into larger DF defined by TotalLength
-    insx = int(center - MP)
-    end = int(insx + length)
-    insert = np.full(TotalLength, np.nan)  # Bins outside input data are NaN
-    data = np.where(data == np.nan, 0, data)  # Set all NaN in input to 0
-    try:  # Insertion
-        insert[insx:end] = data
-    except ValueError:
-        msg = "relate_data() call from {} line {}".format(
-            inspect.stack()[1][1], inspect.stack()[1][2])
-        print('ERROR: {}'.format(msg))
-        lg.logprint(LAM_logger, 'Failed {}\n'.format(msg), 'ex')
-        msg = "If not using MPs, remove MPs.csv from 'Data Files'."
-        if insert[insx:end].size - length == MP:
-            lg.logprint(LAM_logger, msg, 'i')
-        raise SystemExit
-    return insert, insx
+def Create_Samples(PATHS):
+    """Create vectors for the samples."""
+    lg.logprint(LAM_logger, 'Begin vector creation.', 'i')
+    # Test that resize-setting is in step of 0.1:
+    resize = Sett.SkeletonResize
+    if Sett.SkeletonVector and dl.Decimal(str(resize)) % dl.Decimal(str(0.10))\
+            != dl.Decimal('0.0'):
+        msg = 'Resizing not in step of 0.1'
+        print("WARNING: {}".format(msg))
+        # Round setting down to nearest 0.1.
+        Sett.SkeletonResize = math.floor(resize*10) / 10
+        msg2 = 'SkeletonResize changed to {}'.format(Sett.SkeletonResize)
+        print("-> {}".format(msg2))
+        lg.logprint(LAM_logger, msg, 'w')
+        lg.logprint(LAM_logger, msg2, 'i')
+    # Loop Through samples to create vectors
+    print("---Processing samples---")
+    for path in [p for p in Sett.workdir.iterdir() if p.is_dir() and p.stem
+                 != 'Analysis Data']:
+        sample = get_sample(path, PATHS)
+        print("{}  ...".format(sample.name))
+        sample.vectData = sample.get_vectData(Sett.vectChannel)
+        # Creation of vector for projection
+        sample.create_vector(Sett.medianBins, PATHS.datadir,
+                             Sett.SkeletonVector, Sett.SkeletonResize,
+                             Sett.BDiter, Sett.SigmaGauss)
+    lg.logprint(LAM_logger, 'Vectors created.', 'i')
 
 
 def find_existing(PATHS):
@@ -905,3 +739,156 @@ def find_existing(PATHS):
     samples = MPs.columns.tolist()
     Groups = set({s.casefold(): s.split('_')[0] for s in samples}.values())
     store.samplegroups = sorted(Groups)
+
+
+def Get_Counts(PATHS):
+    """Handle data to anchor samples and find cell counts."""
+    try:  # Test that MPs are found for the sample
+        MPs = system.read_data(next(PATHS.datadir.glob('MPs.csv')),
+                               header=0, test=False)
+    except (FileNotFoundError, StopIteration):
+        msg = "MPs.csv NOT found!"
+        print("ERROR: {}".format(msg))
+        lg.logprint(LAM_logger, msg, 'c')
+        msg = "-> Perform 'Count' before continuing.\n"
+        print("{}".format(msg))
+        lg.logprint(LAM_logger, msg, 'i')
+        raise SystemExit
+    # Find the smallest and largest bin-number of the dataset
+    MPmax, MPmin = MPs.max(axis=1).values[0], MPs.min(axis=1).values[0]
+    # Store the bin number of the row onto which samples are anchored to
+    store.center = MPmax
+    # Find the size of needed dataframe, i.e. so that all anchored samples fit
+    MPdiff = MPmax - MPmin
+    if not any([Sett.process_counts, Sett.process_samples]):
+        # Find all sample groups in the analysis from the found MPs.
+        FSamples = [p for p in PATHS.samplesdir.iterdir() if p.is_dir()]
+        samples = MPs.columns.tolist()
+        if len(FSamples) != len(samples):  # Test whether sample numbers match
+            msg = "Mismatch of sample N between MPs.csv and sample folders"
+            print('WARNING: {}'.format(msg))
+            lg.logprint(LAM_logger, msg, 'w')
+        Groups = set({s.casefold(): s.split('_')[0] for s in samples}.values())
+        store.samplegroups = sorted(Groups)
+        store.channels = [c.stem.split('_')[1] for c in
+                          PATHS.datadir.glob("All_*.csv")]
+        try:  # If required lengths of matrices haven't been defined because
+            # Process and Count are both False, get the sizes from files.
+            chan = Sett.vectChannel
+            path = PATHS.datadir.joinpath("Norm_{}.csv".format(chan))
+            temp = system.read_data(path, test=False, header=0)
+            store.totalLength = temp.shape[0]  # Length of anchored matrices
+            path = PATHS.datadir.joinpath("All_{}.csv".format(chan))
+            temp = system.read_data(path, test=False, header=0)
+            Sett.projBins = temp.shape[0]
+        except AttributeError:
+            msg = "Cannot determine length of sample matrix\n" +\
+                    "-> Must perform 'Count' before continuing."
+            lg.logprint(LAM_logger, msg, 'c')
+            print("ERROR: {}".format(msg))
+        return
+    # The total length of needed matrix when using 'Count'
+    store.totalLength = int(Sett.projBins + MPdiff)
+    if Sett.process_counts:  # Begin anchoring of data
+        lg.logprint(LAM_logger, 'Begin normalization of channels.', 'i')
+        print('\n---Normalizing sample data---')
+        # Get combined channel files of all samples
+        countpaths = PATHS.datadir.glob('All_*')
+        for path in countpaths:
+            name = str(path.stem).split('_')[1]
+            print('{}  ...'.format(name))
+            # Aforementionad data is used to create dataframes onto which each
+            # sample's MP is anchored to one row, with bin-respective (index)
+            # cell counts in each element of a sample (column) to allow
+            # relative comparison.
+            ch_counts = normalize(path)
+            ch_counts.starts, norm_counts = ch_counts.normalize_samples(
+                MPs, store.totalLength, store.center)
+            ch_counts.averages(norm_counts)
+            ch_counts.Avg_AddData(PATHS, Sett.AddData, store.totalLength)
+        if Sett.measure_width:
+            print('Width  ...')
+            width_path = PATHS.datadir.joinpath('Sample_widths.csv')
+            width_counts = normalize(str(width_path))
+            _, _ = width_counts.normalize_samples(
+                MPs * 2, store.totalLength * 2, store.center*2,
+                name='Sample_widths_norm')
+        lg.logprint(LAM_logger, 'Channels normalized.', 'i')
+
+
+def Project(PATHS):
+    """Project features onto the vector."""
+    lg.logprint(LAM_logger, 'Begin channel projection and counting.', 'i')
+    print("\n---Projecting and counting channels---")
+    # Loop through all directories in the root directory
+    for path in [p for p in Sett.workdir.iterdir() if p.is_dir() and p.stem
+                 != 'Analysis Data']:
+        # Initialize sample variables
+        sample = get_sample(path, PATHS, process=False, project=True)
+        print("{}  ...".format(sample.name))
+        # Find anchoring point of the sample
+        sample.MP = sample.get_MPs(Sett.MPname, Sett.useMP, PATHS.datadir)
+        # Collection of data for each channel of the sample
+        for path2 in [p for p in sample.channelpaths if Sett.MPname
+                      != str(p).split('_')[-2]]:
+            channel = get_channel(path2, sample, Sett.AddData, PATHS.datadir)
+            # If no variance in found additional data, it is discarded.
+            if channel.datafail:
+                datatypes = ', '.join(channel.datafail)
+                info = "No variance, data discarded"
+                msg = "-> {} - {}: {}".format(info, channel.name, datatypes)
+                print(msg)
+            # Project features of channel onto vector
+            sample.data = sample.project_channel(channel)
+            if channel.name == Sett.vectChannel:
+                sample.data = sample.point_handedness(channel.name)
+                sample.average_width(PATHS.datadir)
+            # Count occurrences in each bin
+            if channel.name not in ["MPs"]:
+                sample.find_counts(channel.name, PATHS.datadir)
+    lg.logprint(LAM_logger, 'All channels projected and counted.', 'i')
+
+
+def relate_data(data, MP=0, center=50, TotalLength=100):
+    """Place sample data in context of all data, i.e. anchoring."""
+    try:
+        length = data.shape[0]
+    except AttributeError:
+        length = len(data)
+    # Insert smaller input data into larger DF defined by TotalLength
+    insx = int(center - MP)
+    end = int(insx + length)
+    insert = np.full(TotalLength, np.nan)  # Bins outside input data are NaN
+    data = np.where(data == np.nan, 0, data)  # Set all NaN in input to 0
+    try:  # Insertion
+        insert[insx:end] = data
+    except ValueError:
+        msg = "relate_data() call from {} line {}".format(
+            inspect.stack()[1][1], inspect.stack()[1][2])
+        print('ERROR: {}'.format(msg))
+        lg.logprint(LAM_logger, 'Failed {}\n'.format(msg), 'ex')
+        msg = "If not using MPs, remove MPs.csv from 'Data Files'."
+        if insert[insx:end].size - length == MP:
+            lg.logprint(LAM_logger, msg, 'i')
+        raise SystemExit
+    return insert, insx
+
+
+def vector_test(path):
+    """Test that vector-files are found."""
+    paths = [p for p in path.iterdir() if p.is_dir()]
+    miss_vector = []
+    for samplepath in paths:
+        try:
+            _ = next(samplepath.glob("Vector.*"))
+        except StopIteration:
+            miss_vector.append(samplepath.name)
+            continue
+    if len(miss_vector) == 0:
+        return
+    msg = "Missing vector-files."
+    print("CRITICAL: {}".format(msg))
+    for smpl in miss_vector:
+        print("-> {}".format(smpl))
+    lg.logprint(LAM_logger, msg, 'c')
+    raise AssertionError
