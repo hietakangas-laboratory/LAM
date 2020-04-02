@@ -188,6 +188,7 @@ class settings:
     non_stdout = False  # Redirect stdout to a window when using executable
     # Determine width of gut based on vector channel projection distances
     measure_width = True
+    plot_width = True
 
 
 class store:

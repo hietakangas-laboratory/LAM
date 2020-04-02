@@ -318,9 +318,7 @@ class MakePlot:
     def visible_labels(self, **kws):
         for ax in self.g.axes.flat:
             ax.yaxis.set_tick_params(which='both', labelleft=True)
-            ax.set_ylabel(visible=True)
             ax.xaxis.set_tick_params(which='both', labelbottom=True)
-            ax.set_xlabel(visible=True)
 
     def xticks(self):
         """Set plot xticks & tick labels to be shown every 5 ticks."""
@@ -704,8 +702,26 @@ class plotting:
         plotter(pfunc.lines, 'centerline', 'ticks', 'title', 'stats', 'labels',
                 'legend', **p_kws)
 
-    def stat_total(self, samplegroups, Stats):
-        pass
+    def width(self):  # !!!
+        name = 'Sample_widths_norm.csv'
+        filepath = list(self.sgroups.paths.datadir.glob(name))
+        if not filepath:
+            print("No width file found. Perform 'Count' with measure_width")
+            lg.logprint(LAM_logger, 'No width file found', 'w')
+            return
+        # Collect data:
+        handle = DataHandler(self.sgroups, filepath)
+        all_data = handle.get_data('drop_outlier', **self.kws)
+        var = 'Linear Position'
+        all_data.loc[:, var] = all_data.loc[:, var].divide(2, fill_value=0)
+
+        # Make plot:
+        plotter = MakePlot(all_data, handle, 'Widths - All')
+        p_kws = merge_kws(self.kws, {'row': None, 'col': None,
+                                     'ylabel': 'Units (coord system)',
+                                     'gridspec': {'bottom': 0.2}})
+        plotter(pfunc.lines, 'centerline', 'ticks', 'title', 'legend',
+                'labels', **p_kws)
 
 
 def select(paths, adds=True):

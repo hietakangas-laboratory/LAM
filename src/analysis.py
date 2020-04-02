@@ -75,7 +75,8 @@ class Samplegroups:
         plots = [Sett.Create_Channel_Plots, Sett.Create_AddData_Plots,
                  Sett.Create_Channel_PairPlots, Sett.Create_Heatmaps,
                  Sett.Create_Distribution_Plots, Sett.Create_Cluster_Plots,
-                 Sett.Create_ChanVSAdd_Plots, Sett.Create_AddVSAdd_Plots]
+                 Sett.Create_ChanVSAdd_Plots, Sett.Create_AddVSAdd_Plots,
+                 Sett.plot_width]
         if not any(plots):
             return
 
@@ -84,6 +85,12 @@ class Samplegroups:
         print("\n---Creating plots---")
         # Update addData variable to contain newly created average-files
         self._addData = list(self.paths.datadir.glob('Avg_*'))
+        
+        if Sett.plot_width:
+            lg.logprint(LAM_logger, 'Plotting widths', 'i')
+            print('Plotting widths  ...')
+            plotting(self).width()
+            lg.logprint(LAM_logger, 'width plot done.', 'i')
 
         # CHANNEL PLOTTING
         if Sett.Create_Channel_Plots:
