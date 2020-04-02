@@ -125,41 +125,41 @@ def main():
     if Sett.Find_Clusters and Sett.process_dists:
         SampleGroups.Get_Clusters()
     # Computing total values from each sample's each bin
-    if Sett.stat_total or Sett.process_counts:
+    if (Sett.statistics and Sett.stat_total) or Sett.process_counts:
         SampleGroups.Get_Totals()
     # Calculation of MWW-statistics for cell counts and other data
     if Sett.statistics:
+        analysis.test_control()
         SampleGroups.Get_Statistics()
     # Creation of plots from various data (excluding statistical plots)
     if Sett.Create_Plots:
-        SampleGroups.create_plots()
+        SampleGroups.create_plots
 
     # TEMPORARY !!!
     # !!! Change plotting of widths
-    if Sett.measure_width:
-        filepath = system_paths.datadir.joinpath('Sample_widths_norm.csv')
-        plotData, _, _ = SampleGroups.read_channel(filepath,
-                                                         store.samplegroups)
-        print(plotData)
-        import seaborn as sns
-        import matplotlib.pyplot as plt
-        err_kws = {'alpha': 0.4}
-        var = 'Longitudinal Position'
-        plotData = plotData.melt(id_vars='Sample Group', value_name='val',
-                                 var_name=var)
-        plotData.loc[:, var] = plotData.loc[:, var].divide(2, fill_value=0)
-        g = sns.FacetGrid(data=plotData, hue='Sample Group', height=2,
-                          aspect=3.5)
-        g = (g.map_dataframe(sns.lineplot, x=var, y='val', ci='sd',
-                             err_style='band', hue='Sample Group',
-                             dashes=False, alpha=1,
-                             palette=SampleGroups._grpPalette,
-                             err_kws=err_kws))
-        g = g.add_legend()
-        plt.suptitle('Gut width', weight='bold')
-        g.savefig(system_paths.plotdir.joinpath("group_widths.pdf"),
-                  format='pdf')
-        plt.close('all')
+    # if Sett.measure_width:
+    #     filepath = system_paths.datadir.joinpath('Sample_widths_norm.csv')
+    #     plotData, name, cntr = SampleGroups.read_channel(filepath,
+    #                                                      store.samplegroups)
+    #     import seaborn as sns
+    #     import matplotlib.pyplot as plt
+    #     err_kws = {'alpha': 0.4}
+    #     var = 'Longitudinal Position'
+    #     plotData = plotData.melt(id_vars='Sample Group', value_name='val',
+    #                              var_name=var)
+    #     plotData.loc[:, var] = plotData.loc[:, var].divide(2, fill_value=0)
+    #     g = sns.FacetGrid(data=plotData, hue='Sample Group', height=2,
+    #                       aspect=3.5)
+    #     g = (g.map_dataframe(sns.lineplot, x=var, y='val', ci='sd',
+    #                          err_style='band', hue='Sample Group',
+    #                          dashes=False, alpha=1,
+    #                          palette=SampleGroups._grpPalette,
+    #                          err_kws=err_kws))
+    #     g = g.add_legend()
+    #     plt.suptitle('Gut width', weight='bold')
+    #     g.savefig(system_paths.plotdir.joinpath("group_widths.pdf"),
+    #               format='pdf')
+    #     plt.close('all')
     # END OF TEMPORARY !!!
 
 

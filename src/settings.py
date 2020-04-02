@@ -24,13 +24,13 @@ class settings:
     process_samples = False  # CLEARS DATA FILES-DIRECTORY
     # Whether to project, count and normalize data. If set to False, expect all
     # data to be in place. Can be used to e.g. create additional plots faster.
-    process_counts = True
+    process_counts = False
     # Whether to compute average distances and clusters.
     process_dists = False
     # Set True/False to set all plotting functionalities ON/OFF
     Create_Plots = True     # ON / OFF switch for plots
     # Whether to calculate statistics
-    statistics = False
+    statistics = True
     ##################################################################
 
     # -#-#-#-#-#-#-#-# VECTOR CREATION & PROJECTION #-#-#-#-#-#-#-#-#- #
@@ -45,13 +45,13 @@ class settings:
     # Make vector by creating binary image and then skeletonizing. If False,
     # vector is created by finding middle point between smallest and largest
     # Y-axis position in bin.
-    SkeletonVector = False
-    SkeletonResize = 0.7    # Binary image resize. Keep at steps of ten.
-    # Find distance (XY-coord system) in skeleton vector creation
-    find_dist = 40
-    BDiter = 0          # Binary dilation iterations (set to 0 if not needed)
-    SigmaGauss = 0.3    # Sigma for gaussian smoothing (set to 0 if not needed)
-    simplifyTol = 25    # Tolerance for vector simplification.
+    SkeletonVector = True
+    SkeletonResize = 0.4    # Binary image resize. Keep at steps of 0.1.
+    # Find distance (in input coords) in skeleton vector creation
+    find_dist = 75
+    BDiter = 5          # Binary dilation iterations (set to 0 if not needed)
+    SigmaGauss = 7    # Sigma for gaussian smoothing (set to 0 if not needed)
+    simplifyTol = 20    # Tolerance for vector simplification.
     # Number of bins used for vector creation when using the median vector
     # creation. Increasing bin number too much may lead to stair-like vector;
     # increasing 'simplifyTol' can correct the steps.
@@ -82,14 +82,13 @@ class settings:
                }
     # If set to true, replaces the above mentioned (AddData) ID numbers with an
     # alternative moniker as defined in channelID
-    replaceID = False
+    replaceID = True
     channelID = {"Ch=1": "Pros",
                  "Ch=2": "GFP",
                  "Ch=3": "SuH",
                  "Ch=4": "DAPI"
                  }
     ###################################################################
-
 
     # ------ANALYSIS OPTIONS------ #
     # ---DISTANCE MEANS--- #
@@ -138,9 +137,9 @@ class settings:
     cntrlGroup = "starv"
 
     # ---PLOTTING OPTIONS--- #
-    Create_Channel_Plots = False
+    Create_Channel_Plots = True
     Create_AddData_Plots = True     # Plots also nearest distance & clusters
-    Create_Channel_PairPlots = True
+    Create_Channel_PairPlots = False
     Create_Heatmaps = True
     Create_Distribution_Plots = True
     Create_Statistics_Plots = True  # requires statistics to be True
@@ -150,12 +149,12 @@ class settings:
     Create_ChanVSAdd_Plots = False  # Pairs of channel and additional data
     Create_AddVSAdd_Plots = False  # Pairs of additional data
     # Create plots of all possible pair combinations of the following:
-    vs_channels = ['DAPI', 'DAPIEC']
-    vs_adds = ['Intensity Mean']
+    vs_channels = ['DAPI', 'GFP']
+    vs_adds = ['Intensity Mean']  # Use the pre-defined keys
 
     # Whether to drop outliers from plots ONLY
     Drop_Outliers = True
-    dropSTD = 3  # The standard deviation limit for drop
+    dropSTD = 2.5  # The standard deviation limit for drop
     # NOTE ON DROPPING OUTLIERS:
     #   Some variables may not be normally distributed (e.g. feature counts),
     #   and using standard deviation for dropping on such data might remove
@@ -171,6 +170,7 @@ class settings:
     # raw, rgba, svg, svgz, tif, tiff.
     saveformat = "pdf"
 
+    # Changing seaborn style and context may break plots
     seaborn_style = 'ticks'   # Different styles of plots, e.g. background
     # Available styles #
     # write to the console the following lines

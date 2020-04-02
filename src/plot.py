@@ -2,487 +2,292 @@
 """
 LAM-module for plot creation.
 
-Created on Wed Mar  6 12:42:28 2019
+Created on Tue Mar 10 11:45:48 2020
 @author: Arto I. Viitanen
-
 """
-
 # LAM modules
-from settings import settings as Sett
+from settings import settings as Sett, store
 import logger as lg
+import system
+import plotfuncs as pfunc
 # Standard libraries
 import warnings
-from random import shuffle
+from itertools import combinations, chain
 # Packages
 import matplotlib.pyplot as plt
 import numpy as np
 import seaborn as sns
-with warnings.catch_warnings():
-    warnings.simplefilter('ignore', category=FutureWarning)
-    import pandas as pd
+import pandas as pd
 try:
     LAM_logger = lg.get_logger(__name__)
 except AttributeError:
     print('Cannot get logger')
 
 
-class plotter:
-    """For holding data and variables, and consequent plotting."""
+class DataHandler:
+    """
+    Handle data for plotting.
 
-    plot_error = False
+    Data will be passed to MakePlot-class
+    """
 
-    def __init__(self, plotData, savepath, center=0, title=None,
-                 palette=None, color='b'):
-        # Seaborn style settings
-        sns.set_style(Sett.seaborn_style)
-        sns.set_context(Sett.seaborn_context)
-        # Relevant variables for plotting:
-        self.data = plotData
-        self.title = title
-        self.savepath = savepath
-        self.palette = palette
-        self.color = color
-        self.ext = ".{}".format(Sett.saveformat)
-        self.format = Sett.saveformat
-        # Define center index for plots
-        if center != 0:
-            self.MPbin = center
+    def __init__(self, samplegroups, paths, savepath=None):
+        if savepath is None:
+            self.savepath = samplegroups.paths.plotdir
         else:
-            self.MPbin = 0
+            self.savepath = savepath
+        self.palette = samplegroups._grpPalette
+        self.center = samplegroups._center
+        self.total_length = samplegroups._length
+        self.MPs = samplegroups._AllMPs
+        self.paths = paths
 
-    def vector(self, samplename, vectordata, X, Y, binaryArray=None,
-               skeleton=None):
-        """Plot sample-specific vectors and skeleton plots."""
-        # Create skeleton plots if using skeleton vectors
-        if skeleton is not None and Sett.SkeletonVector:
-            figskel, axes = plt.subplots(nrows=1, ncols=2, figsize=(15, 6),
-                                         sharex=True, sharey=True)
-            ax = axes.ravel()
-            ax[0].imshow(binaryArray)
-            ax[0].axis('off')
-            ax[0].set_title('modified', fontsize=16)
-            ax[1].imshow(skeleton)
-            ax[1].axis('off')
-            ax[1].set_title('skeleton', fontsize=16)
-            figskel.tight_layout()
-            name = str('Skeleton_' + samplename + self.ext)
-            figskel.savefig(str(self.savepath.joinpath(name)),
-                            format=self.format)
-        # Create vector plot
-        fig, ax = plt.subplots(figsize=(12, 6))
-        ax = sns.scatterplot(x=X, y=Y, color='xkcd:tan', linewidth=0)
-        ax = plt.plot(*vectordata.xy)
-        plt.axis('equal')
-        name = str('Vector_' + samplename + self.ext)
-        fig.savefig(str(self.savepath.parent.joinpath(name)),
-                    format=self.format)
-        plt.close('all')
-
-    def plot_Data(self, plotfunc, savepath, palette=None, **kws):
-        """General plotting function for many kinds of data."""
-        def __melt_data(**kws):
-            """Melt dataframes to long form."""
-            if 'var_str' in kws.keys():
-                varname = kws.get('var_str')
+    def get_data(self, *args, **kws):
+        melt = False
+        all_data = pd.DataFrame()
+        for path in self.paths:
+            data = system.read_data(path, header=0, test=False)
+            if 'IDs' in kws.keys():
+                data = identifiers(data, path, kws.get('IDs'))
+            if 'melt' in kws.keys():
+                m_kws = kws.get('melt')
+                if 'path_id' in args:
+                    id_sep = kws.get('id_sep')
+                    try:
+                        id_var = path.stem.split('_')[id_sep]
+                        m_kws.update({'value_name': id_var})
+                    except IndexError:
+                        msg = 'Faulty list index. Incorrect file names?'
+                        print('ERROR: {}'.format(msg))
+                        lg.logprint(LAM_logger, msg, 'e')
+                data = data.T.melt(id_vars=m_kws.get('id_vars'),
+                                   value_vars=m_kws.get('value_vars'),
+                                   var_name=m_kws.get('var_name'),
+                                   value_name=m_kws.get('value_name'))
+                data = data.dropna(subset=[m_kws.get('value_name')])
+                melt = True
             else:
-                varname = 'variable'
-            if 'value_str' in kws.keys():
-                valname = kws.get('value_str')
-            else:
-                valname = 'value'
-            plotData = pd.melt(self.data, id_vars=kws.get('id_str'),
-                               value_name=valname, var_name=varname)
-            return plotData, varname, valname
-
-        def __set_xtick():
-            """Set plot xticks/labels to be shown every 5 ticks."""
-            length = kws.get('xlen')
-            xticks = np.arange(0, length, 5)
-            plt.setp(g.axes, xticks=xticks, xticklabels=xticks)
-
-        def __centerline():
-            """Plot centerline, i.e. the anchoring point of samples."""
-            MPbin = kws.get('centerline')
-            __, ytop = plt.ylim()
-            for ax in g.axes.flat:
-                ax.plot((MPbin, MPbin), (0, ytop), 'k--', zorder=0)
-
-        def __stats():
-            """Plot statistical elements within data plots."""
-            def __marker(value, colors):
-                """Designation of number of significance stars."""
-                if value <= 0.001:
-                    pStr = "*\n*\n*"
-                    color = colors[3]
-                elif value <= 0.01:
-                    pStr = "*\n*"
-                    color = colors[2]
-                elif value <= Sett.alpha:
-                    if value <= 0.05:
-                        pStr = "*"
-                    else:
-                        pStr = ""
-                    color = colors[1]
+                data = data.T
+            if 'merge' in args:
+                if all_data.empty:
+                    all_data = data
                 else:
-                    pStr = " "
-                    color = colors[0]
-                return pStr, color
+                    all_data = all_data.merge(data, how='outer', copy=False,
+                                              on=kws.get('merge_on'))
+                continue
+            all_data = pd.concat([all_data, data], sort=True)
+        all_data.index = pd.RangeIndex(stop=all_data.shape[0])
+        if 'drop_outlier' in args and Sett.Drop_Outliers:
+            all_data = drop_outliers(all_data, melt, **kws)
+        all_data = all_data.infer_objects()
+        return all_data
 
-            stats = kws.pop('Stats')
-            __, ytop = plt.ylim()
-            tytop = ytop*1.35
-            ax = plt.gca()
-            ax.set_ylim(top=tytop)
-            MPbin = kws.get('centerline')
+    def get_sample_data(self, col_ids, *args, **kws):
+        """Collect data from channel-specific sample files."""
+        melt = False
+        all_data = pd.DataFrame()
+        for path in self.paths:
+            data = system.read_data(path, header=0, test=False)
+            col_list = ['DistBin']
+            for key in col_ids:
+                col_list.extend([c for c in data.columns if key in c])
+                # temp = data.loc[:, data.columns.str.contains(key)]
+            sub_data = data.loc[:, col_list].sort_values('DistBin')
+            # Test for missing variables:
+            for col in sub_data.columns:
+                # If no variance, drop data
+                if sub_data.loc[:, col].nunique() == 1:
+                    sub_data.drop(col, axis=1, inplace=True)
+            # Add identifier columns and melt data
+            sub_data.loc[:, 'Channel'] = path.stem
+            sub_data.loc[:, 'Sample Group'] = str(path.parent.name
+                                                  ).split('_')[0]
+            if 'melt' in kws.keys():
+                m_kws = kws.get('melt')
+                sub_data = sub_data.melt(id_vars=m_kws.get('id_vars'),
+                                         value_vars=m_kws.get('value_vars'),
+                                         var_name=m_kws.get('var_name'),
+                                         value_name=m_kws.get('value_name'))
+                melt = True
+            all_data = pd.concat([all_data, sub_data], sort=True)
+        if 'drop_outlier' in args and Sett.Drop_Outliers:
+            all_data = drop_outliers(all_data, melt, **kws)
+        all_data = all_data.infer_objects()
+        return all_data
 
-            # Creation of -log2 P-valueaxis and line plot
-            if Sett.negLog2:
-                Sett.stars = False
-                Y = stats.iloc[:, 7]
-                X = Y.index.tolist()
-#                Y.replace(0, np.nan, inplace=True)
-                # Find locations where the log line should be drawn
-                ind = Y[Y.notnull()].index
-                logvals = pd.Series(np.zeros(Y.shape[0]), index=Y.index)
-                with warnings.catch_warnings():
-                    warnings.simplefilter('ignore', category=RuntimeWarning)
-                    logvals.loc[ind] = np.log2(Y[ind].astype(np.float64))
-                xmin, xtop = stats.index.min(), stats.index.max()
-                # Create twin axis with -log2 P-values
-                ax2 = plt.twinx()
-                lkws = {'alpha': 0.85}
-                ax2.plot(X, np.negative(logvals), color='dimgrey', linewidth=2,
-                         **lkws)
-                ax2.plot((xmin, xtop), (0, 0), linestyle='dashed',
-                         color='grey', linewidth=0.85, **lkws)
-                ax2.set_ylabel('P value\n(-log2)')
-                # Find top of original y-axis and create a buffer for twin to
-                # create a prettier plot
-                botAdd = 2.75*-Sett.ylim
-                ax2.set_ylim(bottom=botAdd, top=Sett.ylim)
-                ytick = np.arange(0, Sett.ylim, 5)
-                ax2.set_yticks(ytick)
-                ax2.set_yticklabels(ytick, fontdict={'fontsize': 14})
-                ax2.yaxis.set_label_coords(1.04, 0.85)
-                # Create centerline:
-                ybot, ytop = ax.get_ylim()
-                yaxis = [ytop, ytop]
-                ax.plot((MPbin, MPbin), (ybot, ytop), 'k--', zorder=0)
-            # Initiation of variables when not using -log2 & make centerline
-            else:
-                yaxis = [tytop, tytop]
-                yheight = ytop*1.1
-                ax.plot((MPbin, MPbin), (0, tytop), 'k--')
 
-            # Create significance stars and color fills
-            if 'windowed' in kws:
-                comment = "Window: lead {}, trail {}".format(Sett.lead,
-                                                             Sett.trail)
-                ax.annotate(comment, (0, tytop*1.02), ha='center')
-            # Get colors for fills
-            LScolors = sns.color_palette('Reds', n_colors=4)
-            GRcolors = sns.color_palette('Blues', n_colors=4)
-            # Plot significances:
-            for index, row in stats.iterrows():
-                # If both hypothesis rejections have same value, continue
-                if row[3] == row[6]:
-                    continue
-                xaxis = [index-0.5, index+0.5]
-                if row[3] is True:  # ctrl is greater
-                    pStr, color = __marker(row[1], LScolors)
-                    if Sett.fill:
-                        ax.fill_between(xaxis, yaxis, color=color, alpha=0.2,
-                                        zorder=0)
-                    if Sett.stars:
-                        plt.annotate(pStr, (index, yheight), fontsize=14,
-                                     ha='center')
-                if row[6] is True:  # ctrl is lesser
-                    pStr, color = __marker(row[4], GRcolors)
-                    if Sett.fill:
-                        ax.fill_between(xaxis, yaxis, color=color, alpha=0.2,
-                                        zorder=0)
-                    if Sett.stars:
-                        plt.annotate(pStr, (index, yheight), fontsize=14,
-                                     ha='center')
+class MakePlot:
+    """Create decorated plots."""
 
-        def __add(centerline=True):
-            """Label, tick, and centerline creation/altering."""
-            if 'centerline' in kws.keys() and centerline:
-                __centerline()
-            if 'xlen' in kws.keys():
-                __set_xtick()
-            if 'ylabel' in kws.keys():
-                g.set(ylabel=kws.get('ylabel'))
-            if 'xlabel' in kws.keys():
-                plt.xlabel(kws.get('xlabel'), labelpad=20)
-            return g
+    # Base keywords utilized in plots.
+    base_kws = {'hue': 'Sample Group', 'row': 'Channel', 'col': 'Sample Group',
+                'height': 3, 'aspect': 3, 'flier_size': 2, 'title_y': 0.95,
+                'sharex': False, 'sharey': False, 'gridspec': {'hspace': 0.45},
+                'xlabel': 'Linear Position', 'ylabel': 'Feature Count'}
+    # Colors for fills
+    LScolors = sns.color_palette('Reds', n_colors=4)
+    GRcolors = sns.color_palette('Blues', n_colors=4)
 
+    def __init__(self, data, handle, title, sec_data=None):
+        self.data = data
+        self.sec_data = sec_data
         self.plot_error = False
-        # The input data is melted if id_str is found in kws:
-        if 'id_str' in kws and kws.get('id_str') is not None:
-            plotData, varname, valname = __melt_data(**kws)
-            kws.update({'xlabel': varname, 'ylabel': valname,
-                        'data': plotData})
-        else:  # Otherwise data is used as is
-            plotData = self.data
-            kws.update({'data': plotData})
+        self.handle = handle
+        self.title = title
+        self.g = None
+        self.filepath = handle.savepath.joinpath(self.title +
+                                                 ".{}".format(Sett.saveformat))
+
+    def __call__(self, func, *args, **kws):
+        plot_kws = merge_kws(MakePlot.base_kws, kws)
         with warnings.catch_warnings():
             warnings.simplefilter('ignore', category=UserWarning)
-            if plotfunc.__name__ == 'jointPlot':  # If jointplot:
-                # Seaborn unfortunately does not support multi-axis jointplots,
-                # consequently these are created as individual files.
-                key = plotData.iat[0, 0]
-                g = sns.jointplot(data=plotData,
-                                  x=plotData.loc[:, kws.get('x')],
-                                  y=plotData.loc[:, kws.get('y')], kind='kde',
-                                  color=palette.get(key),
-                                  joint_kws={'shade_lowest': False})
-            elif plotfunc.__name__ == 'catPlot':  # Stat plots
-                g = self.catPlot(self.palette, **kws)
-                __stats()
-                __add(centerline=False)
-            elif plotfunc.__name__ == 'pairPlot':  # Pair plot
-                g = self.pairPlot(**kws)
-                if self.plot_error:  # If error is found in plotting, return
-                    print('STOPPING PAIRPLOT')
-                    return
-            else:  # General handling of plots
-                g = sns.FacetGrid(plotData, row=kws.get('row'),
-                                  col=kws.get('col'), hue=kws.get('hue'),
-                                  sharex=True, sharey=kws.get('sharey'),
-                                  gridspec_kws=kws.get('gridspec'),
-                                  height=kws.get('height'),
-                                  aspect=kws.get('aspect'), legend_out=True,
-                                  dropna=False, palette=self.palette)
-                g = g.map_dataframe(plotfunc, self.palette, **kws).add_legend()
-                for ax in g.axes.flat:
-                    ax.xaxis.set_tick_params(labelbottom=True)
-                __add()
-        # Giving a title and then saving the plot
-        plt.suptitle(self.title, weight='bold', y=kws.get('title_y'))
-        filepath = savepath.joinpath(self.title + self.ext)
-        fig = plt.gcf()
-        fig.savefig(str(filepath), format=self.format)
-        plt.close('all')
+            # Make canvas if needed:
+            if 'no_grid' not in args:
+                self.g = self.get_facet(**plot_kws)
+            # Plot data
+            self.g = func(self, **plot_kws)
+        if self.plot_error:
+            msg = "Plot not saved"
+            print("WARNING: {}".format(msg))
+            lg.logprint(LAM_logger, msg, 'w')
+            return
+        self.add_elements(*args, **plot_kws)
+        self.save_plot()
 
-    def boxPlot(palette, **kws):
-        """Creation of box plots."""
-        axes = plt.gca()
-        data = kws.pop('data')
-        sns.boxplot(data=data, x=kws.get('xlabel'), y=kws.get('ylabel'),
-                    hue=kws.get('id_str'), saturation=0.5, linewidth=0.8,
-                    showmeans=False, notch=False, palette=palette,
-                    fliersize=kws.get('flierS'), ax=axes)
-        return axes
+    def add_elements(self, *args, **kws):
+        if 'centerline' in args:
+            self.centerline()
+        if 'ticks' in args:
+            self.xticks()
+        if 'labels' in args:
+            self.collect_labels(kws.get('xlabel'), kws.get('ylabel'))
+            self.labels(kws.get('xlabel'), kws.get('ylabel'),
+                        kws.get('label_first_only'))
+        if 'legend' in args:
+            self.g.add_legend()
+        if 'title' in args:
+            self.set_title(**kws)
+        if 'stats' in args:
+            self.stats(**kws)
+        if 'total_stats' in args:
+            self.stats_total(**kws)
+        if (kws.get('sharey') == 'row' or kws.get('sharex') == 'col'):
+            self.visible_labels(**kws)
 
-    def pairPlot(self, **kws):
-        """Creation of pair plots."""
-        # Drop bins where no values exists in any channel. Then change missing
-        # values to 0 (required for plot)
-        data = self.data.sort_values(by="Sample Group").drop(
-            'Longitudinal Position', axis=1)
-        data = data.dropna(how='all',
-                           subset=data.columns[data.columns != 'Sample Group']
-                           ).replace(np.nan, 0)
-        grpOrder = data["Sample Group"].unique().tolist()  # Plot order
-        colors = [self.palette.get(k) for k in grpOrder]
-        # Create color variables for scatter edges
-        edgeC = []
-        for color in colors:
-            edgeC.append(tuple([0.7 * v for v in color]))
-        # Settings for plotting:
-        pkws = {'x_ci': None, 'order': 2, 'truncate': True,
-                'scatter_kws': {'linewidth': 0.05, 's': 25, 'alpha': 0.4,
-                                'edgecolors': edgeC},
-                'line_kws': {'alpha': 0.7, 'linewidth': 1.5}}
-        if Sett.plot_jitter:
-            pkws.update({'x_jitter': 0.49, 'y_jitter': 0.49})
-        dkws = {'linewidth': 2}
-        with warnings.catch_warnings():
-            warnings.simplefilter('ignore', category=RuntimeWarning)
-            try:
-                g = sns.pairplot(data=data, hue=kws.get('hue'),
-                                 kind=kws.get('kind'), diag_kind=kws.get(
-                                     'diag_kind'), palette=self.palette,
-                                 plot_kws=pkws, diag_kws=dkws)
-            # In case of missing or erroneous data, linalgerror can be raised
-            except np.linalg.LinAlgError:  # Then, exit plotting
-                msg = '-> Confirm that all samples have proper channel data'
-                fullmsg = 'Pairplot singular matrix\n{}'.format(msg)
-                lg.logprint(LAM_logger, fullmsg, 'ex')
-                print('ERROR: Pairplot singular matrix')
-                print(msg)
-                self.plot_error = True
-                return None
-        # Enhance legends
-        for lh in g._legend.legendHandles:
-            lh.set_alpha(1)
-            lh._sizes = [30]
-        # Set bottom values to zero, as no negatives in count data
-        for ax in g.axes.flat:
-            ax.set_ylim(bottom=0)
-            ax.set_xlim(left=0)
-        return g
+    def centerline(self):
+        """Plot centerline, i.e. the anchoring point of samples."""
+        for ax in self.g.axes.flat:
+            __, ytop = ax.get_ylim()
+            ax.vlines(self.handle.center, 0, ytop, 'dimgrey', zorder=0,
+                      linestyles='dashed')
 
-    def distPlot(self, savepath, **kws):
-        """Creation of distributions."""
-        with warnings.catch_warnings():
-            warnings.simplefilter('ignore', category=UserWarning)
-            try:
-                g = sns.FacetGrid(data=self.data, row=kws.get('row'),
-                                  col=kws.get('col'), hue=kws.get('hue'),
-                                  palette=self.palette,
-                                  sharex=kws.get('sharex'),
-                                  sharey=kws.get('sharey'),
-                                  height=kws.get('height'),
-                                  aspect=kws.get('aspect'),
-                                  gridspec_kws=kws.get('gridspec'))
-                g = (g.map(sns.distplot, 'value', kde=True, hist=True,
-                           norm_hist=True, hist_kws={"alpha": 0.3,
-                                                     "linewidth": 0}))
-            except np.linalg.LinAlgError:
-                msg = '-> Confirm that all samples have proper channel data'
-                fullmsg = 'Distribution plot singular matrix\n{}'.format(msg)
-                lg.logprint(LAM_logger, fullmsg, 'ex')
-                print('ERROR: Distribution plot singular matrix')
-                print(msg)
-                return
-        for ax in g.axes.flat:
+    def collect_labels(self, xlabel, ylabel):
+        if 'collect' not in (xlabel, ylabel):
+            return
+        for ax in self.g.axes.flat:
             title = ax.get_title()
-            new_title = title.replace(' | ', '\n')
-            ax.set_title(new_title)
-        g = g.add_legend()
-        filepath = savepath.joinpath(self.title + self.ext)
-        fig = plt.gcf()
-        fig.savefig(str(filepath), format=self.format)
+            var_strs = title.split(' | ')
+            label_strs = [l.split(' = ')[1] for l in var_strs]
+            if ylabel == 'collect':
+                label = get_unit(label_strs[0])
+                ax.set_ylabel(label)
+            if xlabel == 'collect':
+                label = get_unit(label_strs[1])
+                ax.set_xlabel(label)
+            ax.set_title(' | '.join(label_strs))
 
-    def linePlot(self, **kws):
-        """Creation of line plots of additional data."""
-        row_var = kws.get('row')
-        data = self.data.sort_values(by=row_var)
-        adds = data.loc[:, row_var].unique()
-        label_units = kws.get('ylabels')
-        ylabels = [label_units.get(l) for l in adds]
-        err_kws = {'alpha': 0.4}
-        g = sns.FacetGrid(data=data, row=row_var, hue=kws.get('hue'),
-                          height=2, aspect=3.5, sharey=False)
-        g = (g.map_dataframe(sns.lineplot, x='variable', y='value', ci='sd',
-                             err_style='band', hue=kws.get('hue'),
-                             dashes=False, alpha=1, palette=self.palette,
-                             err_kws=err_kws))
-        # grps = {'ctrl': [23.1, 26.8], 'dss': [23.1, 26.4]}
-        # palette_colors = ['orange yellow', 'aqua marine']
-        # groupcolors = sns.xkcd_palette(palette_colors)
-        for i, ax in enumerate(g.axes.flat):
-            ax.set_ylabel(ylabels[i])
-            # ybot, ytop = ax.get_ylim()
-            # y_vals = [ybot, ytop]
-            # ax.plot([19, 19], y_vals, color='k', zorder=0,
-            #         linestyle='dotted', alpha=0.4, linewidth=2.25)
-            # ax.plot([22, 22], y_vals, color='k', zorder=0,
-            #         linestyle='dotted', alpha=0.4, linewidth=2.25)
-            # ybot, ytop = ax.get_ylim()
-            # y_vals = [ybot, ytop]
-            # for i2, grp in enumerate(grps.keys()):
-            #     points = grps.get(grp)
-            #     for val in points:
-            #         x_vals = [val, val]
-            #         ax.plot(x_vals, y_vals, color=groupcolors[i2], zorder=0,
-            #                 linestyle='dotted', alpha=0.4, linewidth=2.25)
-
-            # Create centerline:
-            # ybot, ytop = ax.get_ylim()
-            # yaxis = [ytop, ytop]
-            # ax.plot((self.MPbin, self.MPbin), (ybot, ytop), 'k--', zorder=0)
-        g = g.add_legend()
-        plt.suptitle(self.title, y=0.995)
-        filepath = self.savepath.joinpath(self.title + self.ext)
-        fig = plt.gcf()
-        fig.savefig(str(filepath), format=self.format)
-        plt.close('all')
-
-    def jointPlot(palette, **kws):
-        """Creation of bivariable joint plots with density and distribution."""
-        sns.set(style="white")
-        axes = plt.gca()
-        data = kws.pop('data')
-        key = data.iat[(0, 0)]
-        sns.jointplot(data=data, x=data.loc[:, kws.get('X')],
-                      y=data.loc[:, kws.get('Y')], kind='kde',
-                      color=palette[key], ax=axes, space=0,
-                      joint_kws={'shade_lowest': False})
-
-    def catPlot(self, palette, fliers=True, **kws):
-        """Creation of statistical versus plots."""
-        data = kws.pop('data')
-        fkws = {'dropna': False}
-        xlabel, ylabel = kws.get('xlabel'), kws.get('ylabel')
-        data = data.replace(np.nan, 0)
-        flierprops = kws.pop('fliersize')
-        fliers = not Sett.observations
-        with warnings.catch_warnings():
-            warnings.simplefilter('ignore', category=RuntimeWarning)
-            g = sns.catplot(data=data, x=xlabel, y=ylabel, hue="Sample Group",
-                            kind="box", palette=palette, linewidth=0.15,
-                            height=kws.get('height'), aspect=kws.get('aspect'),
-                            facet_kws=fkws, showfliers=fliers, legend_out=True,
-                            **flierprops)
-            if Sett.observations:  # Create scatters of individual observations
-                g = sns.swarmplot(data=data, x=xlabel, y=ylabel, zorder=1,
-                                  hue="Sample Group", size=2.5, linewidth=0.05,
-                                  palette=palette)
-                g.get_legend().set_visible(False)
+    def get_facet(self, **kws):
+        g = sns.FacetGrid(self.data, row=kws.get('row'),
+                          col=kws.get('col'), hue=kws.get('hue'),
+                          sharex=kws.get('sharex'), sharey=kws.get('sharey'),
+                          gridspec_kws=kws.get('gridspec'),
+                          height=kws.get('height'), aspect=kws.get('aspect'),
+                          legend_out=True, dropna=False,
+                          palette=self.handle.palette)
         return g
 
-    def Heatmap(palette, **kws):
-        """Creation of heat maps."""
-        axes = plt.gca()
-        data = kws.pop('data')
-        sns.heatmap(data=data.iloc[:, :-2], cmap='coolwarm', robust=True,
-                    ax=axes)  #, vmax=240, vmin=0)
-        plt.yticks(rotation=45)
-        MPbin = kws.get('center')
-        axes.plot((MPbin, MPbin), (0, data.shape[0]), 'r--')
-        return axes
+    def labels(self, xlabel=None, ylabel=None, first=None):
+        for ax in self.g.axes.flat:
+            if xlabel not in (None, 'collect'):
+                ax.set_xlabel(xlabel)
+            if ylabel not in (None, 'collect'):
+                ax.set_ylabel(ylabel)
+            if first:
+                return
 
-    def total_plot(self, stats, order):
-        """Creation of statistical plots of variable totals."""
-        def __marker(value):
-            if value <= 0.001:
-                pStr = "***"
-            elif value <= 0.01:
-                pStr = "**"
-            elif value <= Sett.alpha:
-                if value <= 0.05:
-                    pStr = "*"
-                else:
-                    pStr = ""
-            else:
-                pStr = ""
-            return pStr
+    def plot_significance(self, ix, row, ax, yaxis, yheight, fill=Sett.fill,
+                          stars=Sett.stars):
+        # If both hypothesis rejections have same value, continue
+        if row[3] == row[6]:
+            return
+        xaxis = [ix-0.43, ix+0.43]
+        if row[3] is True:  # ctrl is greater
+            pStr, color = significance_marker(row[1], MakePlot.LScolors)
+        elif row[6] is True:  # ctrl is lesser
+            pStr, color = significance_marker(row[4], MakePlot.GRcolors)
+        if fill:
+            ax.fill_between(xaxis, yaxis, color=color, alpha=0.35, zorder=0)
+        if stars:
+            ax.annotate(pStr, (ix, yheight), fontsize=8, ha='center')
 
-        # Melt data to long form and drop missing observation points
-        plotData = pd.melt(self.data, id_vars=['Sample Group', 'Variable'],
-                           value_name='Value')
-        plotData = plotData.dropna(subset=['Value'])
-        # Make sure that data is in float format
-        plotData['Value'] = plotData['Value'].astype('float64')
-        # Assign variable indication the order of plotting
-        plotData['Ord'] = plotData.loc[:, 'Sample Group'].apply(order.index)
-        plotData.sort_values(by=['Ord', 'Variable'], axis=0, inplace=True)
-        g = sns.catplot('Sample Group', 'Value', data=plotData,
-                        col='Variable', palette=self.palette, kind='violin',
-                        sharey=False, saturation=0.5)
-        # Find group order number for control group for plotting significances
-        stats.sort_index(inplace=True)
-        ctrl_x = order.index(Sett.cntrlGroup)
+    def set_title(self, **kws):
+        self.g.fig.suptitle(self.title, weight='bold', y=kws.get('title_y'))
+
+    def stats(self, **kws):
+        stats = self.sec_data.statData
+        __, ytop = plt.ylim()
+        tytop = ytop*1.35
+        ax = plt.gca()
+        ax.set_ylim(top=tytop)
+        yaxis = [tytop, tytop]
+
+        # Create secondary axis for significance plotting
+        ax2 = plt.twinx()
+        lkws = {'alpha': 0.85}
+        xmin, xtop = stats.index.min(), stats.index.max()
+        ax2.plot((xmin, xtop), (0, 0), linestyle='dashed', color='grey',
+                 linewidth=0.85, **lkws)
+        # Find top of original y-axis and create a buffer for twin to
+        # create a prettier plot
+        botAdd = 2.75*-Sett.ylim
+        ax2.set_ylim(bottom=botAdd, top=Sett.ylim)
+        ax2.set_yticks(np.arange(0, Sett.ylim, 5))
+        ax2.set_yticklabels(np.arange(0, Sett.ylim, 5))
+        ax2.yaxis.set_label_coords(1.04, 0.85)
+
+        # Creation of -log2 P-value axis and line plot
+        if Sett.negLog2:
+            Sett.stars = False  # Force stars to be False when plotting neglog
+            Y = stats.iloc[:, 7]
+            X = Y.index.tolist()
+            # Find locations where the log line should be drawn
+            ind = Y[Y.notnull()].index
+            logvals = pd.Series(np.zeros(Y.shape[0]), index=Y.index)
+            with warnings.catch_warnings():
+                warnings.simplefilter('ignore', category=RuntimeWarning)
+                logvals.loc[ind] = np.log2(Y[ind].astype(np.float64))
+            # Create twin axis with -log2 P-values
+            ax2.plot(X, np.negative(logvals), color='dimgrey', linewidth=1.5,
+                     **lkws)
+            ax2.set_ylabel('P value\n(-log2)')
+        # Create significance stars and color fills
+        for index, row in stats.iterrows():
+            self.plot_significance(index, row, ax2, yaxis, yheight=0)
+        # Add info on sliding window to plot
+        if 'windowed' in kws:
+            comment = "Window: lead {}, trail {}".format(Sett.lead, Sett.trail)
+            plt.annotate(comment, (5, 5), xycoords='figure pixels')
+
+    def stats_total(self, **kws):
         # Loop through the plot axes
-        for axInd, ax in enumerate(g.axes.flat):
+        order = kws.get('x_order')
+        ctrl_x = order.index(Sett.cntrlGroup)
+        for ind, ax in enumerate(self.g.axes.flat):
             # Find rejected H0 for current axis
-            statRow = stats.iloc[axInd, :]
-            rejects = statRow.iloc[statRow.index.get_level_values(1).str
-                                   .contains('Reject')
-                                   ].where(statRow).dropna()
+            row = self.sec_data.iloc[ind, :]
+            rejects = row.iloc[row.index.get_level_values(1).str.contains(
+                'Reject')].where(row).dropna()
             rejectN = np.count_nonzero(rejects.to_numpy())
             ax.set_ylim(bottom=0)
             if rejectN > 0:  # If any rejected H0
@@ -491,7 +296,7 @@ class plotter:
                 tytop = ytop*1.3
                 ax.set_ylim(top=tytop)
                 # Find heights for significance lines
-                heights = np.linspace(ytop, ytop*1.2, rejectN)
+                heights = np.linspace(ytop, ytop*1.15, rejectN)
                 # Loop groups with rejected H0
                 for i, grp in enumerate(rejects.index.get_level_values(0)):
                     y = heights[i]  # Get height for the group's line
@@ -500,43 +305,545 @@ class plotter:
                     # Plot line
                     ax.hlines(y=y, xmin=line[0], xmax=line[1], color='dimgrey')
                     # Locate P-value and get significance stars
-                    Pvalue = statRow.loc[(grp, 'P Two-sided')]
-                    pStr = __marker(Pvalue)
+                    Pvalue = row.loc[(grp, 'P Two-sided')]
+                    pStr, _ = significance_marker(Pvalue, vert=True)
                     # Define plot location for stars and plot
                     ax.annotate(pStr, (line[0]+.5, y), ha='center')
-        plt.suptitle(self.title, weight='bold', y=1.02)
-        filepath = self.savepath.joinpath(self.title + self.ext)
-        g.savefig(str(filepath), format=self.format)
-        plt.close('all')
 
-    def clustPlot(self):
-        """Creation of sample-specific cluster position plots."""
-        # Drop all features without designated cluster
-        fData = self.data.dropna(subset=["ClusterID"])
-        # Select data to be plotted
-        plotData = fData.loc[:, ["Position X", "Position Y", "ClusterID"]]
-        # Create unique color for each cluster
-        IDs = pd.unique(plotData.loc[:, "ClusterID"])
-        colors = sns.color_palette("hls", len(IDs))
-        shuffle(colors)
-        palette = {}
-        for ind, ID in enumerate(IDs):
-            palette.update({ID: colors[ind]})
-        # Get non-clustered cells for background plotting
-        baseData = self.data[self.data["ClusterID"].isnull()]
-        # Initialization of figure
-        figure, ax = plt.subplots(figsize=(13, 4.75))
-        kws = dict(linewidth=0.1, edgecolor='dimgrey')
-        # Plot background
-        ax.scatter(baseData.loc[:, "Position X"],
-                   baseData.loc[:, "Position Y"], s=20, c='xkcd:tan')
-        # Plot clusters
-        sns.scatterplot(data=plotData, x="Position X", y="Position Y",
-                        hue="ClusterID", palette=palette, ax=ax, s=35,
-                        legend=False, **kws)
-        plt.title(self.title)
-        plt.axis('equal')
-        # Save figure
-        filepath = self.savepath.joinpath(self.title+self.ext)
-        figure.savefig(str(filepath), format=self.format)
+    def save_plot(self):
+        fig = plt.gcf()
+        fig.savefig(str(self.filepath), format=Sett.saveformat)
         plt.close()
+
+    def visible_labels(self, **kws):
+        for ax in self.g.axes.flat:
+            ax.yaxis.set_tick_params(which='both', labelleft=True)
+            ax.set_ylabel(visible=True)
+            ax.xaxis.set_tick_params(which='both', labelbottom=True)
+            ax.set_xlabel(visible=True)
+
+    def xticks(self):
+        """Set plot xticks & tick labels to be shown every 5 ticks."""
+        xticks = np.arange(0, self.handle.total_length, 5)
+        plt.setp(self.g.axes, xticks=xticks, xticklabels=xticks)
+
+
+class plotting:
+    """Make operations for different plots."""
+    handle_kws = {'IDs': ['Channel', 'Sample Group'],
+                  'melt': {'id_vars': ['Sample Group', 'Channel'],
+                           'var_name': 'Linear Position',
+                           'value_name': 'Value'},
+                  'array_index': 'Sample Group',
+                  'drop_grouper': 'Sample Group'}
+
+    def __init__(self, samplegroups, **kws):
+        self.kws = plotting.handle_kws.copy()
+        self.kws.update(kws)
+        self.sgroups = samplegroups
+
+    def add_bivariate(self):
+        data_vars = ['Channel', 'Sample Group', 'Sample', 'Type']
+        m_kws = {'IDs': data_vars, 'ylabel': 'collect',
+                 'xlabel': 'collect', 'title_y': 1,
+                 'melt': {'id_vars': data_vars,
+                          'value_name': 'Value',
+                          'var_name': 'Linear Position'},
+                 'plot_kws': {'col': 'Type_X', 'row': 'Type_Y'},
+                 'drop_grouper': ['Sample Group', 'Channel', 'Type']}
+        new_kws = merge_kws(self.kws, m_kws)
+        # If required data hasn't been yet collected
+        savepath = self.sgroups.paths.plotdir.joinpath('Versus')
+        savepath.mkdir(exist_ok=True)
+        add_paths = select(self.sgroups._addData)
+
+        # Get Add data
+        all_add_data = pd.DataFrame()
+        for channel in Sett.vs_channels:
+            paths = [p for p in add_paths if channel == str(p.name)
+                     .split('_')[1]]
+            if not paths:
+                print("-> No data found for {}".format(channel))
+                continue
+            handle = DataHandler(self.sgroups, paths, savepath)
+            add_data = handle.get_data('drop_outlier', **new_kws)
+            all_add_data = pd.concat([all_add_data, add_data])
+        grouped = all_add_data.groupby('Channel')
+
+        # Make plot:
+        combined_grps = combinations(grouped.groups, 2)
+        against_self = iter(zip(grouped.groups, grouped.groups))
+        for grps in chain(combined_grps, against_self):
+            grp, grp2 = grps
+            data = grouped.get_group(grp)
+            data2 = grouped.get_group(grp2)
+            print("  {} vs. {}  ...".format(grp, grp2))
+            f_tit = 'Versus_Add {} Data - Add {} Data Matrix'.format(grp, grp2)
+            # Take only data types present in both channels:
+            diff = set(data.Type.unique()).symmetric_difference(set(
+                data2.Type.unique()))
+            p_d = data[~data.Type.isin(diff)].index
+            p_d2 = data2[~data2.Type.isin(diff)].index
+            # Define identifier columns that are in plottable format
+            data = data.assign(Type_Y=data['Channel'] + '-' + data['Type'])
+            data2 = data2.assign(Type_X=data2['Channel'] + '-' + data2['Type'])
+            # Make plot
+            plotter = MakePlot(data.loc[p_d, :], handle, f_tit,
+                               sec_data=data2.loc[p_d2, :])
+            plotter(pfunc.bivariate_kde, 'title', 'legend', 'no_grid',
+                    'labels', **new_kws)
+
+    def add_data(self):
+        # Collect data:
+        data_vars = ['Channel', 'Sample Group', 'Type']
+        m_kws = {'IDs': data_vars, 'row': 'Type', 'col': 'Sample Group',
+                 'melt': {'id_vars': data_vars,
+                          'value_name': 'Value',
+                          'var_name': 'Linear Position'},
+                 'ylabel': 'collect', 'sharey': 'row'}
+        new_kws = merge_kws(self.kws, m_kws)
+        handle = DataHandler(self.sgroups, self.sgroups._addData)
+        all_data = handle.get_data('drop_outlier', **new_kws)
+        grouped_data = all_data.groupby('Channel')
+
+        # Make plot:
+        for grp, data in grouped_data:
+            plotter = MakePlot(data, handle,
+                               'Additional Data - {}'.format(grp))
+            plotter(pfunc.lines, 'centerline', 'ticks', 'title', 'legend',
+                    'labels', **new_kws)
+
+    def chan_bivariate(self):
+        savepath = self.sgroups.paths.plotdir.joinpath('Versus')
+        savepath.mkdir(exist_ok=True)
+        paths1 = select(self.sgroups._addData)
+        paths2 = select(self.sgroups._chanPaths, adds=False)
+
+        # Get Add data
+        all_add_data = pd.DataFrame()
+        for channel in Sett.vs_channels:
+            paths = [p for p in paths1 if channel == str(p.name).split('_')[1]]
+            if not paths:
+                print("-> No data found for {}".format(channel))
+                continue
+            handle = DataHandler(self.sgroups, paths, savepath)
+            data_vars = ['Channel', 'Sample Group', 'Sample', 'Type']
+            m_kws = {'IDs': data_vars, 'ylabel': 'collect',
+                     'xlabel': 'collect', 'title_y': 1,
+                     'melt': {'id_vars': data_vars,
+                              'var_name': 'Linear Position',
+                              'value_name': 'Value'},
+                     'plot_kws': {'col': 'Channel', 'row': 'Type'},
+                     'drop_grouper': ['Channel', 'Sample Group', 'Type']}
+            new_kws = merge_kws(self.kws, m_kws)
+            add_data = handle.get_data('drop_outlier', **new_kws)
+            all_add_data = pd.concat([all_add_data, add_data])
+
+        # Get Channel data
+        data_vars = ['Channel', 'Sample Group', 'Sample']
+        new_kws.update({'IDs': data_vars,
+                        'drop_grouper': ['Channel', 'Sample Group']})
+        new_kws['melt'].update({'id_vars': data_vars})
+        ch_handle = DataHandler(self.sgroups, paths2)
+        all_chan_data = ch_handle.get_data('drop_outlier', **new_kws)
+
+        # Make plot:
+        grouped = all_add_data.groupby('Channel')
+        for grp, data in grouped:
+            print("  {}  ...".format(grp))
+            f_title = 'Versus_Channels - Add {} Data Matrix'.format(grp)
+            plotter = MakePlot(data, handle, f_title, sec_data=all_chan_data)
+            plotter(pfunc.bivariate_kde, 'title', 'legend', 'no_grid',
+                    'labels', **new_kws)
+
+    def channels(self):
+        new_kws = merge_kws(self.kws, {'sharey': 'row'})
+
+        # Collect data:
+        handle = DataHandler(self.sgroups, self.sgroups._chanPaths)
+        all_data = handle.get_data('drop_outlier', **new_kws)
+
+        # Make plot:
+        plotter = MakePlot(all_data, handle, 'Channels - All')
+        plotter(pfunc.lines, 'centerline', 'ticks', 'title', 'legend',
+                'labels', **new_kws)
+
+    def channel_matrix(self):
+        # Collect data:
+        paths = self.sgroups.paths.datadir.glob('ChanAvg_*')
+        handle = DataHandler(self.sgroups, paths)
+        m_kws = {'id_sep': 1, 'IDs': ['Sample Group'], 'kind': 'reg',
+                 'diag_kind': 'kde', 'title_y': 1,
+                 'xlabel': 'Feature Count',
+                 'melt': {'id_vars': ['Sample Group'],
+                          'var_name': 'Linear Position',
+                          'value_name': 'Value'},
+                 'merge_on': ['Sample Group', 'Linear Position']}
+        new_kws = merge_kws(self.kws, m_kws)
+        all_data = handle.get_data('path_id', 'merge', **new_kws)
+
+        # Make plot:
+        plotter = MakePlot(all_data, handle, 'Channels - Matrix')
+        plotter(pfunc.channel_matrix, 'title', 'legend', 'no_grid', **new_kws)
+
+    def clusters(self):
+        # Find cluster channels from existing data
+        cl_chans = [str(p.stem).split('-')[1] for p in
+                    self.sgroups.paths.datadir.glob('Clusters-*.csv')]
+        if not cl_chans:
+            msg = 'No cluster count files found (Clusters_*)'
+            print('WARNING: {}'.format(msg))
+            lg.logprint(LAM_logger, msg, 'w')
+            return
+
+        # Create directory for cluster plots
+        savepath = self.sgroups.paths.plotdir.joinpath('Clusters')
+        savepath.mkdir(exist_ok=True)
+
+        # SAMPLE-SPECIFIC POSITION PLOTS:
+        # Find all cluster data files for each sample
+        chan_paths = [c for p in self.sgroups._samplePaths for c in
+                      p.glob('*.csv') if c.stem in cl_chans]
+        cols = ['Position X', 'Position Y', 'ClusterID']
+        kws = {'ylabel': 'Y', 'xlabel': 'X', 'height': 5}
+        new_kws = merge_kws(self.kws, kws)
+        # Find all channel paths relevant to cluster channels
+        for sample in store.samples:
+            smpl_paths = [p for p in chan_paths if p.parent.name == sample]
+            handle = DataHandler(self.sgroups, smpl_paths, savepath)
+            all_data = handle.get_sample_data(cols)
+            all_data.index = pd.RangeIndex(stop=all_data.shape[0])
+
+            f_title = "Positions - {}".format(sample)
+            sub_ind = all_data.loc[all_data.ClusterID.notnull()].index
+            plotter = MakePlot(all_data.loc[sub_ind, :], handle, f_title)
+            b_data = all_data.loc[all_data.index.difference(sub_ind), :]
+            new_kws.update({'b_data': b_data})
+            plotter(pfunc.cluster_positions, 'title', 'labels', **new_kws)
+
+        # CLUSTER HEATMAPS
+        paths = list(self.sgroups.paths.datadir.glob('ClNorm_*.csv'))
+        if not paths:  # Only if cluster data is found
+            msg = 'No normalized cluster count files found (ClNorm_*)'
+            print('WARNING: {}'.format(msg))
+            lg.logprint(LAM_logger, msg, 'w')
+            return
+
+        new_kws = remove_from_kws(self.kws, 'melt')
+        new_kws.update({'IDs': ['Channel', 'Sample Group', 'Sample'],
+                       'col': None, 'hue': None, 'xlabel': 'Linear Position'})
+
+        # Get and plot heatmap with samples
+        handle = DataHandler(self.sgroups, paths, savepath)
+        all_data = handle.get_data(array=False, **new_kws)
+
+        all_data.index = all_data.loc[:, 'Sample']
+        # Drop unneeded identifiers for 'samples' heatmap
+        smpl_data = all_data.drop(['Sample Group', 'Sample'], axis=1)
+        plotter = MakePlot(smpl_data, handle, 'Cluster Heatmaps - Samples')
+        plotter(pfunc.heatmap, 'centerline', 'ticks', 'title', 'labels',
+                **new_kws)
+
+        # Plot sample group averages
+        grouped = all_data.groupby(['Channel', 'Sample Group'])
+        # Construct a dataframe with averages:
+        avg_data = pd.DataFrame()
+        for grp, data in grouped:
+            temp = pd.Series(data.mean(), name=grp[1])
+            temp['Channel'] = grp[0]
+            avg_data = avg_data.append(temp)
+        # Create plot
+        plotter = MakePlot(avg_data, handle, 'Cluster Heatmaps - Groups')
+        plotter(pfunc.heatmap, 'centerline', 'ticks', 'title', 'labels',
+                **new_kws)
+
+        # CLUSTER LINEPLOT
+        m_kws = {'ylabel': 'Clustered cells',
+                 'melt': {'id_vars': ['Channel', 'Sample Group'],
+                          'var_name': 'Linear Position',
+                          'value_name': 'Value'}}
+        m_data = all_data.drop('Sample', axis=1)
+        m_data = m_data.melt(id_vars=['Channel', 'Sample Group'],
+                             var_name='Linear Position',
+                             value_name='Value')
+        plotter = MakePlot(m_data, handle, 'Cluster Lineplots')
+        plotter(pfunc.lines, 'centerline', 'ticks', 'title', 'legend',
+                'labels', **m_kws)
+
+    def distributions(self):
+        # Channels:
+        m_kws = {'IDs': ['Sample Group', 'Channel'], 'title_y': 0.95,
+                 'ylabel': 'Probability density', 'xlabel': 'Feature Count',
+                 'melt': {'id_vars': ['Sample Group', 'Channel'],
+                          'var_name': 'Linear Position',
+                          'value_name': 'Value'},
+                 'row': 'Channel', 'col': None, 'aspect': 1.75,
+                 'drop_grouper': ['Sample Group', 'Channel']}
+        print('  Channels  ...')
+        new_kws = merge_kws(self.kws, m_kws)
+        # Collect data:
+        handle = DataHandler(self.sgroups, self.sgroups._chanPaths)
+        all_data = handle.get_data('drop_outlier', **new_kws)
+        # Make plot:
+        plotter = MakePlot(all_data, handle, 'Distributions - Channels')
+        plotter(pfunc.distribution, 'title', 'legend', 'labels', **new_kws)
+
+        # Additional data
+        print("  Additional Data  ...")
+        # id_vars = ['Sample Group', 'Channel', 'Type']
+        new_kws.update({'drop_grouper': ['Sample Group', 'Type'],
+                        'row': 'Type', 'col': None,
+                        'melt': {'id_vars': ['Sample Group', 'Channel',
+                                             'DistBin'],
+                                 'var_name': 'Type', 'value_name': 'Value'},
+                        'gridspec': {'left': 0.15, 'right': 0.8,
+                                     'hspace': 0.45}})
+        paths = [p for s in self.sgroups._samplePaths for p in s.glob('*.csv')
+                 if p.stem not in ['Vector', 'MPs']]
+        # Collect and plot each channel separately:
+        for channel in store.channels:
+            print("    {}  ...".format(channel))
+            ch_paths = [p for p in paths if p.stem == channel]
+            handle = DataHandler(self.sgroups, ch_paths)
+            all_data = handle.get_sample_data(Sett.AddData.keys(),
+                                              'drop_outlier', **new_kws)
+            # Make plot:
+            p_title = 'Distributions - Additional {} Data'.format(channel)
+            plotter = MakePlot(all_data, handle, p_title)
+            plotter(pfunc.distribution, 'title', 'legend', 'labels', **new_kws)
+
+    def heatmaps(self):
+        # Get and plot _sample group averages_
+        HMpaths = self.sgroups.paths.datadir.glob("ChanAvg_*")
+        handle = DataHandler(self.sgroups, HMpaths)
+        new_kws = remove_from_kws(self.kws, 'melt')
+        new_kws.update({'IDs': ['Channel', 'Sample Group']})
+        all_data = handle.get_data(array='Sample Group', **new_kws)
+        all_data.index = all_data['Sample Group'].tolist()
+        all_data.drop('Sample Group', axis=1, inplace=True)
+        plotter = MakePlot(all_data, handle, 'Heatmaps - Groups')
+        p_kws = {'col': None, 'hue': None}
+        plotter(pfunc.heatmap, 'centerline', 'ticks', 'title', **p_kws)
+
+        # Get and plot heatmap with _samples_
+        HMpaths = self.sgroups.paths.datadir.glob("Norm_*")
+        handle = DataHandler(self.sgroups, HMpaths)
+        new_kws.update({'IDs': ['Channel', 'Sample']})
+        all_data = handle.get_data(array=False, **new_kws)
+        all_data.index = all_data['Sample'].tolist()
+        all_data.drop('Sample', axis=1, inplace=True)
+        plotter = MakePlot(all_data, handle, 'Heatmaps - Samples')
+        p_kws.update({'Sample_plot': True})
+        plotter(pfunc.heatmap, 'centerline', 'ticks', 'title', **p_kws)
+
+    def stat_totals(self, total_stats, path):
+        plot_data = total_stats.data
+        ctrlN = int(len(total_stats.groups) / 2)
+        order = total_stats.tstGroups
+        order.insert(ctrlN, Sett.cntrlGroup)
+
+        # Melt data to long form and drop missing observation points
+        plot_data = pd.melt(plot_data, id_vars=['Sample Group', 'Variable'],
+                            var_name='Linear Position',
+                            value_name='Value')
+        plot_data = plot_data.dropna(subset=['Value'])
+        # Make sure that data is in float format
+        plot_data['Value'] = plot_data['Value'].astype('float64')
+        # Assign variable indication the order of plotting
+        plot_data['Ord'] = plot_data.loc[:, 'Sample Group'].apply(order.index)
+        plot_data.sort_values(by=['Ord', 'Variable'], axis=0, inplace=True)
+        # Find group order number for control group for plotting significances
+        # total_stats.statData.sort_index(inplace=True)
+        # Create plot:
+        savepath = total_stats.plotDir
+        handle = DataHandler(self.sgroups, path, savepath)
+        plotter = MakePlot(plot_data, handle, total_stats.filename,
+                           sec_data=total_stats.statData)
+        p_kws = {'row': None, 'col': 'Variable', 'x_order': order,
+                 'height': 3, 'aspect': 1, 'title_y': 1,
+                 'ylabel': 'collect', 'xlabel': 'Sample Group',
+                 'gridspec': {'wspace': 0.25}}
+        plotter(pfunc.violin, 'title', 'total_stats', 'labels', 'legend',
+                **p_kws)
+
+    def stat_versus(self, Stats, path):  # !!!
+        """Handle statistical data for plots."""
+        # Restructure data to be plottable:
+        ctrlData = Stats.ctrlData
+        tstData = Stats.tstData
+        if Sett.Drop_Outliers:  # Drop outliers
+            ctrlData = drop_outliers(ctrlData.T, raw=True)
+            tstData = drop_outliers(tstData.T, raw=True)
+        # Add identifier
+        ctrlData.loc[:, 'Sample Group'] = Stats.ctrlGroup
+        tstData.loc[:, 'Sample Group'] = Stats.tstGroup
+        # Combine data in to one frame and melt it to long format
+        plot_data = pd.concat([ctrlData, tstData], ignore_index=True)
+        plot_data = plot_data.melt(id_vars=['Sample Group'],
+                                   var_name='Linear Position',
+                                   value_name='Value')
+        # Initialize plotting:
+        savepath = Stats.plotDir
+        handle = DataHandler(self.sgroups, path, savepath)
+        # Give title
+        data_name = str(path.stem).split('_')[1:]
+        titlep = '-'.join(data_name)
+        f_title = "{} = {}".format(Stats.title, titlep)
+        # Plot variable
+        plotter = MakePlot(plot_data, handle, f_title, sec_data=Stats)
+        ylabel = get_unit(data_name[-1])
+        p_kws = {'col': None, 'row': None, 'ylabel': ylabel,
+                 'label_first_only': True,
+                 'melt': {'id_vars': ['Sample Group'],
+                          'var_name': 'Linear Position',
+                          'value_name': 'Value'},
+                 'gridspec': {'bottom': 0.2}}
+        if Sett.windowed:
+            p_kws.update({'windowed': True})
+
+        plotter(pfunc.lines, 'centerline', 'ticks', 'title', 'stats', 'labels',
+                'legend', **p_kws)
+
+    def stat_total(self, samplegroups, Stats):
+        pass
+
+
+def select(paths, adds=True):
+    """Select paths of defined types of data for versus plot."""
+    # Find target names from settings
+    add_targets = Sett.vs_adds
+    ch_targets = Sett.vs_channels
+    # If selecting additional data:
+    if adds:
+        ret_paths = [p for p in paths if
+                     str(p.stem).split('_')[1] in ch_targets and
+                     str(p.stem).split('_')[2].split('-')[0] in add_targets]
+        return ret_paths
+    # If selecting channel counts:
+    ret_paths = [p for p in paths if str(p.stem).split('_')[1] in ch_targets]
+    return ret_paths
+
+
+def drop_outliers(all_data, melted=False, raw=False, **kws):
+    def drop(data, col):
+        """Drop outliers from a dataframe."""
+        # Get mean and std of input data
+        if raw:
+            values = data
+        else:
+            values = data.loc[:, col].sort_values(ascending=False)
+        with warnings.catch_warnings():  # Ignore empty bin warnings
+            warnings.simplefilter('ignore', category=RuntimeWarning)
+            mean = np.nanmean(values.astype('float'))
+            std = np.nanstd(values.astype('float'))
+        drop_val = Sett.dropSTD * std
+        if raw:  # If data is not melted, replace outliers with NaN
+            data.where(np.abs(values - mean) <= drop_val, other=np.nan,
+                       inplace=True)
+        else:  # If data is melted and sorted, find indexes until val < drop
+            idx = []
+            for ind, val in values.iteritems():
+                if np.abs(val - mean) < drop_val:
+                    break
+                idx.append(ind)
+            # Select data that fills criteria for validity
+            data = data.loc[(data.index.difference(idx)), :]
+        return data
+
+    if raw:
+        all_data = drop(all_data, col=None)
+        return all_data
+    # Handle data for dropping
+    if 'drop_grouper' in kws.keys():
+        grouper = kws.get('drop_grouper')
+    else:
+        grouper = 'Sample Group'
+    grp_data = all_data.groupby(by=grouper)
+    if melted:
+        names = kws['melt'].get('value_name')
+    else:
+        names = all_data.loc[:, all_data.columns != grouper].columns
+    all_data = grp_data.apply(lambda grp: drop(grp, col=names))
+    if isinstance(all_data.index, pd.MultiIndex):
+        all_data = all_data.droplevel(grouper)
+    return all_data
+
+
+def identifiers(data, path, ids):
+    if 'Channel' in ids:
+        data.loc['Channel', :] = path.stem.split('_')[1]
+    if 'Sample Group' in ids:
+        data.loc['Sample Group', :] = [str(c).split('_')[0] for c in
+                                       data.columns]
+    if 'Sample' in ids:
+        data.loc['Sample', :] = data.columns
+    if 'Type' in ids:
+        name = str(path.stem).split('_')[2:]
+        data.loc['Type', :] = name
+    return data
+
+
+def get_unit(string):
+    # If string is a LAM created value name:
+    if string in ("Distance Means", "Width"):  # !!!
+        return "Units (coord system)"
+    sub_str = string.split('-')
+    if len(sub_str) == 3:
+        chan, key, key_c = sub_str
+    elif len(sub_str) == 2:
+        key, key_c = sub_str
+    else:
+        key = sub_str[0]
+    # If not user defined value:
+    if key not in Sett.AddData.keys():
+        if key in store.channels:
+            return '{} Count'.format(string)
+        return 'Value'
+    # Otherwise, build label from the sub-units
+    label = Sett.AddData.get(key)[1]
+    if 'chan' in locals():
+        label = '{}, '.format(chan) + label
+    if 'key_c' in locals():
+        if Sett.replaceID and key_c in Sett.channelID.keys():
+            key_c = Sett.channelID.get(key_c)
+        label = label + '-{}'.format(key_c)
+    return label
+
+
+def merge_kws(kws1, kws2):
+    new_kws = kws1.copy()
+    if kws2 is not None:
+        new_kws.update(kws2)
+    return new_kws
+
+
+def remove_from_kws(kws, *args):
+    new_kws = kws.copy()
+    for key in args:
+        if isinstance(key, str):
+            del new_kws[key]
+    return new_kws
+
+
+def significance_marker(value, colors=MakePlot.GRcolors, vert=False):
+    """Designation of number of significance stars."""
+    if value <= 0.001:
+        pStr = ["*", "*", "*"]
+        color = colors[3]
+    elif value <= 0.01:
+        pStr = ["*", "*"]
+        color = colors[2]
+    elif value <= Sett.alpha:
+        if value <= 0.05:
+            pStr = ["*"]
+        else:
+            pStr = [""]
+        color = colors[1]
+    else:
+        pStr = [" "]
+        color = colors[0]
+    if vert:
+        ret_str = ' '.join(pStr)
+    else:
+        ret_str = '\n'.join(pStr)
+    return ret_str, color
