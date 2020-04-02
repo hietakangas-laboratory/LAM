@@ -276,12 +276,11 @@ def test_vector_ext(dir_path):
                 if ans in ("y", "Y"):
                     flag = 0
                     return
-                elif ans in ("n", "N"):
+                if ans in ("n", "N"):
                     flag = 0
                     print('Analysis terminated')
                     raise KeyboardInterrupt
-                else:
-                    print('Command not understood.')
+                print('Command not understood.')
 
 
 def drop_outliers(all_data, melted=False, raw=False, **kws):

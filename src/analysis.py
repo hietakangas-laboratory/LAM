@@ -67,7 +67,6 @@ class Samplegroups:
                 Samplegroups._grpPalette.update({grp: groupcolors[i]})
             lg.logprint(LAM_logger, 'Sample groups established.', 'i')
 
-    @property
     def create_plots(self):
         """Handle data for the creation of most plots."""
 

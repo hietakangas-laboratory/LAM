@@ -117,26 +117,26 @@ def main():
     system_paths.save_AnalysisInfo(store.samples, store.samplegroups,
                                    store.channels)
     # After samples have been counted and normalized
-    SampleGroups = analysis.Samplegroups(system_paths)
+    sample_groups = analysis.Samplegroups(system_paths)
     # Finding of nearest cells and distances
     if Sett.Find_Distances and Sett.process_dists:
-        SampleGroups.Get_DistanceMean()
+        sample_groups.Get_DistanceMean()
     # Finding clustered cells
     if Sett.Find_Clusters and Sett.process_dists:
-        SampleGroups.Get_Clusters()
+        sample_groups.Get_Clusters()
     # Computing total values from each sample's each bin
     if (Sett.statistics and Sett.stat_total) or Sett.process_counts:
-        SampleGroups.Get_Totals()
+        sample_groups.Get_Totals()
     # Calculation of MWW-statistics for cell counts and other data
     if Sett.statistics:
         analysis.test_control()
-        SampleGroups.Get_Statistics()
+        sample_groups.Get_Statistics()
     # Creation of plots from various data (excluding statistical plots)
     if Sett.Create_Plots:
-        SampleGroups.create_plots
+        sample_groups.create_plots()
 
 
-def MAIN_catch_exit(LAM_logger=None):
+def main_catch_exit(LAM_logger=None):
     """Run main() while catching exceptions for logging."""
     if LAM_logger is None:  # If no logger given, get one
         import logger as lg
@@ -159,6 +159,7 @@ def MAIN_catch_exit(LAM_logger=None):
         msg = 'STOPPED: No vectors found for samples.'
         print(msg)
         lg.logprint(LAM_logger, msg, 'c')
+        lg.log_Shutdown()
 
 
 if __name__ == '__main__':
@@ -172,5 +173,5 @@ if __name__ == '__main__':
         import logger
         LOG = logger.setup_logger(__name__)
         logger.print_settings(LOG)  # print settings of analysis to log
-        MAIN_catch_exit(LOG)
+        main_catch_exit(LOG)
         logger.Close()

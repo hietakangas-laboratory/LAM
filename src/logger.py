@@ -112,7 +112,7 @@ def logprint(self, msg="Missing", logtype='e'):
         self.error(msg)
 
 
-def print_settings(self):
+def print_settings():
     """Write settings into the log file."""
     from settings import settings as Sett
     with open(logFile, 'w') as file:  # Write into the logfile

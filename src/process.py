@@ -137,7 +137,6 @@ class get_sample:
         pfunc.vector_plots(self.sampledir, self.name, vector, X, Y,
                            bin_array, skeleton)
 
-
     def SkeletonVector(self, X, Y, resize, BDiter, SigmaGauss):
         """Create vector by skeletonization of image-transformed positions."""
 
@@ -166,10 +165,10 @@ class get_sample:
                               index=pd.RangeIndex(BA.shape[0]))
             # BINARY DILATION
             try:
+                struct = mp.generate_binary_structure(2, 2)
                 for _ in range(BDiter):
                     BA = mp.binary_dilation(BA, iterations=BDiter,
-                                            structure=
-                                            mp.generate_binary_structure(2, 2))
+                                            structure=struct)
             except TypeError:
                 msg = 'BDiter in settings has to be an integer.'
                 lg.logprint(LAM_logger, msg, 'e')
@@ -213,8 +212,6 @@ class get_sample:
                         segm[ind, round(miny):round(maxy)] = 1
             return segm
 
-
-
         def _score_nearest():
             # DataFrame for storing relevant info on pixel coordinates
             distances = pd.DataFrame(np.zeros((nearest.size, 6)),
@@ -231,7 +228,7 @@ class get_sample:
                 dist = testP.distance(point3)  # distance to a testpoint
                 distOg = point.distance(point3)  # dist to current coord
                 penalty = distOg + dist + abs(rads * 5)
-                distances.loc[ind, :] = [rads, dist, distOg, penalty, x,y]
+                distances.loc[ind, :] = [rads, dist, distOg, penalty, x, y]
                 # print(distances.loc[ind, :])
             return distances
 
@@ -246,7 +243,7 @@ class get_sample:
         coordDF = pd.DataFrame(skel_values, columns=['Y', 'X'])
 
         # BEGIN CREATION OF VECTOR FROM SKELETON COORDS
-        finder = Sett.find_dist * resize # Distance for detection of nearby XY
+        finder = Sett.find_dist * resize  # Distance for detection of nearby XY
         line = []  # For storing vector
         # Start from smallest x-coords
         start = coordDF.nsmallest(5, 'X').idxmin()

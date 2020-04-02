@@ -12,7 +12,7 @@ import tkinter as tk
 # Other packages
 import pathlib as pl
 # LAM modules
-from run import MAIN_catch_exit
+from run import main_catch_exit
 from settings import settings as Sett
 from tkinter import filedialog
 
@@ -644,15 +644,15 @@ class base_GUI(tk.Toplevel):
             lg.Update()
             LAM_logger = logging.getLogger(__name__)
         else:
-            LAM_logger = lg.setup_logger(__name__)
-        lg.print_settings(LAM_logger)
+            LAM_logger = lg.setup_logger(__name__, new=True)
+        lg.print_settings()
         lg.logprint(LAM_logger, 'Run parameters set', 'i')
         lg.logprint(LAM_logger, 'Begin run', 'i')
         if 'flag' in locals():
             msg = "'Use Target' accepts only one channel. Using '{}'".format(
                                                                     ChStr[0])
             lg.logprint(LAM_logger, msg, 'w')
-        MAIN_catch_exit()
+        main_catch_exit()
 
     def redirect_stdout(self):
         """Change stdout direction based on r_stdout check box."""
