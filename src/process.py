@@ -61,7 +61,8 @@ class get_sample:
         self.vectorLength = None
         if process is False and project is True:
             for channel in self.channels:  # Store all found channel names
-                if channel.lower() not in [c.lower() for c in store.channels]:
+                if (channel.lower() not in [c.lower() for c in store.channels]
+                        and channel.lower() != Sett.MPname.lower()):
                     store.channels.append(channel)
             self.find_sample_vector(PATHS.datadir)
 
@@ -527,7 +528,8 @@ class get_channel:
         try:
             data = system.read_data(str(path))
             channel = self.name
-            if channel.lower() not in [c.lower() for c in store.channels]:
+            if (channel.lower() not in [c.lower() for c in store.channels] and
+                    channel.lower() != Sett.MPname.lower()):
                 store.channels.append(self.name)
             return data
         except ValueError:
@@ -720,7 +722,7 @@ def find_existing(PATHS):
         MPs.loc[0, smpl] = MP
         # FIND CHANNEL COUNTS
         for path in [p for p in smplpath.iterdir() if p.suffix == '.csv' and
-                     p.stem not in ['Vector', 'MPs']]:
+                     p.stem not in ['Vector', 'MPs', Sett.MPname]]:
             data = pd.read_csv(path)
             try:
                 counts = np.bincount(data['DistBin'], minlength=Sett.projBins)
@@ -826,8 +828,8 @@ def Project(PATHS):
         # Find anchoring point of the sample
         sample.MP = sample.get_MPs(Sett.MPname, Sett.useMP, PATHS.datadir)
         # Collection of data for each channel of the sample
-        for path2 in [p for p in sample.channelpaths if Sett.MPname
-                      != str(p).split('_')[-2]]:
+        for path2 in [p for p in sample.channelpaths if Sett.MPname.lower()
+                      != str(p).split('_')[-2].lower()]:
             channel = get_channel(path2, sample, Sett.AddData, PATHS.datadir)
             # If no variance in found additional data, it is discarded.
             if channel.datafail:

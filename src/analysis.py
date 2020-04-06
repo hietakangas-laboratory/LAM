@@ -13,6 +13,7 @@ from itertools import product, chain
 from tkinter import simpledialog as sd
 # Other packages
 import numpy as np
+import pandas as pd
 import pathlib as pl
 import seaborn as sns
 from scipy.spatial import distance
@@ -23,7 +24,6 @@ from settings import store, settings as Sett
 from statsMWW import statistics, Total_Stats
 from plot import plotting
 import logger as lg
-import pandas as pd
 try:
     LAM_logger = lg.get_logger(__name__)
 except AttributeError:
@@ -84,7 +84,7 @@ class Samplegroups:
         print("\n---Creating plots---")
         # Update addData variable to contain newly created average-files
         self._addData = list(self.paths.datadir.glob('Avg_*'))
-        
+
         if Sett.plot_width:
             lg.logprint(LAM_logger, 'Plotting widths', 'i')
             print('Plotting widths  ...')
@@ -303,7 +303,8 @@ class Samplegroups:
                           append=False, w_index=True)
 
         # Find totals of additional data
-        for channel in [c for c in store.channels if c not in ['MP', 'R45']]:
+        for channel in [c for c in store.channels if c not in ['MP', 'R45',
+                                                               Sett.MPname]]:
             All = pd.DataFrame()
             for path in datadir.glob('Avg_{}_*'.format(channel)):
                 ChData, __, _ = self.read_channel(path, self._groups,
@@ -367,7 +368,7 @@ class Sample(Group):
         self.name = str(path.stem)
         self.path = path
         self.channelPaths = [p for p in path.iterdir() if p.suffix == '.csv' if
-                             p.stem not in ['vector', 'MPs']]
+                             p.stem not in ['vector', 'MPs', Sett.MPname]]
         # Sample's group-specific color, and it's anchoring bin.
         self.color = grp.color
         self.MP = grp.MPs.loc[0, self.name]
@@ -413,7 +414,7 @@ class Sample(Group):
             Data = Data.loc[:, ~Data.columns.str.contains('ClusterID')]
             Data.name = path.stem  # The name of the clustering channel
             # Find clusters
-            self.find_distances(Data, volIncl=Sett.Cl_Vol_inclusion,
+            self.find_distances(Data, volIncl=Sett.Cl_inclusion,
                                 compare=Sett.Cl_incl_type, clusters=True,
                                 **kws)
 
@@ -632,7 +633,7 @@ class Sample(Group):
             Data = Data.loc[:, ~Data.columns.str.startswith('Nearest_')]
             # Find distances
             Data.name = path.stem
-            self.find_distances(Data, volIncl=Sett.Vol_inclusion,
+            self.find_distances(Data, volIncl=Sett.inclusion,
                                 compare=Sett.incl_type, **kws)
 
 
@@ -653,21 +654,23 @@ def DropOutlier(Data):
 
 
 def subset_data(Data, compare, volIncl):
-    """Get indexes of cells based on volume."""
+    """Get indexes of cells based on values in a column."""
     if not isinstance(Data, pd.DataFrame):
         lg.logprint(LAM_logger, 'Wrong data type for subset_data()', 'e')
         C = 'Wrong datatype for find_distance, Has to be pandas DataFrame.'
         print(C)
         return None
-    ErrorM = "Volume not found for {}".format(Data.name)
+    ErrorM = "Column {} not found for {}".format(Sett.incl_col, Data.name)
+    match_str = re.compile(Sett.incl_col, re.I)
+    cols = Data.columns.str.match(match_str)
     if compare.lower() == 'greater':
         try:  # Get only cells that are of greater volume
-            subInd = Data[(Data['Volume'] >= volIncl)].index
+            subInd = Data.loc[(Data.loc[:, cols].values >= volIncl), :].index
         except KeyError:
             print(ErrorM)
     else:
         try:  # Get only cells that are of lesser volume
-            subInd = Data[(Data['Volume'] <= volIncl)].index
+            subInd = Data.loc[(Data.loc[:, cols].values <= volIncl), :].index
         except KeyError:
             print(ErrorM)
     return subInd

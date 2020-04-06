@@ -330,9 +330,9 @@ class base_GUI(tk.Toplevel):
                                 textvariable=setClMax, bd=2, relief='sunken')
         self.ClMaxIn.grid(row=6, column=2, columnspan=2)
 
-        self.ClSizlbl = tk.Label(self.distf, text='Size incl.:')
+        self.ClSizlbl = tk.Label(self.distf, text='Filter value:')
         self.ClSizlbl.grid(row=7, column=0, columnspan=2)
-        setClSiz = tk.DoubleVar(value=Sett.Cl_Vol_inclusion)
+        setClSiz = tk.DoubleVar(value=Sett.Cl_inclusion)
         self.ClSizIn = tk.Entry(self.distf, text=setClSiz.get(), bg='white',
                                 textvariable=setClSiz, bd=2, relief='sunken')
         self.ClSizIn.grid(row=7, column=2, columnspan=2)
@@ -372,9 +372,9 @@ class base_GUI(tk.Toplevel):
                                   relief='sunken')
         self.DTargetIn.grid(row=5, column=6, columnspan=2)
 
-        self.DSizlbl = tk.Label(self.distf, text='Size incl.:')
+        self.DSizlbl = tk.Label(self.distf, text='Filter value:')
         self.DSizlbl.grid(row=7, column=4, columnspan=2)
-        setDSiz = tk.DoubleVar(value=Sett.Vol_inclusion)
+        setDSiz = tk.DoubleVar(value=Sett.inclusion)
         self.DSizIn = tk.Entry(self.distf, text=setDSiz.get(), bg='white',
                                textvariable=setDSiz, bd=2, relief='sunken')
         self.DSizIn.grid(row=7, column=6, columnspan=2)
@@ -613,13 +613,13 @@ class base_GUI(tk.Toplevel):
                     flag = 1
                 Sett.target_chan = ChStr[0]
             if self.FdistV.get():
-                Sett.Vol_inclusion = setDSiz.get()
+                Sett.inclusion = setDSiz.get()
                 if self.VDselect.get():
                     Sett.incl_type = "greater"
                 else:
                     Sett.incl_type = ""
         else:
-            Sett.Vol_inclusion = 0
+            Sett.inclusion = 0
         if Sett.Find_Clusters:
             ChStr2 = setClCh.get().split(',')
             for i, channel in enumerate(ChStr2):
@@ -629,13 +629,13 @@ class base_GUI(tk.Toplevel):
             Sett.Cl_min = setClMin.get()
             Sett.Cl_max = setClMax.get()
             if self.UseSubV.get():
-                Sett.Cl_Vol_inclusion = setClSiz.get()
+                Sett.Cl_inclusion = setClSiz.get()
                 if self.Vselect.get():
                     Sett.Cl_incl_type = "greater"
                 else:
                     Sett.Cl_incl_type = ""
         else:
-            Sett.Cl_Vol_inclusion = 0
+            Sett.Cl_inclusion = 0
         import logger as lg
         import logging
         if lg.log_created is True:
@@ -737,7 +737,8 @@ class base_GUI(tk.Toplevel):
         self.DetChans.set(chanstring.get())
         from settings import store
         store.samplegroups = DetGroups
-        store.channels = DetChans
+        store.channels = [c for c in DetChans if
+                          c.lower() != Sett.MPname.lower()]
 
 
 class Skel_settings(tk.Frame):
@@ -936,6 +937,16 @@ class Additional_data(tk.Toplevel):
             self.cIDIn.grid(row=row, column=3, columnspan=3)
         self.replace_check()
 
+        # Add distance calculation column name setting:
+        self.set_incl_col = tk.StringVar(value=Sett.incl_col)
+        self.lbl4 = tk.Label(self.Dframe, text='Distances incl. column:', bd=1,
+                             font=('Arial', 9))
+        self.lbl4.grid(row=row+1, column=0, columnspan=2, pady=(20, 0))
+        self.colIn = tk.Entry(self.Dframe, text=self.set_incl_col.get(),
+                              bg='white', textvariable=self.set_incl_col, bd=2,
+                              relief='sunken')
+        self.colIn.grid(row=row+1, column=2, columnspan=3, pady=(20, 0))
+
     def replace_check(self):
         """Change relevant settings when replaceID is checked."""
         if not self.repID.get():
@@ -990,6 +1001,7 @@ class Additional_data(tk.Toplevel):
         """Save settings when exiting Other-window."""
         Sett.AddData = self.addDict
         Sett.replaceID = self.repID.get()
+        Sett.incl_col = self.set_incl_col.get()
         if Sett.replaceID:
             fileIDs = []
             changeIDs = []

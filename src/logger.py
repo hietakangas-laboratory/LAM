@@ -166,13 +166,13 @@ def print_settings():
                          'Maximum distance': Sett.maxDist}
                 if Sett.use_target:
                     distD.update({'Target channel': Sett.target_chan})
-                if Sett.Vol_inclusion > 0:
+                if Sett.inclusion > 0:
                     if not Sett.incl_type:
                         inclmsg = 'Smaller than {}'.format(
-                                                        Sett.Vol_inclusion)
+                                                        Sett.inclusion)
                     else:
                         inclmsg = 'Greater than {}'.format(
-                                                        Sett.Vol_inclusion)
+                                                        Sett.inclusion)
                     distD.update({'Cell inclusion': inclmsg})
                 keys = sorted(list(distD.keys()))
                 file.write(', '.join(["{}: {}".format(key, distD.get(key))
@@ -184,13 +184,13 @@ def print_settings():
                           'Maximum distance': Sett.Cl_maxDist,
                           'Minimum cluster': Sett.Cl_min,
                           'Maximum cluster': Sett.Cl_max}
-                if Sett.Vol_inclusion > 0:
+                if Sett.inclusion > 0:
                     if not Sett.Cl_incl_type:
                         inclmsg = 'Smaller than {}'.format(
-                                                    Sett.Cl_Vol_inclusion)
+                                                    Sett.Cl_inclusion)
                     else:
                         inclmsg = 'Greater than {}'.format(
-                                                    Sett.Cl_Vol_inclusion)
+                                                    Sett.Cl_inclusion)
                     clustD.update({'Cell inclusion': inclmsg})
                 keys = sorted(list(clustD.keys()))
                 file.write(', '.join(["{}: {}".format(key, clustD.get(key))

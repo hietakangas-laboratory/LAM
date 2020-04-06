@@ -102,6 +102,7 @@ def cluster_positions(plotter, **kws):
         sns.scatterplot(data=plot_data, x="Position X", y="Position Y",
                         hue="ClusterID", palette=palette, s=20, legend=False,
                         ax=ax, **p_kws)
+        ax.set_title("{} Clusters".format(chans[ind]))
     return plotter.g
 
 
@@ -148,7 +149,7 @@ def heatmap(plotter, **kws):
                 ax.hlines(idx, xmin=left, xmax=right, linestyles='dotted',
                           color=plotter.handle.palette.get(strings[idx]),
                           linewidth=1.5)
-    plt.subplots_adjust(left=0.2, right=0.99)
+    plt.subplots_adjust(left=0.25, right=0.99)
     return plotter.g
 
 

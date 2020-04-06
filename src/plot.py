@@ -433,9 +433,8 @@ class plotting:
             handle = system.DataHandler(self.sgroups, smpl_paths, savepath)
             all_data = handle.get_sample_data(cols)
             all_data.index = pd.RangeIndex(stop=all_data.shape[0])
-
-            f_title = "Positions - {}".format(sample)
             sub_ind = all_data.loc[all_data.ClusterID.notnull()].index
+            f_title = "Positions - {}".format(sample)
             plotter = MakePlot(all_data.loc[sub_ind, :], handle, f_title)
             b_data = all_data.loc[all_data.index.difference(sub_ind), :]
             new_kws.update({'b_data': b_data})
@@ -451,7 +450,8 @@ class plotting:
 
         new_kws = remove_from_kws(self.kws, 'melt')
         new_kws.update({'IDs': ['Channel', 'Sample Group', 'Sample'],
-                        'col': None, 'hue': None, 'xlabel': 'Linear Position'})
+                        'col': None, 'hue': None, 'xlabel': 'Linear Position',
+                        'ylabel': 'Clustered Cells'})
 
         # Get and plot heatmap with samples
         handle = system.DataHandler(self.sgroups, paths, savepath)
@@ -461,8 +461,9 @@ class plotting:
         # Drop unneeded identifiers for 'samples' heatmap
         smpl_data = all_data.drop(['Sample Group', 'Sample'], axis=1)
         plotter = MakePlot(smpl_data, handle, 'Cluster Heatmaps - Samples')
+        p_kws = merge_kws(new_kws, {'Sample_plot': True})
         plotter(pfunc.heatmap, 'centerline', 'ticks', 'title', 'labels',
-                **new_kws)
+                **p_kws)
 
         # Plot sample group averages
         grouped = all_data.groupby(['Channel', 'Sample Group'])
@@ -478,10 +479,11 @@ class plotting:
                 **new_kws)
 
         # CLUSTER LINEPLOT
-        m_kws = {'ylabel': 'Clustered cells',
+        m_kws = {'ylabel': 'Clustered cells', 'titley': 1,
                  'melt': {'id_vars': ['Channel', 'Sample Group'],
                           'var_name': 'Linear Position',
-                          'value_name': 'Value'}}
+                          'value_name': 'Value'},
+                 'row': 'Channel', 'col': None}
         m_data = all_data.drop('Sample', axis=1)
         m_data = m_data.melt(id_vars=['Channel', 'Sample Group'],
                              var_name='Linear Position',
@@ -520,7 +522,7 @@ class plotting:
                         'gridspec': {'left': 0.15, 'right': 0.8,
                                      'hspace': 0.45}})
         paths = [p for s in self.sgroups._samplePaths for p in s.glob('*.csv')
-                 if p.stem not in ['Vector', 'MPs']]
+                 if p.stem not in ['Vector', 'MPs', 'MP', Sett.MPname]]
         # Collect and plot each channel separately:
         for channel in store.channels:
             print("    {}  ...".format(channel))
