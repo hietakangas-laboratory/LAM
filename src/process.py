@@ -480,10 +480,11 @@ class get_sample:
             width = 0
             for val in [-1, 1]:
                 distances = data.loc[(data.hand == val)].ProjDist
-                if distances.size > 5:
-                    width += distances.nlargest().mean()
-                elif distances.size > 0:
-                    width += distances.max()
+                if not distances.empty:
+                    temp = distances.groupby(pd.qcut(distances, 10,
+                                                     duplicates='drop')).mean()
+                    if not temp.empty:
+                        width += temp.tolist()[-1]
             return width
 
         edges = self.get_vector_edges(multip=2, points=False)
