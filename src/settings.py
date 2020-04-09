@@ -13,7 +13,10 @@ class settings:
     """A class for holding all user-end settings for the analysis."""
 
     # ####################### PRIMARY SETTINGS #######################
-    GUI = True  # Use graphical user interface (True / False)
+    GUI = False  # Use graphical user interface (True / False)
+    # Determine width of gut based on vector channel projection distances
+    measure_width = True
+    plot_width = True
 
     # DEFINE PATH TO ANALYSIS FOLDER:
     # (Use input r'PATH' where PATH is your path)
@@ -24,7 +27,7 @@ class settings:
     process_samples = False  # CLEARS DATA FILES-DIRECTORY
     # Whether to project, count and normalize data. If set to False, expect all
     # data to be in place. Can be used to e.g. create additional plots faster.
-    process_counts = False
+    process_counts = True
     # Whether to compute average distances and clusters.
     process_dists = False
     # Set True/False to set all plotting functionalities ON/OFF
@@ -82,7 +85,7 @@ class settings:
                }
     # If set to true, replaces the above mentioned (AddData) ID numbers with an
     # alternative moniker as defined in channelID
-    replaceID = True
+    replaceID = False
     channelID = {"Ch=1": "Pros",
                  "Ch=2": "GFP",
                  "Ch=3": "SuH",
@@ -192,9 +195,6 @@ class settings:
                       'tan brown', 'red violet', 'dusty green', 'sandy brown']
 
     non_stdout = False  # Redirect stdout to a window when using executable
-    # Determine width of gut based on vector channel projection distances
-    measure_width = True
-    plot_width = True
 
 
 class store:

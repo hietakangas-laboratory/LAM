@@ -60,6 +60,12 @@ class MakePlot:
             print("WARNING: {}".format(msg))
             lg.logprint(LAM_logger, msg, 'w')
             return
+        # Adjust plot sizes so that everything fits properly
+        if 'adjust' in kws.keys():
+            plt.subplots_adjust(top=kws['adjust'].get('top'),
+                                bottom=kws['adjust'].get('bottom'))
+        else:
+            plt.subplots_adjust(top=0.85, bottom=0.2)
         self.add_elements(*args, **plot_kws)
         self.save_plot()
 
@@ -266,7 +272,8 @@ class plotting:
                           'value_name': 'Value',
                           'var_name': 'Linear Position'},
                  'plot_kws': {'col': 'Type_X', 'row': 'Type_Y'},
-                 'drop_grouper': ['Sample Group', 'Channel', 'Type']}
+                 'drop_grouper': ['Sample Group', 'Channel', 'Type'],
+                 'gridpec': {'hspace': 0.6}}
         new_kws = merge_kws(self.kws, m_kws)
         # If required data hasn't been yet collected
         savepath = self.sgroups.paths.plotdir.joinpath('Versus')
@@ -410,7 +417,7 @@ class plotting:
         # Find cluster channels from existing data
         cl_chans = [str(p.stem).split('-')[1] for p in
                     self.sgroups.paths.datadir.glob('Clusters-*.csv')]
-        if not cl_chans:
+        if not cl_chans:  # If no cluster data is found
             msg = 'No cluster count files found (Clusters_*)'
             print('WARNING: {}'.format(msg))
             lg.logprint(LAM_logger, msg, 'w')
@@ -425,13 +432,17 @@ class plotting:
         chan_paths = [c for p in self.sgroups._samplePaths for c in
                       p.glob('*.csv') if c.stem in cl_chans]
         cols = ['Position X', 'Position Y', 'ClusterID']
-        kws = {'ylabel': 'Y', 'xlabel': 'X', 'height': 5}
+        kws = {'ylabel': 'Y', 'xlabel': 'X', 'height': 5,
+               'adjust': {'top': 0.65, 'bottom': 0.2}}
         new_kws = merge_kws(self.kws, kws)
         # Find all channel paths relevant to cluster channels
         for sample in store.samples:
             smpl_paths = [p for p in chan_paths if p.parent.name == sample]
             handle = system.DataHandler(self.sgroups, smpl_paths, savepath)
             all_data = handle.get_sample_data(cols)
+            if 'ClusterID' not in all_data.columns:
+                print(f"  -> No clusters on {sample}")
+                continue  # If sample does not contain clusters, continue
             all_data.index = pd.RangeIndex(stop=all_data.shape[0])
             sub_ind = all_data.loc[all_data.ClusterID.notnull()].index
             f_title = "Positions - {}".format(sample)
@@ -479,7 +490,7 @@ class plotting:
                 **new_kws)
 
         # CLUSTER LINEPLOT
-        m_kws = {'ylabel': 'Clustered cells', 'titley': 1,
+        m_kws = {'ylabel': 'Clustered cells', 'titley': 1.01,
                  'melt': {'id_vars': ['Channel', 'Sample Group'],
                           'var_name': 'Linear Position',
                           'value_name': 'Value'},

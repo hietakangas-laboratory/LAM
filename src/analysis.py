@@ -323,11 +323,14 @@ class Samplegroups:
         # Find totals of data obtained from distance calculations
         All = pd.DataFrame()
         for path in chain(datadir.glob('Clusters-*.csv'),
-                          datadir.glob('*Distance Means.csv')):
+                          datadir.glob('*Distance Means.csv'),
+                          datadir.glob('Sample_widths_norm.csv')):
             if 'Clusters-' in path.name:
                 name = "{} Clusters".format(path.stem.split('-')[1])
-            else:
+            elif 'Distance Means' in path.name:
                 name = "{} Distances".format(path.name.split('_')[1])
+            else:
+                name = "Widths"
             ChData, __, _ = self.read_channel(path, self._groups,
                                               drop=dropB)
             # Assign data type identifier
@@ -591,6 +594,9 @@ class Sample(Group):
                 for i, vals in enumerate(Clusters):
                     vals = [int(v) for v in vals]
                     clustData.loc[clustData.ID.isin(vals), 'ClusterID'] = i
+            else:
+                print(f"-> No clusters found.")
+                clustData.loc[:, 'ClusterID'] = np.nan
             # Merge obtained data with the original data
             NewData = Data.merge(clustData, how='outer', copy=False, on=['ID'])
             self.Count_clusters(NewData, Data.name)
@@ -696,7 +702,7 @@ def test_control():
             return
     # If control not found at all:
     msg = "control group NOT found in sample groups!"
-    print("WARNING: {}\n".format(msg))
+    print("\nWARNING: {}\n".format(msg))
     flag = 1
     # Print groups and demand input for control:
     while flag:
