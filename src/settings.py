@@ -13,7 +13,7 @@ class settings:
     """A class for holding all user-end settings for the analysis."""
 
     # ####################### PRIMARY SETTINGS #######################
-    GUI = False  # Use graphical user interface (True / False)
+    GUI = True  # Use graphical user interface (True / False)
     # Determine width of gut based on vector channel projection distances
     measure_width = True
     plot_width = True

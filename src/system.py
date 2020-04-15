@@ -68,15 +68,22 @@ class paths:
             raise KeyboardInterrupt
         lg.logprint(LAM_logger, 'Directories successfully created.', 'i')
 
-    def save_AnalysisInfo(self, sample, group, channels):
+    def save_AnalysisInfo(self, samples, groups, channels):
         """For saving information of all analyzed samples."""
-        pd.DataFrame(sample).to_csv(self.outputdir.joinpath('SampleList.csv'),
-                                    index=False, header=False)
-        pd.DataFrame(group).to_csv(self.outputdir.joinpath('SampleGroups.csv'),
-                                   index=False, header=False)
-        pd.DataFrame(channels).to_csv(self.outputdir.joinpath('Channels.csv'),
-                                      index=False, header=False)
-        lg.logprint(LAM_logger, 'All metadata successfully saved.', 'i')
+        with open(str(self.outputdir.joinpath('Analysis_info.txt')), 'w') as f:
+            f.write('GROUPS:\t')
+            f.write(', '.join(groups))
+            f.write('\nSAMPLES:\t')
+            f.write(', '.join(samples))
+            f.write('\nCHANNELS:\t')
+            f.write(', '.join(channels))
+        # pd.DataFrame(samples).to_csv(self.outputdir.joinpath('SampleList.csv'),
+        #                             index=False, header=False)
+        # pd.DataFrame(groups).to_csv(self.outputdir.joinpath('SampleGroups.csv'),
+        #                            index=False, header=False)
+        # pd.DataFrame(channels).to_csv(self.outputdir.joinpath('Channels.csv'),
+        #                               index=False, header=False)
+        lg.logprint(LAM_logger, 'Analysis info successfully saved.', 'i')
 
 
 class DataHandler:

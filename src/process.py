@@ -70,10 +70,10 @@ class get_sample:
         """Find sample's vector data."""
         try:  # Find sample's vector file and read it
             vectorp = next(self.sampledir.glob('Vector.*'))
-            if vectorp.name == "Vector.csv":
+            if vectorp.name.lower() == "vector.csv":
                 tempVect = pd.read_csv(vectorp)
             # If vector is user-generated with ImageJ line tools:
-            elif vectorp.name == "Vector.txt":
+            elif vectorp.name.lower() == "vector.txt":
                 tempVect = pd.read_csv(vectorp, sep="\t", header=None)
                 tempVect.columns = ["X", "Y"]
             Vect = list(zip(tempVect.loc[:, 'X'].astype('float'),

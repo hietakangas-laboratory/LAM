@@ -85,6 +85,7 @@ class Samplegroups:
         # Update addData variable to contain newly created average-files
         self._addData = list(self.paths.datadir.glob('Avg_*'))
 
+        # PLOT SAMPLE GROUP WIDTHS
         if Sett.plot_width:
             lg.logprint(LAM_logger, 'Plotting widths', 'i')
             print('Plotting widths  ...')
