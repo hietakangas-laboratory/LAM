@@ -316,7 +316,7 @@ class Samplegroups:
                 All = pd.concat([All, ChData], ignore_index=False, sort=False)
             # Drop samples that have nonvariant data
             All = All[All.iloc[:, :-3].nunique(axis=1, dropna=True) > 1]
-        # Save dataframe containing sums of each channel for each sample
+            # Save dataframe containing sums of each channel for each sample
             filename = 'Total {} AddData.csv'.format(channel)
             system.saveToFile(All, datadir, filename, append=False,
                               w_index=True)

@@ -351,24 +351,23 @@ class get_sample:
     def get_MPs(self, MPname, useMP, datadir):
         """Collect MPs for sample anchoring."""
         if useMP:
-            try:  # Get MP
+            try:  # Get measurement point for anchoring
                 MPdirPath = next(self.channelpaths.pop(i) for i, s in
                                  enumerate(self.channelpaths) if
                                  str('_' + MPname + '_') in str(s))
                 MPpath = next(MPdirPath.glob("*Position.csv"))
                 MPdata = system.read_data(MPpath)
                 MPdata = MPdata.loc[:, ['Position X', 'Position Y']]
-            except (StopIteration, ValueError):
-                msg = 'could not find MP position for {}'.format(self.name)
-                lg.logprint(LAM_logger, msg, 'e')
-                print("-> Failed to find MP positions")
-            finally:
-                MPbin = None
                 if not MPdata.empty:
                     MPbin = self.project_MPs(MPdata, self.vector, datadir,
                                              filename="MPs.csv")
                     MP = pd.DataFrame(data=[MPbin.values], columns=['MP'])
                     MP.to_csv(self.sampledir.joinpath("MPs.csv"), index=False)
+            except (StopIteration, ValueError, UnboundLocalError):
+                MPbin = None
+                msg = 'could not find MP position for {}'.format(self.name)
+                lg.logprint(LAM_logger, msg, 'e')
+                print("-> Failed to find MP position data")
         else:  # Sets measurement point values to zero when MP's are not used
             MPbin = pd.Series(0, name=self.name)
             system.saveToFile(MPbin, datadir, "MPs.csv")
@@ -809,7 +808,7 @@ def Get_Counts(PATHS):
         if Sett.measure_width:
             print('Width  ...')
             width_path = PATHS.datadir.joinpath('Sample_widths.csv')
-            width_counts = normalize(str(width_path))
+            width_counts = normalize(width_path)
             _, _ = width_counts.normalize_samples(
                 MPs * 2, store.totalLength * 2, store.center*2,
                 name='Sample_widths_norm')

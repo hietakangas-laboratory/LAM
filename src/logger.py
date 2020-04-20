@@ -84,6 +84,7 @@ def Update():
 
 def log_Shutdown():
     """Shut down all logging elements."""
+    Close()
     logging.shutdown()
 
 

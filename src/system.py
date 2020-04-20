@@ -257,9 +257,24 @@ def start():
         raise SystemExit
     # Otherwise create paths and directories
     PATHS = paths(Sett.workdir)
-    # Find all samples, if exist
-    store.samples = [p.name for p in PATHS.samplesdir.iterdir() if
-                     p.is_dir()]
+    # Check that vector channel data are found
+    if Sett.process_samples or (Sett.measure_width and Sett.process_counts):
+        samples = [p for p in Sett.workdir.iterdir() if p.is_dir() and
+                   p.name != 'Analysis Data']
+        failed = []
+        for sample in samples:
+            try:
+                next(sample.glob(f'*_{Sett.vectChannel}_*'))
+            except StopIteration:
+                failed.append(sample.name)
+        if failed:
+            msg = f"Vector channel data not found for {', '.join(failed)}"
+            print(f'ERROR: {msg}')
+            print('Check vector channel setting or data.')
+            lg.logprint(LAM_logger, msg, 'e')
+            raise SystemExit
+    # Find and store all sample names
+    store.samples = [p.name for p in PATHS.samplesdir.iterdir() if p.is_dir()]
     return PATHS
 
 

@@ -81,8 +81,6 @@ separate directory that contains position.csv for a single coordinate, the MP.
 
 For more extensive instructions, see user manual.
 """
-# Standard
-import sys
 # LAM module
 from settings import settings as Sett
 
@@ -151,10 +149,9 @@ def main_catch_exit(LAM_logger=None):
         lg.logprint(LAM_logger, 'STOPPED: keyboard interrupt', 'e')
         print("STOPPED: Keyboard interrupt by user")
     except SystemExit:
-        lg.logprint(LAM_logger, 'SYSTEM EXIT\n', 'ex')
-        print("System Exit")
+        lg.logprint(LAM_logger, 'EXIT\n', 'ex')
+        print("STOPPED")
         lg.log_Shutdown()
-        sys.exit(0)
     except AssertionError:
         msg = 'STOPPED: No vectors found for samples.'
         print(msg)

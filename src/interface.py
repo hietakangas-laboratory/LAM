@@ -85,6 +85,7 @@ class base_GUI(tk.Toplevel):
         StatsV = tk.BooleanVar(value=Sett.statistics)
         MPV = tk.BooleanVar(value=Sett.useMP)
         Proj = tk.BooleanVar(value=Sett.project)
+        self.widths = tk.BooleanVar(value=Sett.measure_width)
         self.pSample = tk.Checkbutton(self.midf, text="Process",
                                       variable=SampleV, relief='groove', bd=4,
                                       font=('Arial', 8, 'bold'),
@@ -112,7 +113,7 @@ class base_GUI(tk.Toplevel):
         self.pDists.grid(row=0, column=2, columnspan=1, padx=(2, 2))
         self.pPlots.grid(row=0, column=3, columnspan=1, padx=(2, 2))
         self.pStats.grid(row=0, column=4, columnspan=1, padx=(2, 2))
-        # Projection, Measurement point & file header settings
+        # Projection, Measurement point, widths & file header settings
         self.pProj = tk.Checkbutton(self.midf, text="Project", variable=Proj,
                                     relief='groove', bd=3, font=('Arial', 8))
         self.pProj.grid(row=1, column=0, columnspan=1, padx=(2, 2))
@@ -120,6 +121,11 @@ class base_GUI(tk.Toplevel):
                                   relief='groove', bd=3, font=('Arial', 8),
                                   command=self.MP_check)
         self.pMP.grid(row=1, column=1, columnspan=1, padx=(2, 2))
+        self.pWidth = tk.Checkbutton(self.midf, text="Widths",
+                                     variable=self.widths, relief='groove',
+                                     bd=3, font=('Arial', 8),
+                                     command=self.width_check)
+        self.pWidth.grid(row=2, column=0, columnspan=1, padx=(2, 2))
         self.lblMP = tk.Label(self.midf, text='MP label:', bd=1,
                               font=('Arial', 8))
         self.lblMP.grid(row=1, column=2)
@@ -130,11 +136,11 @@ class base_GUI(tk.Toplevel):
         lbltext = 'Data file header row:\n(Starts from zero)'
         self.lblHead = tk.Label(self.midf, text=lbltext, bd=1,
                                 font=('Arial', 8))
-        self.lblHead.grid(row=2, column=0, columnspan=3)
+        self.lblHead.grid(row=2, column=1, columnspan=2)
         setHead = tk.IntVar(value=Sett.header_row)
         self.HeadIn = tk.Entry(self.midf, text=setHead.get(), bg='white',
                                textvariable=setHead, bd=2, relief='sunken')
-        self.HeadIn.grid(row=2, column=2, columnspan=3)
+        self.HeadIn.grid(row=2, column=3, columnspan=2)
 
         # BOTTOM BUTTONS
         self.r_stdout = tk.BooleanVar(value=Sett.non_stdout)
@@ -494,7 +500,10 @@ class base_GUI(tk.Toplevel):
         else:
             self.plotbutton.configure(state='normal')
             for widget in self.rightf.winfo_children():
-                widget.configure(state='normal')
+                if not StatsV.get() and widget.cget('text') == 'Statistics':
+                    continue
+                else:
+                    widget.configure(state='normal')
         self.run_check()
 
     def Process_check(self):
@@ -536,6 +545,7 @@ class base_GUI(tk.Toplevel):
             self.MPIn.configure(state='disable')
             self.pMP.configure(state='disable')
             self.pProj.configure(state='disable')
+            self.pWidth.configure(state='disable')
         else:
             self.binIn.configure(state='normal')
             self.lbl5.configure(state='normal')
@@ -545,7 +555,9 @@ class base_GUI(tk.Toplevel):
             self.lblHead.configure(state='normal')
             self.HeadIn.configure(state='normal')
             self.pProj.configure(state='normal')
+            self.pWidth.configure(state='normal')
         self.MP_check()
+        self.width_check()
         self.run_check()
 
     def browse_button(self):
@@ -739,6 +751,18 @@ class base_GUI(tk.Toplevel):
         store.samplegroups = DetGroups
         store.channels = [c for c in DetChans if
                           c.lower() != Sett.MPname.lower()]
+
+    def width_check(self):
+        if not SampleV.get() and not CountV.get():
+            self.chIn.configure(state='disable')
+            self.lbl4.configure(state='disable')
+        elif not SampleV.get():
+            if self.widths.get():
+                self.chIn.configure(state='normal')
+                self.lbl4.configure(state='normal')
+            else:
+                self.chIn.configure(state='disable')
+                self.lbl4.configure(state='disable')
 
 
 class Skel_settings(tk.Frame):
