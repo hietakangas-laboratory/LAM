@@ -839,7 +839,7 @@ def Project(PATHS):
                 print(msg)
             # Project features of channel onto vector
             sample.data = sample.project_channel(channel)
-            if channel.name == Sett.vectChannel:
+            if (channel.name == Sett.vectChannel and Sett.measure_width):
                 sample.data = sample.point_handedness(channel.name)
                 sample.average_width(PATHS.datadir)
             # Count occurrences in each bin
