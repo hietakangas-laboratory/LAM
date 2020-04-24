@@ -21,7 +21,7 @@ class base_GUI(tk.Toplevel):
     """Container for the most important settings of the GUI."""
 
     def __init__(self, master=None):
-        master.title("LAM-0.1.0")
+        master.title("LAM-0.1.1")
         self.master = master
         self.master.grab_set()
         self.master.bind('<Escape>', self.func_destroy)
@@ -576,6 +576,7 @@ class base_GUI(tk.Toplevel):
         Sett.Create_Plots = PlotV.get()
         Sett.statistics = StatsV.get()
         if not Sett.process_counts:
+            Sett.measure_width = False
             Sett.useMP = False
             Sett.project = False
         else:

@@ -83,8 +83,8 @@ import pathlib as pl
 import shapely.geometry as gm
 import shapely.ops as op
 
-ROOT = pl.Path(r"P:\h919\hietakangas\Arto\LAM_manu_sets\DSS")
-SAVEDIR = pl.Path(r"P:\h919\hietakangas\Arto\LAM_manu_sets\DSS_62bin_split")
+ROOT = pl.Path(r"E:\Code_folder\DSS")
+SAVEDIR = pl.Path(r"E:\Code_folder\DSS_62bin_split")
 CUT_POINTS = ["R2R3", "R3R4"]  # "R4R5"]
 CHANNELS = ['DAPI', 'GFP', 'Delta', 'Prospero', 'DAPIbig', 'DAPIpienet']
 # Number of bins for whole length of samples. Script gives recommendation for

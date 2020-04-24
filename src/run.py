@@ -4,13 +4,14 @@ Run file for Longitudinal Analysis of Midgut.
 
 Created on Wed Mar  6 12:42:28 2019
 @author: Arto I. Viitanen
+@version: 0.1.1
 -------------------------------------------------------------------------------
 
 DEPENDENCIES:
 ------------
-matplotlib (3.1.1), numpy (1.16.5), pandas (0.25.1), pathlib2
-(2.3.5), scipy (1.3.1), seaborn (0.9.0), shapely (1.7.0),
-scikit-image (0.15.0), statsmodels (0.9.0)
+matplotlib (3.1.3), numpy (1.18.1), pandas (1.0.1), pathlib2
+(2.3.5), scipy (1.4.1), seaborn (0.10.0), shapely (1.7.0),
+scikit-image (0.16.2), statsmodels (0.11.0)
 
 INSTALLATION:
 ------------

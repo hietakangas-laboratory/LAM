@@ -4,6 +4,6 @@ pandas==1.0.1
 pathlib2==2.3.5
 scipy==1.4.1
 seaborn==0.10.0
-shapely==1.6.4
+shapely==1.7.0
 scikit-image==0.16.2
 statsmodels==0.11.0
