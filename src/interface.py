@@ -582,6 +582,7 @@ class base_GUI(tk.Toplevel):
         else:
             Sett.useMP = MPV.get()
             Sett.project = Proj.get()
+            Sett.measure_width = self.widths.get()
         Sett.MPname = setMP.get()
         Sett.header_row = setHead.get()
         Sett.Create_Channel_Plots = Pchans.get()

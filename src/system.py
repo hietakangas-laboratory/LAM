@@ -193,8 +193,8 @@ def read_data(filepath, header=Sett.header_row, test=True, index_col=False):
                 lg.logprint(LAM_logger, msg, 'ex')
                 print('WARNING: read_data() call from {} line {}'.format(
                                 inspect.stack()[1][1], inspect.stack()[1][2]))
-                print("Key 'ID' not found. Wrong header row?")
-                print("If all correct, set test=False\nPath: {}"
+                print("Key 'ID' not found. Verify header row setting.")
+                print("Path: {}\n"
                       .format(filepath))
     except FileNotFoundError:
         lg.logprint(LAM_logger, 'File not found at {}'.format(filepath), 'e')

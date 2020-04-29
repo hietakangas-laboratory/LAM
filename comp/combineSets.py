@@ -40,12 +40,13 @@ import pathlib as pl
 import re
 
 # GIVE DATA SETS:
-# format: {<order>: [r"<path_to_dataset_root>", <bins>]}
-data_sets = {1: [r"P:\h919\hietakangas\Arto\R1_R2", 25],
-             2: [r"P:\h919\hietakangas\Arto\R4_R5", 25]
+# format: {<order of combining>: [r"<path_to_dataset_root>", <bins>]}
+data_sets = {1: [r"E:\Code_folder\DSS_split\R2R3", 26],
+             2: [r"E:\Code_folder\DSS_split\R3R4", 5],
+             3: [r"E:\Code_folder\DSS_split\END", 28]             
              }
-combine_chans = ['DAPI', 'GFP', 'Prospero', 'Delta']
-savepath = pl.Path(r"P:\h919\hietakangas\Arto\combined")
+combine_chans = ['DAPI', 'GFP', 'Prospero', 'Delta', 'Delta+Prospero']
+savepath = pl.Path(r"E:\Code_folder\DSS_split\Combined")
 
 
 def combine(path):
@@ -54,8 +55,9 @@ def combine(path):
     order = sorted(data_sets.keys())
     bins = [0]
     # Determine the amount to increase each sets bins
+    binN = 0
     for ind in order[:-1]:
-        binN = data_sets.get(ind)[1]
+        binN += data_sets.get(ind)[1]
         bins.extend([binN])
     set_paths = []
     for ind in order:
@@ -69,7 +71,8 @@ def combine(path):
             smplpath = fullpath.joinpath(smpl[0])
             smplpath.mkdir(parents=True, exist_ok=True)
             for chan in combine_chans:
-                regc = re.compile("^{}.csv".format(chan), re.I)
+                string = '^' + re.escape(chan + ".csv")
+                regc = re.compile(string, re.I)
                 paths = [p for p in smpl[1].iterdir() if
                          regc.fullmatch(p.name)]
                 if not paths:

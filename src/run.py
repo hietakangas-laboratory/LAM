@@ -109,6 +109,8 @@ def main():
     # If performing 'Count' without projection, only calculate counts:
     elif Sett.process_counts and not Sett.project:
         process.find_existing(system_paths)
+        if Sett.measure_width:
+            analysis.Get_Widths(system_paths.samplesdir, system_paths.datadir)
     # After all samples have been collected/created, find their respective MP
     # bins and normalize (anchor) cell count data.
     process.Get_Counts(system_paths)
@@ -148,14 +150,14 @@ def main_catch_exit(LAM_logger=None):
     # Catch and log possible exits from the analysis
     except KeyboardInterrupt:
         lg.logprint(LAM_logger, 'STOPPED: keyboard interrupt', 'e')
-        print("STOPPED: Keyboard interrupt by user")
+        print("STOPPED: Keyboard interrupt by user.\n")
     except SystemExit:
         lg.logprint(LAM_logger, 'EXIT\n', 'ex')
-        print("STOPPED")
+        print("STOPPED\n")
         lg.log_Shutdown()
     except AssertionError:
         msg = 'STOPPED: No vectors found for samples.'
-        print(msg)
+        print(msg + '\n')
         lg.logprint(LAM_logger, msg, 'c')
         lg.log_Shutdown()
 

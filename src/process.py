@@ -367,7 +367,7 @@ class get_sample:
                 MPbin = None
                 msg = 'could not find MP position for {}'.format(self.name)
                 lg.logprint(LAM_logger, msg, 'e')
-                print("-> Failed to find MP position data")
+                print("-> Failed to find MP position data.")
         else:  # Sets measurement point values to zero when MP's are not used
             MPbin = pd.Series(0, name=self.name)
             system.saveToFile(MPbin, datadir, "MPs.csv")
@@ -424,81 +424,6 @@ class get_sample:
         system.saveToFile(data, self.sampledir, ChString, append=False)
         return data
 
-    def point_handedness(self, channel):
-        """
-        Find handedness of projected points compared to vector.
-
-        self.data must contain columns created by project_channel(). Returns DF
-        with added column 'hand', with possible values [-1, 0, 1] that corres-
-        pond to [right side, on vector, left side] respectively.
-        """
-        def _get_sign(arr, p1x, p1y, p2x, p2y):
-            X, Y = arr[0], arr[1]
-            val = math.copysign(1, (p2x - p1x) * (Y - p1y) -
-                                (p2y - p1y) * (X - p1x))
-            return val
-
-        edges, edge_points = self.get_vector_edges(multip=2)
-        data = self.data.sort_values(by='NormDist')
-        for ind, point1 in enumerate(edge_points[:-1]):
-            point2 = edge_points[ind+1]
-            p1x, p1y = point1.x, point1.y
-            p2x, p2y = point2.x, point2.y
-            d_index = self.data.loc[(data.NormDist >= edges[ind]) &
-                                    (data.NormDist < edges[ind+1])].index
-            points = data.loc[d_index, ['Position X', 'Position Y']]
-            data.loc[d_index, 'hand'] = points.apply(
-                _get_sign, args=(p1x, p1y, p2x, p2y), axis=1, raw=True
-                ).replace(np.nan, 0)
-        data = data.sort_index()
-        ChString = str('{}.csv'.format(channel))
-        system.saveToFile(data, self.sampledir, ChString, append=False)
-        return data
-
-    def get_vector_edges(self, multip=1, points=True):
-        """
-        Divide vector to segments.
-
-        Params:
-        ------
-            multip : int
-                Determines the number of segments, i.e. Sett.projBins * multip
-
-            points : bool
-                Whether to also find the XY-coordinates of the edges.
-        """
-        edges = np.linspace(0, 1, Sett.projBins*multip)
-        if points:
-            edge_points = [self.vector.interpolate(d, normalized=True) for d in
-                           edges]
-            return edges, edge_points
-        return edges
-
-    def average_width(self, datadir):
-        def _get_approx_width(data):
-            width = 0
-            for val in [-1, 1]:
-                distances = data.loc[(data.hand == val)].ProjDist
-                if not distances.empty:
-                    temp = distances.groupby(pd.qcut(distances, 10,
-                                                     duplicates='drop')).mean()
-                    if not temp.empty:
-                        width += temp.tolist()[-1]
-            return width
-
-        edges = self.get_vector_edges(multip=2, points=False)
-        cols = ['NormDist', 'ProjDist', 'hand']
-        data = self.data.sort_values(by='NormDist').loc[:, cols]
-        # Create series to hold width results
-        res = pd.Series(name=self.name, index=pd.RangeIndex(stop=len(edges)))
-        # Loop segments and get widths:
-        for ind, _ in enumerate(edges[:-1]):
-            d_index = data.loc[(data.NormDist >= edges[ind]) &
-                               (data.NormDist < edges[ind+1])].index
-            res.iat[ind] = _get_approx_width(data.loc[d_index, :])
-        filename = 'Sample_widths.csv'
-        system.saveToFile(res, datadir, filename)
-
     def find_counts(self, channelName, datadir):
         """Gather projected features and find bin counts."""
         counts = np.bincount(self.data['DistBin'],
@@ -526,7 +451,7 @@ class get_channel:
     def read_channel(self, path):
         """Read channel data into a dataframe."""
         try:
-            data = system.read_data(str(path))
+            data = system.read_data(str(path), header=Sett.header_row)
             channel = self.name
             if (channel.lower() not in [c.lower() for c in store.channels] and
                     channel.lower() != Sett.MPname.lower()):
@@ -679,6 +604,97 @@ class normalize:
         return SampleStart, data
 
 
+class DefineWidths:
+    
+    def __init__(self, data, vector, path, datadir):
+        self.name = path.name
+        self.sampledir = path
+        self.data = data
+        if isinstance(vector, gm.LineString):
+            self.vector = vector
+        else:
+            vlist = list(zip(vector.loc[:, 'X'].astype('float'),
+                             vector.loc[:, 'Y'].astype('float')))
+            self.vector = gm.LineString(vlist)
+        self.data = self.point_handedness()
+        self.average_width(datadir)
+
+    def point_handedness(self):
+        """
+        Find handedness of projected points compared to vector.
+
+        self.data must contain columns created by project_channel(). Returns DF
+        with added column 'hand', with possible values [-1, 0, 1] that corres-
+        pond to [right side, on vector, left side] respectively.
+        """
+        def _get_sign(arr, p1x, p1y, p2x, p2y):
+            X, Y = arr[0], arr[1]
+            val = math.copysign(1, (p2x - p1x) * (Y - p1y) -
+                                (p2y - p1y) * (X - p1x))
+            return val
+
+        edges, edge_points = self.get_vector_edges(multip=2)
+        data = self.data.sort_values(by='NormDist')
+        for ind, point1 in enumerate(edge_points[:-1]):
+            point2 = edge_points[ind+1]
+            p1x, p1y = point1.x, point1.y
+            p2x, p2y = point2.x, point2.y
+            d_index = data.loc[(data.NormDist >= edges[ind]) &
+                               (data.NormDist < edges[ind+1])].index
+            points = data.loc[d_index, ['Position X', 'Position Y']]
+            data.loc[d_index, 'hand'] = points.apply(
+                _get_sign, args=(p1x, p1y, p2x, p2y), axis=1, raw=True
+                ).replace(np.nan, 0)
+        data = data.sort_index()
+        ChString = str('{}.csv'.format(Sett.vectChannel))
+        system.saveToFile(data, self.sampledir, ChString, append=False)
+        return data
+
+    def get_vector_edges(self, multip=1, points=True):
+        """
+        Divide vector to segments.
+
+        Params:
+        ------
+            multip : int
+                Determines the number of segments, i.e. Sett.projBins * multip
+
+            points : bool
+                Whether to also find the XY-coordinates of the edges.
+        """
+        edges = np.linspace(0, 1, Sett.projBins*multip)
+        if points:
+            edge_points = [self.vector.interpolate(d, normalized=True) for d in
+                           edges]
+            return edges, edge_points
+        return edges
+
+    def average_width(self, datadir):
+        def _get_approx_width(data):
+            width = 0
+            for val in [-1, 1]:
+                distances = data.loc[(data.hand == val)].ProjDist
+                if not distances.empty:
+                    temp = distances.groupby(pd.qcut(distances, 10,
+                                                     duplicates='drop')).mean()
+                    if not temp.empty:
+                        width += temp.tolist()[-1]
+            return width
+
+        edges = self.get_vector_edges(multip=2, points=False)
+        cols = ['NormDist', 'ProjDist', 'hand']
+        data = self.data.sort_values(by='NormDist').loc[:, cols]
+        # Create series to hold width results
+        res = pd.Series(name=self.name, index=pd.RangeIndex(stop=len(edges)))
+        # Loop segments and get widths:
+        for ind, _ in enumerate(edges[:-1]):
+            d_index = data.loc[(data.NormDist >= edges[ind]) &
+                               (data.NormDist < edges[ind+1])].index
+            res.iat[ind] = _get_approx_width(data.loc[d_index, :])
+        filename = 'Sample_widths.csv'
+        system.saveToFile(res, datadir, filename)
+    
+
 def Create_Samples(PATHS):
     """Create vectors for the samples."""
     lg.logprint(LAM_logger, 'Begin vector creation.', 'i')
@@ -715,8 +731,14 @@ def find_existing(PATHS):
         smplpath = PATHS.samplesdir.joinpath(smpl)
         # FIND MP
         if Sett.useMP:
-            MPDF = pd.read_csv(smplpath.joinpath('MPs.csv'))
-            MP = MPDF.iat[0, 0]
+            try:
+                MPDF = pd.read_csv(smplpath.joinpath('MPs.csv'))
+                MP = MPDF.iat[0, 0]
+            except FileNotFoundError:
+                msg = "MP-data not found."
+                add = "Provide MP-data or set useMP to False."
+                print(f"ERROR: {msg}\n{add}")
+                raise SystemExit
         else:
             MP = 0
         MPs.loc[0, smpl] = MP
@@ -840,8 +862,8 @@ def Project(PATHS):
             # Project features of channel onto vector
             sample.data = sample.project_channel(channel)
             if (channel.name == Sett.vectChannel and Sett.measure_width):
-                sample.data = sample.point_handedness(channel.name)
-                sample.average_width(PATHS.datadir)
+                DefineWidths(sample.data, sample.vector, sample.sampledir,
+                             PATHS.datadir)
             # Count occurrences in each bin
             if channel.name not in ["MPs"]:
                 sample.find_counts(channel.name, PATHS.datadir)

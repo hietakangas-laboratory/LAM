@@ -16,6 +16,7 @@ import numpy as np
 import pandas as pd
 import pathlib as pl
 import seaborn as sns
+import shapely.geometry as gm
 from scipy.spatial import distance
 # LAM imports
 import system as system
@@ -725,3 +726,29 @@ def test_control():
     msg = "-> Changed to group '{}' by user".format(
         Sett.cntrlGroup)
     lg.logprint(LAM_logger, msg, 'i')
+
+
+def Get_Widths(samplesdir, datadir):
+    msg = "Necessary files for width approximation not be found for "
+    for path in samplesdir.iterdir():
+        files = [p for p in path.iterdir() if p.is_file()]
+        vreg = re.compile('^vector\.', re.I)
+        dreg = re.compile(f'^{Sett.vectChannel}\.csv', re.I)
+        try:
+            vect_path = [p for p in files if vreg.match(p.name)]
+            data_path = [p for p in files if dreg.match(p.name)]
+            vector_data = system.read_data(vect_path[0], header=0, test=False)
+            data = system.read_data(data_path[0], header=0)
+        except (StopIteration, IndexError):
+            name = path.name
+            full_msg = msg + name
+            print(f"WARNING: {full_msg}")
+            if 'vector_data' not in locals():
+                print("-> Could not read vector data.")
+                continue
+            if 'data' not in locals():
+                print("Could not read channel data")
+                print("Make sure channel is set right (vector channel)\n")
+                continue
+            lg.logprint(LAM_logger, full_msg, 'w')
+        process.DefineWidths(data, vector_data, path, datadir)
