@@ -34,10 +34,12 @@ Vars:
         Path to directory where the combined data set is to be saved.
         
 """
-
+import numpy as np
 import pandas as pd
 import pathlib as pl
 import re
+import shapely.geometry as gm
+import shapely.ops as ops
 
 # GIVE DATA SETS:
 # format: {<order of combining>: [r"<path_to_dataset_root>", <bins>]}
@@ -45,7 +47,7 @@ data_sets = {1: [r"E:\Code_folder\DSS_split\R2R3", 26],
              2: [r"E:\Code_folder\DSS_split\R3R4", 5],
              3: [r"E:\Code_folder\DSS_split\END", 28]             
              }
-combine_chans = ['DAPI', 'GFP', 'Prospero', 'Delta', 'Delta+Prospero']
+combine_chans = ['DAPI', 'GFP', 'Prospero', 'Delta']
 savepath = pl.Path(r"E:\Code_folder\DSS_split\Combined")
 
 
@@ -64,25 +66,72 @@ def combine(path):
         path = pl.Path(data_sets.get(ind)[0])
         samplespath = path.joinpath('Analysis Data', 'Samples')
         set_paths.append(samplespath)
+    sample_names = set([p.name for s in set_paths for p in s.iterdir() if
+                        p.is_dir()])
+    vectors = {s: [0] * len(data_sets.keys()) for s in sample_names}
+    # Collect split vectors:
+    print('Collecting vectors')
+    for ind, path in enumerate(set_paths):
+        sample_paths = [p for p in path.iterdir() if p.is_dir()]
+        samples = set([p.name for p in sample_paths])
+        diff = sample_names - samples
+        if diff:
+            print(f"Missing samples in {data_sets.keys()[ind]}:")
+            print(f"  {n}" for n in diff)
+        # Gather vector data:
+        vect_pat = re.compile('^vector\.csv', re.I)
+        for smplpath in sample_paths:
+            files = [p for p in smplpath.iterdir() if p.is_file()]
+            try:
+                vector_path = [p for p in files if vect_pat.match(p.name)]
+                vector = pd.read_csv(vector_path[0])
+                vlist = list(zip(vector.loc[:, 'X'].astype('float'),
+                             vector.loc[:, 'Y'].astype('float')))
+                vects = vectors.get(smplpath.name)
+                vects[ind] = gm.LineString(vlist).length
+                vectors.update({smplpath.name: vects})
+            except StopIteration:
+                print(f"Could not find vector-file for {path.name}")
+    # Find full lengths of vectors and length fractions:
+    for sample, vector_data in vectors.items():
+        smplpath = fullpath.joinpath(sample)
+        full_length = sum([v for v in vector_data])
+        vector_data = np.array(vector_data) / full_length
+        vectors.update({sample: vector_data})
+
+    # Find channel data
     for ind, path in enumerate(set_paths):
         print("Data set {}: {}".format(ind+1, path.parents[1].name))
         samples = [[p.name, p] for p in path.iterdir() if p.is_dir()]
         for smpl in samples:
             smplpath = fullpath.joinpath(smpl[0])
             smplpath.mkdir(parents=True, exist_ok=True)
+            # Modify channel data:
             for chan in combine_chans:
                 string = '^' + re.escape(chan + ".csv")
                 regc = re.compile(string, re.I)
                 paths = [p for p in smpl[1].iterdir() if
                          regc.fullmatch(p.name)]
                 if not paths:
+                    print(f"No {chan} data found for {smpl[0]}")
                     continue
                 chan_savep = smplpath.joinpath(paths[0].name)
                 data = pd.read_csv(paths[0])
+                data = modify_normdist(data, vectors.get(smpl[0]), ind)
                 if ind != 0:
                     combine_chan(data, chan_savep, bins[ind])
                 else:
                     data.to_csv(chan_savep, index=False)
+
+
+def modify_normdist(data, fractions, f_index):
+    if f_index == 0:
+        min_v = 0
+    else:
+        min_v = sum(fractions[:f_index])
+    max_v = min_v + fractions[f_index]
+    data.NormDist = np.interp(data.NormDist, (0, 1), (min_v, max_v))
+    return data
 
 
 def combine_chan(data, filepath, add_bin):
