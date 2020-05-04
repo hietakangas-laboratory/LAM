@@ -440,7 +440,8 @@ class plotting:
             smpl_paths = [p for p in chan_paths if p.parent.name == sample]
             handle = system.DataHandler(self.sgroups, smpl_paths, savepath)
             all_data = handle.get_sample_data(cols)
-            if 'ClusterID' not in all_data.columns:
+            if ('ClusterID' not in all_data.columns or
+                all_data.loc[:, 'ClusterID'].isna().all()):
                 print(f"  -> No clusters on {sample}")
                 continue  # If sample does not contain clusters, continue
             all_data.index = pd.RangeIndex(stop=all_data.shape[0])

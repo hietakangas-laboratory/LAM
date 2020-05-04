@@ -172,6 +172,6 @@ if __name__ == '__main__':
     else:  # Otherwise create logger and start the analysis
         import logger
         LOG = logger.setup_logger(__name__)
-        logger.print_settings(LOG)  # print settings of analysis to log
+        logger.print_settings()  # print settings of analysis to log
         main_catch_exit(LOG)
         logger.Close()

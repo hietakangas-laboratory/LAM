@@ -48,7 +48,7 @@ class paths:
                     msg = "Data Files-folder will be cleared. Continue? [y/n]"
                     print('\a')
                     while flag:
-                        ans = sd.askstring(title="Dialog", prompt=msg)
+                        ans = ask_user(msg)
                         if ans in ("y", "Y"):
                             flag = 0
                             shutil.rmtree(self.datadir)
@@ -294,7 +294,7 @@ def test_vector_ext(dir_path):
             print('\a')
             msg = "Pre-existing vectors will be cleared. Continue? [y/n]"
             while flag:
-                ans = sd.askstring(title="Dialog", prompt=msg)
+                ans = ask_user(msg)
                 if ans in ("y", "Y"):
                     flag = 0
                     return
@@ -348,3 +348,14 @@ def drop_outliers(all_data, melted=False, raw=False, **kws):
     if isinstance(all_data.index, pd.MultiIndex):
         all_data = all_data.droplevel(grouper)
     return all_data
+
+
+def ask_user(dlg, dlgtype='string', use_gui=Sett.GUI):
+    if use_gui:
+        if dlgtype == 'string':
+            ans = sd.askstring(title="Dialog", prompt=dlg)
+        elif dlgtype == 'integer':
+            ans = sd.askinteger(title="Dialog", prompt=dlg)
+    else:
+        ans = input(dlg)
+    return ans

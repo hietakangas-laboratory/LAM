@@ -39,7 +39,6 @@ import pandas as pd
 import pathlib as pl
 import re
 import shapely.geometry as gm
-import shapely.ops as ops
 
 # GIVE DATA SETS:
 # format: {<order of combining>: [r"<path_to_dataset_root>", <bins>]}

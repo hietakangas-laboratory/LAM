@@ -713,7 +713,7 @@ def test_control():
             print('{}: {}'.format(i, grp))
         msg = "Select the number of control group: "
         print('\a')
-        ans = sd.askinteger(title="Dialog", prompt=msg)
+        ans = system.ask_user(msg, dlgtype='integer')
         if ans is None:
             raise KeyboardInterrupt
         if 0 <= ans <= len(store.samplegroups):
