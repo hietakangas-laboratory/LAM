@@ -91,6 +91,7 @@ def main():
     import system
     import analysis
     import process
+    import BorderDetection as bd
     from settings import store
     system_paths = system.start()
     # If sample processing set to True, create vectors, collect and project
@@ -128,6 +129,10 @@ def main():
     # Computing total values from each sample's each bin
     if (Sett.statistics and Sett.stat_total) or Sett.process_counts:
         sample_groups.Get_Totals()
+    # Find border regions
+    if Sett.border_detection:
+        bd.detect_borders(system_paths, sample_groups._samplePaths,
+                          sample_groups._grpPalette, store.center)
     # Calculation of MWW-statistics for cell counts and other data
     if Sett.statistics:
         analysis.test_control()

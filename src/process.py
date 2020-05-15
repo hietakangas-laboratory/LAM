@@ -775,7 +775,7 @@ def Get_Counts(PATHS):
         print("{}".format(msg))
         lg.logprint(LAM_logger, msg, 'i')
         raise SystemExit
-    # Find the smallest and largest bin-number of the dataset
+    # Find the smallest and largest anchor bin-number of the dataset
     MPmax, MPmin = MPs.max(axis=1).values[0], MPs.min(axis=1).values[0]
     # Store the bin number of the row onto which samples are anchored to
     store.center = MPmax

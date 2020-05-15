@@ -10,13 +10,12 @@ Created on Wed Mar  6 12:42:28 2019
 import re
 import warnings
 from itertools import product, chain
-from tkinter import simpledialog as sd
 # Other packages
 import numpy as np
 import pandas as pd
 import pathlib as pl
 import seaborn as sns
-import shapely.geometry as gm
+# import shapely.geometry as gm
 from scipy.spatial import distance
 # LAM imports
 import system as system

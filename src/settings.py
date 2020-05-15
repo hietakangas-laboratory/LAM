@@ -14,6 +14,8 @@ class settings:
 
     # ####################### PRIMARY SETTINGS #######################
     GUI = True  # Use graphical user interface (True / False)
+    # Detect border regions
+    border_detection = True
     # Determine width of gut based on vector channel projection distances
     measure_width = True
     plot_width = True
@@ -128,6 +130,22 @@ class settings:
     Cl_incl_type = ""       # Same as above in Find_Distances
     Cl_min = 3
     Cl_max = 50
+    
+    # ---BORDERS--- #
+    # Name of channel from which scoring variables are collected from
+    border_channel = vectChannel  # Default is vector creation channel
+    peak_thresh = 0.1  # Border score threshold for peak detection
+    # Plot individual samples (requires Create_Border_Plots==True)
+    plot_samples = False
+    # Data columns to use for detection (sample width is always collected)
+    # Adding 'Count' will get cell counts
+    border_vars = ['Area', f'Nearest_Dist_{border_channel}']
+    # Scoring weights for variables. Adding extension '_std' or '_diff' will
+    # perform respective calculations to the underlying variables.
+    scoring_vars = {'width': -1.5,
+                    'width_diff': 1.5,
+                    'Area_diff': -1,
+                    'Nearest_Dist_{border_channel}_diff': 1.5}
 
     # ---STATISTICS OPTIONS--- #
     stat_versus = True
@@ -153,6 +171,7 @@ class settings:
     Create_Distribution_Plots = True
     Create_Statistics_Plots = True  # requires statistics to be True
     Create_Cluster_Plots = False
+    Create_Border_Plots = True  # Requires calculated width data
 
     # Variable vs. variable plots:
     Create_ChanVSAdd_Plots = False  # Pairs of channel and additional data
