@@ -1,5 +1,10 @@
 # -*- coding: utf-8 -*-
 """
+Detect region borders for for all sample groups through variable scoring.
+
+Requires LAM-produced width data! On default settings, the functionality
+also expects to find nearest distance estimates for the used channel, i.e.
+'find distances' in GUI.
 Created on Fri May  8 19:03:36 2020
 
 @author: arska
@@ -15,54 +20,53 @@ import matplotlib.pyplot as plt
 from scipy.signal import find_peaks, peak_prominences
 import warnings
 
+
 try:
     LAM_logger = lg.get_logger(__name__)
 except AttributeError:
     print('Cannot get logger')
 
-# workdir = pl.Path(r'E:\Code_folder\ALLSTATS')
-# channel = "DAPI"
-# samplesdir = workdir.joinpath('Analysis Data', 'Samples')
-# plotdir = workdir.joinpath('Analysis Data', 'Plots', 'Borders')
-# plotdir.mkdir(exist_ok=True)
-# datadir = workdir.joinpath('Analysis Data', 'Data Files')
-# width_path = datadir.joinpath('Sample_widths_norm.csv')
-# scoring = {#'Count': 0,
-#            # 'Count_diff': 0,
-#            'width': -1.5,
-#            'width_diff': 1.5,
-#            'Area_diff': -1,
-#            # 'Area_std': -1,
-#            f'Nearest_Dist_{channel}': -1.5,
-#            f'Nearest_Dist_{channel}_diff': 1.5,
-#            # f'Nearest_Dist_{channel}_std': 1.5
-#            }
-
-# path_kws = {'samplesdir': samplesdir, 'plotdir': plotdir, 'datadir': datadir}
-
 
 def detect_borders(paths, all_samples, palette, anchor,
                    threshold=Sett.peak_thresh, variables=Sett.border_vars,
                    scoring=Sett.scoring_vars, channel=Sett.border_channel):
-    print('-Finding border regions-')
+    """
+    Midgut border detection by weighted scoring of binned variables.
+    
+    Args:
+    ----
+        paths - LAM system.paths-object that contains directory paths
+        all_samples - Paths to sample folders
+        palette - Color palette dict with sample groups as keys
+        anchor - Anchoring bin of the samples in the full data matrix
+        threshold - Minimum score for peak detection, i.e. borders
+        variables - List of column names to collect from sample's channel data
+        scoring - Dict of variable names with their scoring weight
+        channel - The name of the data channel that is used, e.g. 'DAPI' data
+    """
+    print('---Finding border regions---')
     lg.logprint(LAM_logger, 'Finding border regions.', 'i')
     b_dirpath = plotting_directory(paths.plotdir)
+    # Get widths and if not found, abort
     widths = read_widths(paths.datadir)
     if widths is None:
         return
+    # Establish object to store scores of individual samples
     border_data = FullBorders(all_samples, widths, anchor, palette)
     print('  Scoring samples  ...')
+    # Collect and score variables for each sample in the sample list
     for path in all_samples:
         sample = GetSampleBorders(path, channel, scoring, anchor, variables)
         sample(border_data, b_dirpath)
+    # Once sample scores have been collected, find peaks
     print('  Finding peaks  ...')
     peaks = border_data(b_dirpath, threshold)
-    print('Found peaks:')
-    print(peaks)
+    peaks.to_csv(paths.datadir.joinpath('All_peaks.csv'), index=False)
     lg.logprint(LAM_logger, 'Border detection done.', 'i')
 
 
 class FullBorders:
+    """Store sample scores from GetSampleBorders and find group peaks."""
 
     def __init__(self, samples, widths, anchor, palette):
         self.samples = samples
@@ -75,7 +79,6 @@ class FullBorders:
                                    index=widths.index)
 
     def __call__(self, dirpath, threshold):
-        # group_totals = self.group_scores()
         flattened, curves = self.flatten_scores()
         s_sums = get_group_total(flattened)
         peaks = get_peak_data(s_sums, threshold)
@@ -84,16 +87,18 @@ class FullBorders:
             scores = prepare_data(self.scores.T)
             flat = prepare_data(flattened)
             self.group_plots(scores, flat, curves, s_sums, peaks, dirpath)
-        # self.group_plots(flattened)
+        peaks.peak = peaks.peak.divide(2)
         return peaks
 
     def flatten_scores(self):
+        """Subtract fitted curve from values of each group."""
         groups = [s[0] for s in self.scores.columns.str.split('_')]
         vals = self.scores.T.copy().assign(group=groups)
-        grouped = vals.groupby('group', as_index=True)
-        curves = pd.DataFrame()
-        curves = grouped.apply(lambda x: get_fit(x.melt(id_vars='group')))
-        devs = vals.apply(lambda x, c=curves: x - c[x.group], axis=1)
+        grouped = vals.groupby('group')
+        curves = grouped.apply(lambda x: get_fit(x, x.name, id_var=['group']))
+        curves  = curves.droplevel(1)
+        devs = vals.apply(lambda x, c=curves:
+                          x[:-1].subtract(c.loc[x.group, :]), axis=1)
         return devs, curves
 
     def group_plots(self, scores, flat, curves, s_sums, peaks, dirpath):
@@ -113,7 +118,7 @@ class FullBorders:
             color = self.palette[grp]
             ax1.vlines(x=loc, ymin=c_val-prom, ymax=c_val, color=color,
                        linewidth=1, zorder=2)
-            ax1.annotate(loc, (loc + 0.03, c_val * 1.03), color=color,
+            ax1.annotate(loc/2, (loc + 0.03, c_val * 1.03), color=color,
                          alpha=0.7)
         ax1.set_title('Smoothed sum scores')
 
@@ -123,9 +128,8 @@ class FullBorders:
         ax2.set_title('Flattened scores')
         sns.lineplot(data=scores, x='variable', y='value', hue='group',
                      palette=self.palette, alpha=0.7, legend=False, ax=ax3)
-        p_curves = pd.DataFrame(data=curves.values, columns=['value'])
-        p_curves = p_curves.assign(variable=curves.index.get_level_values(1),
-                                   group=curves.index.get_level_values(0))
+        p_curves = pd.DataFrame(data=curves.values)
+        p_curves = p_curves.assign(group=curves.index).melt('group')
         sns.lineplot(data=p_curves.infer_objects(), x='variable', y='value',
                      hue='group', style='group', alpha=0.9, legend=False,
                      dashes=True, linewidth=0.5, palette=self.palette, ax=ax3)
@@ -165,7 +169,7 @@ class GetSampleBorders:
         # print(f'{self.sample_name}  ...')
         self.get_variables(FullBorders)
         normalized = self.normalize_data()
-        curve = get_fit(normalized.T.melt())
+        curve = get_fit(normalized.T)
         devs = deviate_data(normalized, curve)
         scores = self.score_data(devs)
         if (Sett.plot_samples & Sett.Create_Border_Plots & Sett.Create_Plots):
@@ -182,7 +186,7 @@ class GetSampleBorders:
         score = scores.T.assign(var_name=scores.T.index, stype='score')
         norm_mean = norm.mean()
 
-        scurve = get_fit(scores.T.melt())
+        scurve = get_fit(scores.T)
         fitted_mean = scores.apply(lambda x, c=scurve: x - c, axis=0).mean(axis=1)
 
         score = score.melt(id_vars=['var_name', 'stype'])
@@ -223,8 +227,7 @@ class GetSampleBorders:
         self.var_data = pd.DataFrame(index=width.index)
         self.var_data = self.var_data.assign(width=width,
                                              width_diff=self.get_diff(width))
-        bin_max = self.data.DistBin.max()
-        bins = np.linspace(0, 1, (bin_max + 1) * 2)
+        bins = np.linspace(0, 1, width.index.size + 1)
         self.data = self.data.assign(binning=pd.cut(self.data["NormDist"],
                                                     bins=bins))
         # get counts and and related:
@@ -281,7 +284,7 @@ def assign_fit(x, fit):
 
 
 def deviate_data(data, curve):
-    devs = data.subtract(curve, axis=0)
+    devs = data.subtract(curve.iloc[0, :], axis=0)
     return devs
 
 
@@ -323,7 +326,6 @@ def get_group_total(data):
     trimmed = prepare_data(smoothed)
     s_sums = trimmed.groupby(['group', 'variable']
                              ).apply(lambda x: drop_outlier(x.value).sum())
-    # s_sums = trimmed.groupby(['group', 'variable']).sum()
     s_sums = s_sums.to_frame(name='value')
     s_sums = s_sums.assign(group=s_sums.index.get_level_values(0),
                            variable=s_sums.index.get_level_values(1))
@@ -353,12 +355,6 @@ def prepare_data(data):
     return data
 
 
-def fit_func(x, a, b, c, d):
-    return a * x**3 + b * x**2 + c * x + d
-    # return a * x**2 + b * x + c
-    # return a * np.exp(-b * x) + c
-
-
 def plotting_directory(plotdir):
     dirpath = plotdir.joinpath('Borders')
     dirpath.mkdir(exist_ok=True)
@@ -383,7 +379,7 @@ def smooth_data(data, win=3, tau=10):
     return smooth_data
 
 
-def trim_data(data, grouper='group'):
+def trim_data(data, name='curve', grouper='group'):
     grouped = data.groupby(grouper)
     masks = grouped.apply(lambda x: x.isna().sum() < x.shape[0]/2)
     return grouped.apply(lambda x, m=masks: apply_mask(x, m.loc[x.name, :]))
@@ -393,17 +389,20 @@ def apply_mask(arr, mask):
     return arr.apply(lambda x, m=mask: x.where(m), axis=1)
 
 
-def get_fit(data):
+def get_fit(data, name='c', id_var=None):
+    try:
+        data = data.melt(id_vars=id_var)
+    except KeyError:
+         data = data.melt()
     data = data.dropna()
     x_data = data.variable.values
     y_data = data.value.values
-    # popt, pcov = curve_fit(fit_func, x_data, y_data) #, sigma=0.1)
     z = np.polyfit(x_data.astype(np.float), y_data.astype(np.float), 4)
     f = np.poly1d(z)
     x_curve = data.variable.unique()
-    # x_curve = np.linspace(0, 1, 100)
     y_curve = f(x_curve)
-    curve = pd.Series(y_curve, index=x_curve)
+    curve = pd.DataFrame(index=[name], columns=x_curve.astype(int),
+                         data=np.reshape(y_curve, (-1, len(y_curve))))
     return curve
 
 

@@ -15,8 +15,7 @@ import numpy as np
 import pandas as pd
 import pathlib as pl
 import seaborn as sns
-# import shapely.geometry as gm
-from scipy.spatial import distance
+from sklearn.neighbors import KDTree
 # LAM imports
 import system as system
 import process as process
@@ -24,6 +23,7 @@ from settings import store, settings as Sett
 from statsMWW import statistics, Total_Stats
 from plot import plotting
 import logger as lg
+
 try:
     LAM_logger = lg.get_logger(__name__)
 except AttributeError:
@@ -174,30 +174,32 @@ class Samplegroups:
 
     def Get_Clusters(self):
         """Gather sample data to compute cell clusters."""
+        print('---Finding clusters---')
         lg.logprint(LAM_logger, 'Finding clusters', 'i')
 #        allpaths = [] ???
         for grp in self._groups:  # Get one sample group
             lg.logprint(LAM_logger, '-> clusters for group {}'.format(grp),
                         'i')
-            print('\n---Finding clusters for group {}---'.format(grp))
+            print('  {}  ...'.format(grp))
             SampleGroup = Group(grp)
             for path in SampleGroup.groupPaths:  # Get one sample of the group
                 Smpl = Sample(path, SampleGroup)
-                print('{}  ...'.format(Smpl.name))
+                # print('{}  ...'.format(Smpl.name))
                 Smpl.Clusters(Sett.Cl_maxDist)  # Find clusters
         lg.logprint(LAM_logger, 'Clusters calculated', 'i')
 
     def Get_DistanceMean(self):
         """Get sample data and pass for cell-to-cell distance calculation."""
-        lg.logprint(LAM_logger, 'Finding cell-to-cell distances', 'i')
+        print('---Feature-to-feature distances---')
+        lg.logprint(LAM_logger, 'Finding feature-to-feature distances', 'i')
         for grp in self._groups:  # Get one sample group
             lg.logprint(LAM_logger, '-> Distances for group {}'.format(grp),
                         'i')
-            print('\n---Finding nearest cells for group {}---'.format(grp))
+            print('  {}  ...'.format(grp))
             SampleGroup = Group(grp)
             for path in SampleGroup.groupPaths:  # Get one sample of the group
                 Smpl = Sample(path, SampleGroup)
-                print('{}  ...'.format(Smpl.name))
+                # print('{}  ...'.format(Smpl.name))
                 # Find distances between nuclei within the sample
                 Smpl.DistanceMean(Sett.maxDist)
         lg.logprint(LAM_logger, 'Distances calculated', 'i')
@@ -425,35 +427,6 @@ class Sample(Group):
     def find_distances(self, Data, volIncl=200, compare='smaller',
                        clusters=False, **kws):
         """Calculate cell-to-cell distances or find clusters."""
-        def _get_nearby(ind, row, target, maxDist, rmv_self=False):
-            """Within an iterator, find all cells near the current cell."""
-            # When finding nearest in the same channel, remove the current
-            # cell from the frame, otherwise nearest cell would be itself.
-            if rmv_self:
-                target = target.loc[target.index.difference([ind]), :]
-            # Find cells within the accepted limits (Sett.maxDist)
-            nID = target[((abs(target.x - row.x) <= maxDist) &
-                          (abs(target.y - row.y) <= maxDist))].index
-            if nID.size == 0:
-                return None
-            # Get coordinate data of current cell
-            point = np.asarray([row.at['x'], row.at['y'], row.at['z']])
-            point = np.reshape(point, (-1, 3))
-            # DF for storing nearby cells
-            r_df = pd.DataFrame(index=nID, columns=['XYZ', 'Dist', 'ID'])
-            # Calculate distances to each nearby cell
-            # NOTE: z-distance is also taken into account at this step
-            r_df['Dist'] = distance.cdist(point, target.loc[
-                nID, ['x', 'y', 'z']].to_numpy(), 'euclidean').ravel()
-            # Drop data that is more distant than the max distance
-            r_df = r_df[r_df.Dist <= maxDist]
-            if r_df.empty:  # If no cells are close enough
-                return None
-            # Otherwise, insert coordinates and cell ID to DF
-            r_df['XYZ'] = target.loc[nID, ['x', 'y', 'z']].apply(tuple,
-                                                                 axis=1)
-            r_df['ID'] = target.loc[r_df.index, 'ID']
-            return r_df
 
         def _find_clusters():
             """Find cluster 'seeds' and merge to create full clusters."""
@@ -475,19 +448,13 @@ class Sample(Group):
                 yield r
 
             maxDist = kws.get('Dist')  # max distance to consider clustering
-            clusterSeed = {}  # For storing cluster 'seeds'
-            for i, row in XYpos.iterrows():  # Iterate over all cells
-                # Find nearby cells
-                nearby = _get_nearby(i, row, XYpos, maxDist)
-                # If nearby cells, make a list of their IDs and add to seeds
-                if nearby is not None:
-                    if nearby.shape[0] > 1:
-                        clusterSeed[i] = nearby.ID.tolist()
-            # Make a sorted list of lists of the found cluster seeds
-            Cl_lst = [sorted(list(clusterSeed.get(key))) for key in
-                      clusterSeed.keys()]
+            
+            treedata = XYpos[['x', 'y', 'z']]
+            tree = KDTree(treedata)
+            seed_ids = tree.query_radius(treedata, r=maxDist)
             # Merging of the seeds
-            Cl_gen = __merge(Cl_lst)
+            seed_lst = [XYpos.iloc[a, :].ID.tolist() for a in seed_ids]
+            Cl_gen = __merge(seed_lst)
             # Change the generator into list of lists and drop clusters of size
             # under/over limits
             Clusters = [list(y) for x in Cl_gen for y in x if y and len(y) >=
@@ -510,44 +477,22 @@ class Sample(Group):
                 comment = Data.name
                 filename = 'Avg_{}_Distance Means.csv'.format(Data.name)
             # Creation of DF to store found data (later concatenated to data)
-            cols = ['Nearest_XYZ_{}'.format(comment), 'Nearest_Dist_{}'.format(
-                    comment), 'Nearest_ID_{}'.format(comment)]
-            NewData = pd.DataFrame(columns=cols, index=XYpos.index)
-            # If not finding nearest on other channel, search distance can be
-            # limited if current cell has already been found to be near another
-            # -> we know there's a cell at least at that distance
-            if 'targetXY' not in locals():
-                found_ids = {}  # Stores the IDs already found
-                # Iterate over each cell (row) in the data
-                for i, row in XYpos.iterrows():
-                    find_dist = maxDist
-                    # Search if cell ID already used
-                    if row.at['ID'] in found_ids.keys():
-                        find_dist = found_ids.get(row.at['ID'])  # Limit dist
-                    # Find nearby cells
-                    nearby = _get_nearby(i, row, target, find_dist,
-                                         rmv_self=rmv)
-                    # If some are found:
-                    if nearby is not None:
-                        min_idx = nearby.Dist.idxmin()  # Find nearest of cells
-                        row2 = nearby.loc[min_idx]  # Get data of cell
-                        # Update ID to the 'founds'
-                        found_ids.update({row2.at['ID']: row2.at['Dist']})
-                        # Insert cell data to the storage DF
-                        NewData.loc[i, cols] = row2.to_list()
-            else:  # If cells are found on another channel:
-                # Iterate each cell and find nearest at the user-defined dist
-                for i, row in XYpos.iterrows():
-                    nearby = _get_nearby(i, row, target, maxDist, rmv_self=rmv)
-                    if nearby is not None:
-                        NewData.loc[i, cols] = nearby.loc[nearby.Dist.idxmin()
-                                                          ].to_list()
+            cols = [f'Nearest_Dist_{comment}', f'Nearest_ID_{comment}']
+            NewData = pd.DataFrame(index=target.index)
+            # KD tree
+            treedata = target[['x', 'y', 'z']]
+            tree = KDTree(treedata)
+            dist, ind = tree.query(treedata, k=2)
+
+            col_dict = {cols[0]: dist[:, 1],
+                        cols[1]: target.iloc[ind[:, 1]].ID.values}
+            NewData = NewData.assign(**col_dict)
             # Concatenate the obtained data with the read data.
             NewData = pd.concat([Data, NewData], axis=1)
             # Get bin and distance to nearest cell for each cell, calculate
             # average distance within each bin.
             binnedData = NewData.loc[:, 'DistBin']
-            distances = NewData.loc[:, cols[1]].astype('float64')
+            distances = NewData.loc[:, cols[0]].astype('float64')
             with warnings.catch_warnings():
                 warnings.simplefilter('ignore', category=RuntimeWarning)
                 means = [np.nanmean(distances[binnedData.values == k]) for k in

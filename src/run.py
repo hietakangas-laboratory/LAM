@@ -4,7 +4,7 @@ Run file for Longitudinal Analysis of Midgut.
 
 Created on Wed Mar  6 12:42:28 2019
 @author: Arto I. Viitanen
-@version: 0.1.2
+@version: 0.2.0
 -------------------------------------------------------------------------------
 
 DEPENDENCIES:
@@ -85,6 +85,9 @@ For more extensive instructions, see user manual.
 # LAM module
 from settings import settings as Sett
 
+# Standard libs
+import sys
+
 
 def main():
     """Perform LAM-analysis based on settings.py."""
@@ -143,14 +146,18 @@ def main():
 
 
 def main_catch_exit(LAM_logger=None):
-    """Run main() while catching exceptions for logging."""
+    """Run main() while catching exc eptions for logging."""
+    import logger as lg
+    if 'logger' not in sys.modules:
+        LAM_logger = lg.setup_logger(__name__, new=True)
+        lg.print_settings()  # print settings of analysis to log
     if LAM_logger is None:  # If no logger given, get one
-        import logger as lg
         LAM_logger = lg.get_logger(__name__)
     try:
         print("START ANALYSIS")
         main()  # run analysis
         lg.logprint(LAM_logger, 'Completed', 'i')
+        lg.Close()
         print('\nCOMPLETED\n')
     # Catch and log possible exits from the analysis
     except KeyboardInterrupt:
@@ -175,8 +182,4 @@ if __name__ == '__main__':
         GUI = interface.base_GUI(ROOT)
         ROOT.mainloop()
     else:  # Otherwise create logger and start the analysis
-        import logger
-        LOG = logger.setup_logger(__name__)
-        logger.print_settings()  # print settings of analysis to log
-        main_catch_exit(LOG)
-        logger.Close()
+        main_catch_exit()
