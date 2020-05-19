@@ -61,7 +61,7 @@ def detect_borders(paths, all_samples, palette, anchor,
     # Once sample scores have been collected, find peaks
     print('  Finding peaks  ...')
     peaks = border_data(b_dirpath, threshold)
-    peaks.to_csv(paths.datadir.joinpath('All_peaks.csv'), index=False)
+    peaks.to_csv(paths.datadir.joinpath('Group_peaks.csv'), index=False)
     lg.logprint(LAM_logger, 'Border detection done.', 'i')
 
 
@@ -187,8 +187,8 @@ class GetSampleBorders:
         norm_mean = norm.mean()
 
         scurve = get_fit(scores.T)
-        fitted_mean = scores.apply(lambda x, c=scurve: x - c, axis=0).mean(axis=1)
-
+        fitted_mean = scores.apply(lambda x, c=scurve:
+                          x[:-1].subtract(c.iloc[0, :]), axis=0).mean(axis=1)
         score = score.melt(id_vars=['var_name', 'stype'])
         norm = norm.melt(id_vars=['var_name', 'stype'])
         fig, (ax1, ax2, ax3) = plt.subplots(3, 1, figsize=(10, 5),
@@ -251,7 +251,8 @@ class GetSampleBorders:
         return counts
 
     def get_diff(self, data):
-        diff = data.diff()
+        diff = data.diff()[1:]
+        diff.index = diff.index -1
         return diff
 
     def get_std(self, var):

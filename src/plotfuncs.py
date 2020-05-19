@@ -76,6 +76,14 @@ def channel_matrix(plotter, **kws):
         print(msg)
         plotter.plot_error = True
         return None
+    except RuntimeError:
+        msg = '-> Confirm that all samples have proper channel data'
+        fullmsg = 'Pairplot RuntimeError\n{}'.format(msg)
+        lg.logprint(LAM_logger, fullmsg, 'ex')
+        print('ERROR: Pairplot RuntimeError')
+        print(msg)
+        plotter.plot_error = True
+        return None
     return g
 
 

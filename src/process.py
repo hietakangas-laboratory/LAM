@@ -581,7 +581,7 @@ class normalize:
                     filename = str('Avg_{}_{}.csv'.format(self.channel, col))
                     system.saveToFile(avgS, PATHS.datadir, filename)
 
-    def normalize_samples(self, MPs, arrayLength, center, name=None,):
+    def normalize_samples(self, MPs, arrayLength, center, name=None):
         """For inserting sample data into larger matrix, centered with MP."""
         cols = self.counts.columns
         data = pd.DataFrame(np.zeros((arrayLength, len(cols))), columns=cols)
@@ -726,6 +726,9 @@ def Create_Samples(PATHS):
 
 def find_existing(PATHS):
     """Get MPs and count old projections when not projecting during 'Count'."""
+    msg = 'Collecting pre-existing data.'
+    print(msg)
+    lg.logprint(LAM_logger, msg, 'i')
     MPs = pd.DataFrame(columns=store.samples)
     for smpl in store.samples:
         smplpath = PATHS.samplesdir.joinpath(smpl)

@@ -15,7 +15,7 @@ class settings:
     # ####################### PRIMARY SETTINGS #######################
     GUI = True  # Use graphical user interface (True / False)
     # Detect border regions
-    border_detection = True
+    border_detection = False
     # Determine width of gut based on vector channel projection distances
     measure_width = True
     plot_width = True
@@ -136,7 +136,7 @@ class settings:
     border_channel = vectChannel  # Default is vector creation channel
     peak_thresh = 0.1  # Border score threshold for peak detection
     # Plot individual samples (requires Create_Border_Plots==True)
-    plot_samples = False
+    plot_samples = True
     # Data columns to use for detection (sample width is always collected)
     # Adding 'Count' will get cell counts
     border_vars = ['Area', f'Nearest_Dist_{border_channel}']

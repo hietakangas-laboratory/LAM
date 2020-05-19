@@ -156,11 +156,12 @@ class DataHandler:
                 col_list.extend([c for c in data.columns if key in c])
                 # temp = data.loc[:, data.columns.str.contains(key)]
             sub_data = data.loc[:, col_list].sort_values('DistBin')
-            # Test for missing variables:
-            for col in sub_data.columns:
-                # If no variance, drop data
-                if sub_data.loc[:, col].nunique() == 1:
-                    sub_data.drop(col, axis=1, inplace=True)
+            if not 'no_var' in args:
+                # Test for missing variables:
+                for col in sub_data.columns:
+                    # If no variance, drop data
+                    if sub_data.loc[:, col].nunique() == 1:
+                        sub_data.drop(col, axis=1, inplace=True)
             # Add identifier columns and melt data
             sub_data.loc[:, 'Channel'] = path.stem
             sub_data.loc[:, 'Sample Group'] = str(path.parent.name

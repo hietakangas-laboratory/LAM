@@ -439,7 +439,7 @@ class plotting:
         for sample in store.samples:
             smpl_paths = [p for p in chan_paths if p.parent.name == sample]
             handle = system.DataHandler(self.sgroups, smpl_paths, savepath)
-            all_data = handle.get_sample_data(cols)
+            all_data = handle.get_sample_data(cols, 'no_var')
             if ('ClusterID' not in all_data.columns or
                 all_data.loc[:, 'ClusterID'].isna().all()):
                 print(f"  -> No clusters on {sample}")

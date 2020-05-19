@@ -39,20 +39,22 @@ import pandas as pd
 import pathlib as pl
 import re
 import shapely.geometry as gm
+from shapely.ops import linemerge
 
 # GIVE DATA SETS:
 # format: {<order of combining>: [r"<path_to_dataset_root>", <bins>]}
-data_sets = {1: [r"E:\Code_folder\DSS_split\R2R3", 26],
-             2: [r"E:\Code_folder\DSS_split\R3R4", 5],
-             3: [r"E:\Code_folder\DSS_split\END", 28]             
+data_sets = {1: [r"E:\Code_folder\DSS_split\R2R3", 19],
+             2: [r"E:\Code_folder\DSS_split\R3R4", 3],
+             3: [r"E:\Code_folder\DSS_split\END", 18]             
              }
-combine_chans = ['DAPI', 'GFP', 'Prospero', 'Delta']
+combine_chans = ['DAPI', 'DAPIEC', 'DAPIsmall', 'GFP', 'Prospero', 'Delta']
 savepath = pl.Path(r"E:\Code_folder\DSS_split\Combined")
 
 
 def combine(path):
     """Combine data sets created by LAM."""
     fullpath = path.joinpath('Analysis Data', 'Samples')
+    fullpath.mkdir(parents=True, exist_ok=True)
     order = sorted(data_sets.keys())
     bins = [0]
     # Determine the amount to increase each sets bins
@@ -87,15 +89,24 @@ def combine(path):
                 vlist = list(zip(vector.loc[:, 'X'].astype('float'),
                              vector.loc[:, 'Y'].astype('float')))
                 vects = vectors.get(smplpath.name)
-                vects[ind] = gm.LineString(vlist).length
+                vects[ind] = gm.LineString(vlist)
                 vectors.update({smplpath.name: vects})
             except StopIteration:
                 print(f"Could not find vector-file for {path.name}")
     # Find full lengths of vectors and length fractions:
     for sample, vector_data in vectors.items():
         smplpath = fullpath.joinpath(sample)
-        full_length = sum([v for v in vector_data])
-        vector_data = np.array(vector_data) / full_length
+        smplpath.mkdir(exist_ok=True)
+        v_lengths = [v.length for v in vector_data]
+        full_length = sum(v_lengths)
+        # Merge vectors into one and save:
+        all_vects = gm.MultiLineString(vector_data)
+        full_vector = linemerge(all_vects)
+        x_d, y_d = full_vector.xy
+        vector_df = pd.DataFrame().assign(X=x_d, Y=y_d)
+        vector_df.to_csv(smplpath.joinpath('Vector.csv'))
+        # Update vector dict to have vector lengths to modify normDist
+        vector_data = np.array(v_lengths) / full_length
         vectors.update({sample: vector_data})
 
     # Find channel data
@@ -104,7 +115,6 @@ def combine(path):
         samples = [[p.name, p] for p in path.iterdir() if p.is_dir()]
         for smpl in samples:
             smplpath = fullpath.joinpath(smpl[0])
-            smplpath.mkdir(parents=True, exist_ok=True)
             # Modify channel data:
             for chan in combine_chans:
                 string = '^' + re.escape(chan + ".csv")

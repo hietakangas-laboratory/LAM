@@ -448,7 +448,6 @@ class Sample(Group):
                 yield r
 
             maxDist = kws.get('Dist')  # max distance to consider clustering
-            
             treedata = XYpos[['x', 'y', 'z']]
             tree = KDTree(treedata)
             seed_ids = tree.query_radius(treedata, r=maxDist)
@@ -489,6 +488,8 @@ class Sample(Group):
             NewData = NewData.assign(**col_dict)
             # Concatenate the obtained data with the read data.
             NewData = pd.concat([Data, NewData], axis=1)
+            # limit data based on maxDist
+            NewData[cols] = NewData[cols].where((NewData[cols[0]]<=maxDist))
             # Get bin and distance to nearest cell for each cell, calculate
             # average distance within each bin.
             binnedData = NewData.loc[:, 'DistBin']
@@ -539,9 +540,9 @@ class Sample(Group):
             if Clusters:
                 for i, vals in enumerate(Clusters):
                     vals = [int(v) for v in vals]
-                    clustData.loc[clustData.ID.isin(vals), 'ClusterID'] = i
+                    clustData.loc[clustData.ID.isin(vals), 'ClusterID'] = i + 1
             else:
-                print(f"-> No clusters found.")
+                print(f"-> No clusters found for {self.name}.")
                 clustData.loc[:, 'ClusterID'] = np.nan
             # Merge obtained data with the original data
             NewData = Data.merge(clustData, how='outer', copy=False, on=['ID'])
