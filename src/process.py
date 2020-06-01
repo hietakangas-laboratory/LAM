@@ -849,7 +849,7 @@ def Project(PATHS):
                  != 'Analysis Data']:
         # Initialize sample variables
         sample = get_sample(path, PATHS, process=False, project=True)
-        print("{}  ...".format(sample.name))
+        print("  {}  ...".format(sample.name))
         # Find anchoring point of the sample
         sample.MP = sample.get_MPs(Sett.MPname, Sett.useMP, PATHS.datadir)
         # Collection of data for each channel of the sample

@@ -57,7 +57,12 @@ def detect_borders(paths, all_samples, palette, anchor,
     # Collect and score variables for each sample in the sample list
     for path in all_samples:
         sample = GetSampleBorders(path, channel, scoring, anchor, variables)
-        sample(border_data, b_dirpath)
+        if not sample.error:
+            sample(border_data, b_dirpath)
+    if border_data.scores.isnull().values.all():
+        print('\nERROR: Missing data, border detection cancelled.')
+        lg.logprint(LAM_logger, 'Border detection variables not found.', 'e')
+        return
     # Once sample scores have been collected, find peaks
     print('  Finding peaks  ...')
     peaks = border_data(b_dirpath, threshold)
@@ -161,7 +166,13 @@ class GetSampleBorders:
         data = pd.read_csv(filepath, index_col=False)
         id_cols = ['NormDist', 'DistBin']
         self.var_cols = variables
-        self.data = data.loc[:, id_cols + self.var_cols]
+        try:
+            self.data = data.loc[:, id_cols + self.var_cols]
+            self.error = False
+        except KeyError:
+            print(f'All variables not found in data for {self.sample_name}.')
+            print('Check data and/or border_vars-setting.')
+            self.error = True
         self.scoring = pd.Series(scoring)
         self.anchor = anchor * 2
 

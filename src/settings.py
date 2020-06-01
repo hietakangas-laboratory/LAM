@@ -15,7 +15,7 @@ class settings:
     # ####################### PRIMARY SETTINGS #######################
     GUI = True  # Use graphical user interface (True / False)
     # Detect border regions
-    border_detection = False
+    border_detection = True
     # Determine width of gut based on vector channel projection distances
     measure_width = True
     plot_width = True

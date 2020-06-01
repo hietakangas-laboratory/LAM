@@ -72,7 +72,7 @@ On some experiments the size proportions of different regions may alter, e.g.
 when comparing starved and fully-fed midguts, more accurate results can be
 obtained by dividing the image/data into multiple analyses. A typical way to do
 this is to run separate analyses for R1-2, R3, and R4-5. Alternatively, a user-
-defined coordinate (MP = measurement point) at a distinGUIshable point can be
+defined coordinate (MP = measurement point) at a distinguishable point can be
 used to anchor the individual samples for comparison, e.g. points at R2/3-
 border are lined, with each sample having variable numbers of bins on either
 side. The variation however likely leads to a compounding error as distance

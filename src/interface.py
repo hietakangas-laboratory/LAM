@@ -86,6 +86,7 @@ class base_GUI(tk.Toplevel):
         MPV = tk.BooleanVar(value=Sett.useMP)
         Proj = tk.BooleanVar(value=Sett.project)
         self.widths = tk.BooleanVar(value=Sett.measure_width)
+        self.borders = tk.BooleanVar(value=Sett.border_detection)
         self.pSample = tk.Checkbutton(self.midf, text="Process",
                                       variable=SampleV, relief='groove', bd=4,
                                       font=('Arial', 8, 'bold'),
@@ -113,7 +114,7 @@ class base_GUI(tk.Toplevel):
         self.pDists.grid(row=0, column=2, columnspan=1, padx=(2, 2))
         self.pPlots.grid(row=0, column=3, columnspan=1, padx=(2, 2))
         self.pStats.grid(row=0, column=4, columnspan=1, padx=(2, 2))
-        # Projection, Measurement point, widths & file header settings
+        # Projection, Measurement point, widths, borders & file header settings
         self.pProj = tk.Checkbutton(self.midf, text="Project", variable=Proj,
                                     relief='groove', bd=3, font=('Arial', 8))
         self.pProj.grid(row=1, column=0, columnspan=1, padx=(2, 2))
@@ -126,6 +127,11 @@ class base_GUI(tk.Toplevel):
                                      bd=3, font=('Arial', 8),
                                      command=self.width_check)
         self.pWidth.grid(row=2, column=0, columnspan=1, padx=(2, 2))
+        self.pBorder = tk.Checkbutton(self.midf, text="Borders",
+                                     variable=self.borders, relief='groove',
+                                     bd=3, font=('Arial', 8),
+                                     command=self.border_check)
+        self.pBorder.grid(row=2, column=1, columnspan=1, padx=(2, 2))
         self.lblMP = tk.Label(self.midf, text='MP label:', bd=1,
                               font=('Arial', 8))
         self.lblMP.grid(row=1, column=2)
@@ -133,10 +139,10 @@ class base_GUI(tk.Toplevel):
         self.MPIn = tk.Entry(self.midf, text=setMP.get(), bg='white',
                              textvariable=setMP, bd=2, relief='sunken')
         self.MPIn.grid(row=1, column=3, columnspan=3)
-        lbltext = 'Data file header row:\n(Starts from zero)'
+        lbltext = 'Data header row:\n(from zero)'
         self.lblHead = tk.Label(self.midf, text=lbltext, bd=1,
                                 font=('Arial', 8))
-        self.lblHead.grid(row=2, column=1, columnspan=2)
+        self.lblHead.grid(row=2, column=2, columnspan=1)
         setHead = tk.IntVar(value=Sett.header_row)
         self.HeadIn = tk.Entry(self.midf, text=setHead.get(), bg='white',
                                textvariable=setHead, bd=2, relief='sunken')
@@ -189,7 +195,7 @@ class base_GUI(tk.Toplevel):
         self.lbl2.grid(row=0, column=0)
         # checkbox variables
         global Pchans, Padds, Ppairs, Pheats, Pdists, Pstats, Pclusts
-        global PVSchan, PVSadd
+        global PVSchan, PVSadd, Pborders, Pwidths
         Pchans = tk.BooleanVar(value=Sett.Create_Channel_Plots)
         Padds = tk.BooleanVar(value=Sett.Create_AddData_Plots)
         Ppairs = tk.BooleanVar(value=Sett.Create_Channel_PairPlots)
@@ -199,6 +205,8 @@ class base_GUI(tk.Toplevel):
         Pclusts = tk.BooleanVar(value=Sett.Create_Cluster_Plots)
         PVSchan = tk.BooleanVar(value=Sett.Create_ChanVSAdd_Plots)
         PVSadd = tk.BooleanVar(value=Sett.Create_AddVSAdd_Plots)
+        Pborders = tk.BooleanVar(value=Sett.Create_Border_Plots)
+        Pwidths = tk.BooleanVar(value=Sett.plot_width)
         # create checkboxes
         self.chanC = tk.Checkbutton(self.rightf, text="Channels",
                                     variable=Pchans)
@@ -218,15 +226,25 @@ class base_GUI(tk.Toplevel):
                                       variable=PVSchan)
         self.addVSC = tk.Checkbutton(self.rightf, text="Add. VS. Add.",
                                      variable=PVSadd)
+        self.borderC = tk.Checkbutton(self.rightf, text="Borders",
+                                     variable=Pborders)
+        self.widthC = tk.Checkbutton(self.rightf, text="Widths",
+                                     variable=Pwidths)
         self.chanC.grid(row=1, column=0, sticky='w')
+        self.heatC.grid(row=1, column=1, sticky='w')
+
         self.addC.grid(row=2, column=0, sticky='w')
+        self.clustC.grid(row=2, column=1, sticky='w')
+
         self.pairC.grid(row=3, column=0, sticky='w')
-        self.heatC.grid(row=4, column=0, sticky='w')
-        self.distC.grid(row=5, column=0, sticky='w')
-        self.statC.grid(row=6, column=0, sticky='w')
-        self.clustC.grid(row=7, column=0, sticky='w')
-        self.chanVSC.grid(row=8, column=0, sticky='w')
-        self.addVSC.grid(row=9, column=0, sticky='w')
+        self.statC.grid(row=3, column=1, sticky='w')
+
+        self.distC.grid(row=4, column=0, sticky='w')
+        self.borderC.grid(row=4, column=1, sticky='w')
+
+        self.widthC.grid(row=5, column=0, sticky='w')
+        self.chanVSC.grid(row=7, column=0, sticky='w', pady=(10, 0))
+        self.addVSC.grid(row=8, column=0, sticky='w')
         if PlotV.get() is False:
             for child in self.rightf.winfo_children():
                 child.configure(state='disable')
@@ -494,6 +512,9 @@ class base_GUI(tk.Toplevel):
     def Plot_check(self):
         """Relevant changes when plot-setting is checked."""
         if PlotV.get() is False:
+            global Pborders, Pwidths
+            Pborders.set(False)
+            Pwidths.set(False)
             self.plotbutton.configure(state='disable')
             for widget in self.rightf.winfo_children():
                 widget.configure(state='disable')
@@ -508,14 +529,15 @@ class base_GUI(tk.Toplevel):
 
     def Process_check(self):
         """Relevant changes when Process-setting is checked."""
+        wids = [self.binIn, self.lbl5, self.chIn, self.lbl4]
         if not SampleV.get():
             for widget in self.Up_leftf.winfo_children():
-                if widget not in [self.binIn, self.lbl5]:
+                if widget not in wids:
                     widget.configure(state='disable')
             hidev = 'disable'
         else:
             for widget in self.Up_leftf.winfo_children():
-                if widget not in [self.binIn, self.lbl5]:
+                if widget not in wids:
                     widget.configure(state='normal')
             self.switch_pages()
             hidev = 'normal'
@@ -558,6 +580,7 @@ class base_GUI(tk.Toplevel):
             self.pWidth.configure(state='normal')
         self.MP_check()
         self.width_check()
+        self.border_check()
         self.run_check()
 
     def browse_button(self):
@@ -567,6 +590,17 @@ class base_GUI(tk.Toplevel):
         Sett.workdir = str(self.folder_path.get())
         self.Detect_Channels()
 
+    def border_check(self):
+        if PlotV.get():
+            if self.borders.get():
+                self.borderC.configure(state='normal')
+            else:
+                self.borderC.configure(state='disable')
+        else:
+            global Pborders
+            Pborders.set(False)
+        
+
     def RUN_button(self, event=None):
         """Relevant changes when Run-button is pressed + run initialization."""
         Sett.workdir = pl.Path(self.folder_path.get())
@@ -575,6 +609,7 @@ class base_GUI(tk.Toplevel):
         Sett.process_dists = DistV.get()
         Sett.Create_Plots = PlotV.get()
         Sett.statistics = StatsV.get()
+        Sett.border_detection = self.borders.get()
         if not Sett.process_counts:
             Sett.measure_width = False
             Sett.useMP = False
@@ -592,6 +627,9 @@ class base_GUI(tk.Toplevel):
         Sett.Create_Distribution_Plots = Pdists.get()
         Sett.Create_Statistics_Plots = Pstats.get()
         Sett.Create_Cluster_Plots = Pclusts.get()
+        Sett.Create_Border_Plots = Pborders.get()
+        
+        Sett.plot_width = Pwidths.get()
         Sett.Create_ChanVSAdd_Plots = PVSchan.get()
         Sett.Create_AddVSAdd_Plots = PVSadd.get()
         Sett.vectChannel = setCh.get()
@@ -755,16 +793,14 @@ class base_GUI(tk.Toplevel):
                           c.lower() != Sett.MPname.lower()]
 
     def width_check(self):
-        if not SampleV.get() and not CountV.get():
-            self.chIn.configure(state='disable')
-            self.lbl4.configure(state='disable')
-        elif not SampleV.get():
+        if PlotV.get():
             if self.widths.get():
-                self.chIn.configure(state='normal')
-                self.lbl4.configure(state='normal')
+                self.widthC.configure(state='normal')
             else:
-                self.chIn.configure(state='disable')
-                self.lbl4.configure(state='disable')
+                self.widthC.configure(state='disable')
+        else:
+            global Pwidths
+            Pwidths.set(False)
 
 
 class Skel_settings(tk.Frame):
