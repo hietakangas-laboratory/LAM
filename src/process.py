@@ -820,7 +820,7 @@ def Get_Counts(PATHS):
         countpaths = PATHS.datadir.glob('All_*')
         for path in countpaths:
             name = str(path.stem).split('_')[1]
-            print('{}  ...'.format(name))
+            print('  {}  ...'.format(name))
             # Aforementionad data is used to create dataframes onto which each
             # sample's MP is anchored to one row, with bin-respective (index)
             # cell counts in each element of a sample (column) to allow
@@ -831,7 +831,7 @@ def Get_Counts(PATHS):
             ch_counts.averages(norm_counts)
             ch_counts.Avg_AddData(PATHS, Sett.AddData, store.totalLength)
         if Sett.measure_width:
-            print('Width  ...')
+            print('  Width  ...')
             width_path = PATHS.datadir.joinpath('Sample_widths.csv')
             width_counts = normalize(width_path)
             _, _ = width_counts.normalize_samples(
@@ -860,7 +860,7 @@ def Project(PATHS):
             if channel.datafail:
                 datatypes = ', '.join(channel.datafail)
                 info = "No variance, data discarded"
-                msg = "-> {} - {}: {}".format(info, channel.name, datatypes)
+                msg = "  -> {} - {}: {}".format(info, channel.name, datatypes)
                 print(msg)
             # Project features of channel onto vector
             sample.data = sample.project_channel(channel)

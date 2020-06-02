@@ -221,7 +221,7 @@ class Samplegroups:
         # VERSUS STATS
         if Sett.stat_versus:
             lg.logprint(LAM_logger, '-> Versus statistics', 'i')
-            print('-Versus-')
+            print('  -Versus-')
             # Finding control and other groups
             control = Sett.cntrlGroup
             ctrlName = re.compile(control, re.I)
@@ -236,7 +236,7 @@ class Samplegroups:
                 ctrl = Group(control)
                 Grp = Group(testgroup)
                 # Print names of groups under statistical analysis
-                print("{} Vs. {}  ...".format(ctrl.group, Grp.group))
+                print("    {} Vs. {}  ...".format(ctrl.group, Grp.group))
                 # Initiate statistics-class with the two groups
                 Stats = statistics(ctrl, Grp)
                 # Find stats of cell counts and additional data by looping
@@ -257,7 +257,7 @@ class Samplegroups:
         # TOTAL STATS
         if Sett.stat_total:
             lg.logprint(LAM_logger, '-> Total statistics', 'i')
-            print('-Totals-')
+            print('  -Totals-')
             # Find the data file, initialize class, and count stats
             datapaths = self.paths.datadir.glob('Total*.csv')
             for path in datapaths:
@@ -469,19 +469,17 @@ class Sample(Group):
                 comment = Sett.target_chan
                 filename = 'Avg_{} VS {}_Distance Means.csv'.format(Data.name,
                                                                     comment)
-                rmv = False
             else:  # If using the same channel:
                 target = XYpos
-                rmv = True
                 comment = Data.name
                 filename = 'Avg_{}_Distance Means.csv'.format(Data.name)
             # Creation of DF to store found data (later concatenated to data)
             cols = [f'Nearest_Dist_{comment}', f'Nearest_ID_{comment}']
-            NewData = pd.DataFrame(index=target.index)
+            NewData = pd.DataFrame(index=XYpos.index)
             # KD tree
             treedata = target[['x', 'y', 'z']]
             tree = KDTree(treedata)
-            dist, ind = tree.query(treedata, k=2)
+            dist, ind = tree.query(XYpos[['x', 'y', 'z']], k=2)
 
             col_dict = {cols[0]: dist[:, 1],
                         cols[1]: target.iloc[ind[:, 1]].ID.values}
@@ -677,8 +675,8 @@ def Get_Widths(samplesdir, datadir):
     msg = "Necessary files for width approximation not be found for "
     for path in samplesdir.iterdir():
         files = [p for p in path.iterdir() if p.is_file()]
-        vreg = re.compile('^vector\.', re.I)
-        dreg = re.compile(f'^{Sett.vectChannel}\.csv', re.I)
+        vreg = re.compile('^vector.', re.I)
+        dreg = re.compile(f'^{Sett.vectChannel}.csv', re.I)
         try:
             vect_path = [p for p in files if vreg.match(p.name)]
             data_path = [p for p in files if dreg.match(p.name)]

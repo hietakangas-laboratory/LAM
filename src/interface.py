@@ -44,9 +44,9 @@ class base_GUI(tk.Toplevel):
                            pady=(0, 0), sticky="new")
         self.rightf.grid(row=5, column=3, columnspan=3, rowspan=11,
                          pady=(0, 0), sticky="new")
-        self.distf.grid(row=13, rowspan=8, columnspan=6, sticky="new",
+        self.distf.grid(row=12, rowspan=8, columnspan=6, sticky="new",
                         pady=(0, 0))
-        self.bottomf.grid(row=19, rowspan=2, columnspan=6, sticky="new",
+        self.bottomf.grid(row=18, rowspan=2, columnspan=6, sticky="new",
                           pady=(15, 2))
         col_count, row_count = self.master.grid_size()
         for col in range(col_count):
@@ -230,8 +230,8 @@ class base_GUI(tk.Toplevel):
                                      variable=Pborders)
         self.widthC = tk.Checkbutton(self.rightf, text="Widths",
                                      variable=Pwidths)
-        self.chanC.grid(row=1, column=0, sticky='w')
-        self.heatC.grid(row=1, column=1, sticky='w')
+        self.chanC.grid(row=1, column=0, sticky='w', pady=(2, 0))
+        self.heatC.grid(row=1, column=1, sticky='w', pady=(2, 0))
 
         self.addC.grid(row=2, column=0, sticky='w')
         self.clustC.grid(row=2, column=1, sticky='w')
@@ -244,7 +244,7 @@ class base_GUI(tk.Toplevel):
 
         self.widthC.grid(row=5, column=0, sticky='w')
         self.chanVSC.grid(row=7, column=0, sticky='w', pady=(10, 0))
-        self.addVSC.grid(row=8, column=0, sticky='w')
+        self.addVSC.grid(row=8, column=0, sticky='ws', pady=(2, 30))
         if PlotV.get() is False:
             for child in self.rightf.winfo_children():
                 child.configure(state='disable')
@@ -431,35 +431,28 @@ class base_GUI(tk.Toplevel):
 
     def Cluster_check(self):
         """Relevant changes when cluster-setting is checked."""
+        widgets = [self.ClChanlbl, self.ClChIn, self.ClDistlbl, self.ClDistIn,
+                   self.ClMinlbl, self.ClMinIn, self.ClMaxlbl, self.ClMaxIn,
+                   self.ClSizlbl, self.ClSizIn, self.VClbut1, self.VClbut2,
+                   self.Cllbl]
         if not self.clustV.get():
-            for widget in [self.ClChanlbl, self.ClChIn, self.ClDistlbl,
-                           self.ClDistIn, self.ClMinlbl, self.ClMinIn,
-                           self.ClMaxlbl, self.ClMaxIn, self.ClSizlbl,
-                           self.ClSizIn, self.VClbut1, self.VClbut2,
-                           self.Cllbl]:
+            for widget in widgets:
                 widget.configure(state='disable')
         else:
-            for widget in [self.ClChanlbl, self.ClChIn, self.ClDistlbl,
-                           self.ClDistIn, self.ClMinlbl, self.ClMinIn,
-                           self.ClMaxlbl, self.ClMaxIn, self.ClSizlbl,
-                           self.ClSizIn, self.VClbut1, self.VClbut2,
-                           self.Cllbl]:
+            for widget in widgets:
                 widget.configure(state='normal')
             self.Filter_check()
 
     def Dist_check(self):
         """Relevant changes when find distance-setting is checked."""
+        widgets = [self.DChanlbl, self.DChIn, self.DDistlbl, self.DDistIn,
+                   self.DTarget, self.DTargetIn, self.DSizlbl, self.DSizIn,
+                   self.VDbut1, self.VDbut2, self.Distlbl]
         if not self.FdistV.get():
-            for widget in [self.DChanlbl, self.DChIn, self.DDistlbl,
-                           self.DDistIn, self.DTarget, self.DTargetIn,
-                           self.DSizlbl, self.DSizIn, self.VDbut1, self.VDbut2,
-                           self.Distlbl]:
+            for widget in widgets:
                 widget.configure(state='disable')
         else:
-            for widget in [self.DChanlbl, self.DChIn, self.DDistlbl,
-                           self.DDistIn, self.DTarget, self.DTargetIn,
-                           self.DSizlbl, self.DSizIn, self.VDbut1, self.VDbut2,
-                           self.Distlbl]:
+            for widget in widgets:
                 widget.configure(state='normal')
             self.Target_check()
             self.Filter_check()
@@ -560,24 +553,16 @@ class base_GUI(tk.Toplevel):
 
     def Count_check(self):
         """Relevant changes when count-setting is checked."""
+        widgets = [self.binIn, self.lbl5, self.lblMP, self.MPIn, self.pMP,
+                   self.pProj, self.pWidth]
         if not CountV.get():
-            self.binIn.configure(state='disable')
-            self.lbl5.configure(state='disable')
-            self.lblMP.configure(state='disable')
-            self.MPIn.configure(state='disable')
-            self.pMP.configure(state='disable')
-            self.pProj.configure(state='disable')
-            self.pWidth.configure(state='disable')
+            for wdg in widgets:
+                wdg.configure(state='disable')
         else:
-            self.binIn.configure(state='normal')
-            self.lbl5.configure(state='normal')
-            self.pMP.configure(state='normal')
-            self.lblMP.configure(state='normal')
-            self.MPIn.configure(state='normal')
             self.lblHead.configure(state='normal')
             self.HeadIn.configure(state='normal')
-            self.pProj.configure(state='normal')
-            self.pWidth.configure(state='normal')
+            for wdg in widgets:
+                wdg.configure(state='normal')
         self.MP_check()
         self.width_check()
         self.border_check()
@@ -849,11 +834,11 @@ class Skel_settings(tk.Frame):
 
         self.lbl10 = tk.Label(self, text='Smoothing', bd=1,
                               font=('Arial', 9))
-        self.lbl10.grid(row=5, column=0, columnspan=1, pady=(0, 22))
+        self.lbl10.grid(row=5, column=0, columnspan=1, pady=(0, 0))
         SSmooth = tk.DoubleVar(value=Sett.SigmaGauss)
         self.smoothIn = tk.Entry(self, text=SSmooth.get(), bg='white',
                                  textvariable=SSmooth, bd=2, relief='sunken')
-        self.smoothIn.grid(row=5, column=1, pady=(0, 22))
+        self.smoothIn.grid(row=5, column=1, pady=(0, 0))
 
 
 class Median_settings(tk.Frame):
@@ -879,11 +864,11 @@ class Median_settings(tk.Frame):
 
         self.lbl7 = tk.Label(self, text='Median bins  ', bd=1,
                              font=('Arial', 9))
-        self.lbl7.grid(row=2, column=0, columnspan=1, pady=(0, 85))
+        self.lbl7.grid(row=2, column=0, columnspan=1, pady=(0, 63))
         medBins = tk.IntVar(value=Sett.medianBins)
         self.mbinIn = tk.Entry(self, text=medBins.get(), bg='white',
                                textvariable=medBins, bd=2, relief='sunken')
-        self.mbinIn.grid(row=2, column=1, pady=(0, 85))
+        self.mbinIn.grid(row=2, column=1, pady=(0, 63))
 
 
 class Additional_data(tk.Toplevel):
