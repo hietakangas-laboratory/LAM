@@ -10,7 +10,7 @@ Created on Fri May  8 19:03:36 2020
 @author: Arto Viitanen
 """
 # LAM modules
-from settings import settings as Sett
+from settings import settings as Sett, store
 import logger as lg
 # Other
 import numpy as np
@@ -19,6 +19,9 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 from scipy.signal import find_peaks, peak_prominences
 import warnings
+
+import tkinter as tk
+import tkinter.simpledialog as tks
 
 
 try:
@@ -29,7 +32,8 @@ except AttributeError:
 
 def detect_borders(paths, all_samples, palette, anchor,
                    threshold=Sett.peak_thresh, variables=Sett.border_vars,
-                   scoring=Sett.scoring_vars, channel=Sett.border_channel):
+                   scoring=Sett.scoring_vars, channel=Sett.border_channel,
+                   gui_root=None):
     """
     Midgut border detection by weighted scoring of binned variables.
     
@@ -71,6 +75,11 @@ def detect_borders(paths, all_samples, palette, anchor,
     # Save data
     flat.to_csv(paths.datadir.joinpath('Borders_scores.csv'), index=False)
     peaks.to_csv(paths.datadir.joinpath('Borders_peaks.csv'), index=False)
+    if Sett.add_peaks:
+        if Sett.select_peaks:
+            ask_peaks(peaks, gui_root)
+        else:
+            store.border_peaks = peaks
     lg.logprint(LAM_logger, 'Border detection done.', 'i')
 
 
@@ -347,6 +356,34 @@ class GetSampleBorders:
         return normalized
 
 
+class PeakDialog(tks.Dialog):
+    
+    def __init__(self, data=None, master=None):
+        self.master = master
+        top = tk.Toplevel(master)
+        top.bind('<Return>', self.apply)
+        tk.Label(top, text="Select peaks for plotting:").grid(row=0)
+        tk.Label(top, text="(group, bin, prominence)").grid(row=1)
+        tk.Button(top, text="OK", command=self.apply).grid(row=1, column=4)
+        data.prominence = data.prominence.round(decimals=2)
+        self.values = []
+        self.bools = None
+        for i, row in data.iterrows():
+            string = ',  '.join(row[:-1].values.astype(str))
+            val = tk.IntVar(value=1)
+            wg = tk.Checkbutton(top, text=string, variable=val)
+            wg.grid(row=i+2, columnspan=2, sticky='W')
+            self.values.append(val)
+        self.top = top
+        self.top.wait_window()
+    
+    def apply(self):
+        self.bools = [bool(v.get()) for v in self.values]
+        self.top.destroy()
+        self.master.grab_set()
+        return self.bools
+
+
 def deviate_data(data, curve):
     """Subtract fitted curve from variable values."""
     devs = data.subtract(curve.iloc[0, :], axis=0)
@@ -490,3 +527,19 @@ def get_fit(data, name='c', id_var=None):
 
 def norm_func(arr):
     return (arr-arr.min())/(arr.max()-arr.min())
+
+
+def ask_peaks(peaks, gui_root):
+    if gui_root is not None:
+        win = PeakDialog(data=peaks, master=gui_root)
+        store.border_peaks = peaks.loc[win.bools, :]
+    else:
+        print('\aDetected peaks:')
+        print(peaks)
+        ans = input('\nGive indices of peaks to drop (e.g. 1, 2): ')
+        if ans == '':
+            store.border_peaks = peaks
+        else:
+            nums = [int(v) for v in ans.split(',')]
+            if nums:
+                store.border_peaks = peaks.loc[nums, :]

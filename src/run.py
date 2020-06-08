@@ -15,8 +15,8 @@ scikit-image (0.16.2), statsmodels (0.11.0)
 
 INSTALLATION:
 ------------
-The master folder should contain environment.yml that can be used to create
-Anaconda environment for LAM-use. For a Python environment, requirements.txt is
+The master folder contains environment.yml that can be used to create Anaconda
+environment for LAM-use. For a Python environment, requirements.txt is
 included.
 
 - Anaconda env:
@@ -90,7 +90,7 @@ import ParseCmds as pc
 import sys
 
 
-def main():
+def main(gui_root=None):
     """Perform LAM-analysis based on settings.py."""
     import system
     import analysis
@@ -136,7 +136,8 @@ def main():
     # Find border regions
     if Sett.border_detection:
         bd.detect_borders(system_paths, sample_groups._samplePaths,
-                          sample_groups._grpPalette, store.center)
+                          sample_groups._grpPalette, store.center,
+                          gui_root=gui_root)
     # Calculation of MWW-statistics for cell counts and other data
     if Sett.statistics:
         analysis.test_control()
@@ -146,7 +147,7 @@ def main():
         sample_groups.create_plots()
 
 
-def main_catch_exit(LAM_logger=None):
+def main_catch_exit(LAM_logger=None, gui_root=None):
     """Run main() while catching exc eptions for logging."""
     import logger as lg
     if LAM_logger is None:  # If no logger given, get one
@@ -155,7 +156,7 @@ def main_catch_exit(LAM_logger=None):
         LAM_logger = lg.get_logger(__name__)
     try:
         print("START ANALYSIS")
-        main()  # run analysis
+        main(gui_root=gui_root)  # run analysis
         lg.logprint(LAM_logger, 'Completed', 'i')
         lg.Close()
         print('\nCOMPLETED\n')

@@ -2,7 +2,7 @@
 """
 Created on Fri Jun  5 15:26:28 2020
 
-@author: arska
+@author: Arto I. Viitanen
 """
 
 

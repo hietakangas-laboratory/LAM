@@ -689,7 +689,8 @@ class base_GUI(tk.Toplevel):
             msg = "'Use Target' accepts only one channel. Using '{}'".format(
                                                                     ChStr[0])
             lg.logprint(LAM_logger, msg, 'w')
-        main_catch_exit()
+        # self.master.grab_release()
+        main_catch_exit(gui_root=self.master)
 
     def redirect_stdout(self):
         """Change stdout direction based on r_stdout check box."""

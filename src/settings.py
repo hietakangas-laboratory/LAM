@@ -13,7 +13,7 @@ class settings:
     """A class for holding all user-end settings for the analysis."""
 
     # ####################### PRIMARY SETTINGS #######################
-    GUI = False  # Use graphical user interface (True / False)
+    GUI = True  # Use graphical user interface (True / False)
     # Detect border regions
     border_detection = True
     # Determine width of gut based on vector channel projection distances
@@ -136,7 +136,7 @@ class settings:
     border_channel = vectChannel  # Default is vector creation channel
     peak_thresh = 0.1  # Border score threshold for peak detection
     # Plot individual samples (requires Create_Border_Plots==True)
-    plot_samples = True
+    plot_samples = False
     # Data columns to use for detection (sample width is always collected)
     # Adding 'Count' will get cell counts
     border_vars = ['Area', f'Nearest_Dist_{border_channel}']
@@ -159,7 +159,7 @@ class settings:
     stars = False  # Make P-value stars (*:<0.05 **:<0.01 ***:<0.001)
     fill = True  # fill significant bins with marker color
     negLog2 = True  # Forces stars to be False
-    observations = True  # Plot individual observations
+    observations = True  # Plot individual observations. NOT IN USE!
     # The name of the control group that the statistics are run against.
     cntrlGroup = "starv"
 
@@ -179,6 +179,10 @@ class settings:
     # Create plots of all possible pair combinations of the following:
     vs_channels = ['DAPI', 'GFP']
     vs_adds = ['Intensity Mean']  # Use the pre-defined keys
+
+    # Add border detection peaks to plots
+    add_peaks = True
+    select_peaks = True  # If true, LAM asks which detected peaks are plotted
 
     # Whether to drop outliers from plots ONLY
     Drop_Outliers = True
@@ -229,3 +233,4 @@ class store:
     totalLength = 0  # The length of DataFrame after all samples are anchored
     center = 0  # The index of the anchoring point within the DataFrame
     clusterPaths = []
+    border_peaks = None

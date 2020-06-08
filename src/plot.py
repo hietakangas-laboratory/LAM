@@ -87,6 +87,8 @@ class MakePlot:
             self.stats(**kws)
         if 'total_stats' in args:
             self.stats_total(**kws)
+        if ('peaks' in args and Sett.add_peaks):
+            self.plot_peaks(**kws)
         if (kws.get('sharey') == 'row' or kws.get('sharex') == 'col'):
             self.visible_labels()
 
@@ -132,6 +134,24 @@ class MakePlot:
                 ax.set_ylabel(ylabel)
             if first:
                 return
+
+    def plot_peaks(self, **kws):
+        if 'Sample Group' in self.data.columns:
+            groups = self.data.loc[:, 'Sample Group'].unique()
+            peaks = store.border_peaks[store.border_peaks.group.isin(groups)]
+        else:
+            peaks = store.border_peaks
+        for ax in self.g.axes.flat:
+            vmin, vtop = ax.get_ylim()
+            vmax = (vtop - self.data.Value.min()) * 0.2
+            for peak in peaks.iterrows():
+                loc = peak[1]['peak']
+                # prom = peak[1]['prominence']
+                grp = peak[1]['group']
+                color = self.handle.palette[grp]
+                # peak location line with prominence
+                ax.vlines(x=loc, ymin=vmin, ymax=vmax, color=color, alpha=0.5,
+                           linewidth=1, zorder=2, linestyle='dashed',)
 
     def plot_significance(self, ix, row, ax, yaxis, yheight, fill=Sett.fill,
                           stars=Sett.stars):
@@ -326,7 +346,7 @@ class plotting:
                  'ylabel': 'collect', 'sharey': 'row'}
         new_kws = merge_kws(self.kws, m_kws)
         handle = system.DataHandler(self.sgroups, self.sgroups._addData)
-        all_data = handle.get_data('drop_outlier', **new_kws)
+        all_data = handle.get_data('drop_outlier', 'peaks', **new_kws)
         grouped_data = all_data.groupby('Channel')
 
         # Make plot:
@@ -334,7 +354,7 @@ class plotting:
             plotter = MakePlot(data, handle,
                                'Additional Data - {}'.format(grp))
             plotter(pfunc.lines, 'centerline', 'ticks', 'title', 'legend',
-                    'labels', **new_kws)
+                    'labels', 'peaks', **new_kws)
 
     def chan_bivariate(self):
         """Create channel versus additional data bivariate plots."""
@@ -391,7 +411,7 @@ class plotting:
         # Make plot:
         plotter = MakePlot(all_data, handle, 'Channels - All')
         plotter(pfunc.lines, 'centerline', 'ticks', 'title', 'legend',
-                'labels', **new_kws)
+                'labels', 'peaks', **new_kws)
 
     def channel_matrix(self):
         """Create matrix plot containing channels on both axes."""
@@ -502,7 +522,7 @@ class plotting:
                              value_name='Value')
         plotter = MakePlot(m_data, handle, 'Cluster Lineplots')
         plotter(pfunc.lines, 'centerline', 'ticks', 'title', 'legend',
-                'labels', **m_kws)
+                'peaks', 'labels', **m_kws)
 
     def distributions(self):
         """Create distributions of all variables."""
@@ -639,7 +659,7 @@ class plotting:
             p_kws.update({'windowed': True})
 
         plotter(pfunc.lines, 'centerline', 'ticks', 'title', 'stats', 'labels',
-                'legend', **p_kws)
+                'legend', 'peaks', **p_kws)
 
     def width(self):
         """Create line plots of sample group widths."""
@@ -661,7 +681,7 @@ class plotting:
                                      'ylabel': 'Units (coord system)',
                                      'gridspec': {'bottom': 0.2}})
         plotter(pfunc.lines, 'centerline', 'ticks', 'title', 'legend',
-                'labels', **p_kws)
+                'labels', 'peaks', **p_kws)
 
 
 def select(paths, adds=True):
