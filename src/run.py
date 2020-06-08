@@ -4,7 +4,7 @@ Run file for Longitudinal Analysis of Midgut.
 
 Created on Wed Mar  6 12:42:28 2019
 @author: Arto I. Viitanen
-@version: 0.2.0
+@version: 0.2.1
 -------------------------------------------------------------------------------
 
 DEPENDENCIES:
@@ -84,6 +84,7 @@ For more extensive instructions, see user manual.
 """
 # LAM module
 from settings import settings as Sett
+import ParseCmds as pc
 
 # Standard libs
 import sys
@@ -148,10 +149,9 @@ def main():
 def main_catch_exit(LAM_logger=None):
     """Run main() while catching exc eptions for logging."""
     import logger as lg
-    if 'logger' not in sys.modules:
+    if LAM_logger is None:  # If no logger given, get one
         LAM_logger = lg.setup_logger(__name__, new=True)
         lg.print_settings()  # print settings of analysis to log
-    if LAM_logger is None:  # If no logger given, get one
         LAM_logger = lg.get_logger(__name__)
     try:
         print("START ANALYSIS")
@@ -173,8 +173,10 @@ def main_catch_exit(LAM_logger=None):
         lg.logprint(LAM_logger, msg, 'c')
         lg.log_Shutdown()
 
-
 if __name__ == '__main__':
+    if len(sys.argv) > 1:
+        parser = pc.make_parser()
+        pc.change_settings(parser)
     if Sett.GUI:  # Create GUI if using it
         import tkinter as tk
         import interface

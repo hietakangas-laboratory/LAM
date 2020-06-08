@@ -13,7 +13,7 @@ class settings:
     """A class for holding all user-end settings for the analysis."""
 
     # ####################### PRIMARY SETTINGS #######################
-    GUI = True  # Use graphical user interface (True / False)
+    GUI = False  # Use graphical user interface (True / False)
     # Detect border regions
     border_detection = True
     # Determine width of gut based on vector channel projection distances
@@ -113,7 +113,7 @@ class settings:
     # The maximum distance the nearest cell will be looked at. Increase is
     # computationally expensive, depending on the size of the dataset and the
     # density of cells.
-    maxDist = 40    # Radius around a cell
+    maxDist = 99    # Radius around a cell
     # Whether to look only at cells with certain characteristics. Default is
     # to include cells smaller than 'inclusion'. If cells of greater volume are
     # wanted, designate incl_type to be 'greater'. Otherwise, it can be left

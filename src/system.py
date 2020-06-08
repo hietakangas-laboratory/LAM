@@ -77,12 +77,6 @@ class paths:
             f.write(', '.join(samples))
             f.write('\nCHANNELS:\t')
             f.write(', '.join(channels))
-        # pd.DataFrame(samples).to_csv(self.outputdir.joinpath('SampleList.csv'),
-        #                             index=False, header=False)
-        # pd.DataFrame(groups).to_csv(self.outputdir.joinpath('SampleGroups.csv'),
-        #                            index=False, header=False)
-        # pd.DataFrame(channels).to_csv(self.outputdir.joinpath('Channels.csv'),
-        #                               index=False, header=False)
         lg.logprint(LAM_logger, 'Analysis info successfully saved.', 'i')
 
 

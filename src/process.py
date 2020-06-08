@@ -401,11 +401,10 @@ class get_sample:
         """For projecting coordinates onto the vector."""
         data = channel.data
         XYpos = list(zip(data['Position X'], data['Position Y']))
-        # The shapely packages reguires transformation into Multipoints for the
-        # projection.
+        # Transformation into Multipoints required for projection:
         points = gm.MultiPoint(XYpos)
         # Find projection distance on the vector.
-        proj_vector_dist = [self.vector.project(gm.Point(x)) for x in points]
+        proj_vector_dist = [self.vector.project(x) for x in points]
         # Find the exact point of projection
         proj_points = [self.vector.interpolate(p) for p in proj_vector_dist]
         # Find distance between feature and the point of projection
@@ -584,12 +583,14 @@ class normalize:
     def normalize_samples(self, MPs, arrayLength, center, name=None):
         """For inserting sample data into larger matrix, centered with MP."""
         cols = self.counts.columns
-        data = pd.DataFrame(np.zeros((arrayLength, len(cols))), columns=cols)
+        # Create empty data array => insert in DF
+        arr = np.full((arrayLength, len(cols)), np.nan)
+        data = pd.DataFrame(arr, columns=cols)
         # Create empty series for holding each sample's starting index
         SampleStart = pd.Series(np.full(len(cols), np.nan), index=cols)
         for col in self.counts.columns:
-            handle = self.counts.loc[:, col].values
-            MP = MPs.loc[0, col]
+            handle = self.counts[col].values
+            MP = MPs.at[0, col]
             # Insert sample's count data into larger, anchored dataframe:
             insert, insx = relate_data(handle, MP, center, arrayLength)
             data[col] = insert
@@ -797,7 +798,7 @@ def Get_Counts(PATHS):
         store.channels = [c.stem.split('_')[1] for c in
                           PATHS.datadir.glob("All_*.csv")]
         try:  # If required lengths of matrices haven't been defined because
-            # Process and Count are both False, get the sizes from files.
+              # Process and Count are both False, get the sizes from files.
             chan = Sett.vectChannel
             path = PATHS.datadir.joinpath("Norm_{}.csv".format(chan))
             temp = system.read_data(path, test=False, header=0)
@@ -821,7 +822,7 @@ def Get_Counts(PATHS):
         for path in countpaths:
             name = str(path.stem).split('_')[1]
             print('  {}  ...'.format(name))
-            # Aforementionad data is used to create dataframes onto which each
+            # Aforementioned data is used to create dataframes onto which each
             # sample's MP is anchored to one row, with bin-respective (index)
             # cell counts in each element of a sample (column) to allow
             # relative comparison.
@@ -835,7 +836,7 @@ def Get_Counts(PATHS):
             width_path = PATHS.datadir.joinpath('Sample_widths.csv')
             width_counts = normalize(width_path)
             _, _ = width_counts.normalize_samples(
-                MPs * 2, store.totalLength * 2, store.center*2,
+                MPs * 2, store.totalLength * 2, store.center * 2,
                 name='Sample_widths_norm')
         lg.logprint(LAM_logger, 'Channels normalized.', 'i')
 
@@ -849,7 +850,7 @@ def Project(PATHS):
                  != 'Analysis Data']:
         # Initialize sample variables
         sample = get_sample(path, PATHS, process=False, project=True)
-        print("  {}  ...".format(sample.name))
+        print(f"  {sample.name}  ...")
         # Find anchoring point of the sample
         sample.MP = sample.get_MPs(Sett.MPname, Sett.useMP, PATHS.datadir)
         # Collection of data for each channel of the sample
@@ -860,7 +861,7 @@ def Project(PATHS):
             if channel.datafail:
                 datatypes = ', '.join(channel.datafail)
                 info = "No variance, data discarded"
-                msg = "  -> {} - {}: {}".format(info, channel.name, datatypes)
+                msg = f"   -> {info} - {channel.name}: {datatypes}"
                 print(msg)
             # Project features of channel onto vector
             sample.data = sample.project_channel(channel)

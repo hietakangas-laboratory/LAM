@@ -21,7 +21,7 @@ class base_GUI(tk.Toplevel):
     """Container for the most important settings of the GUI."""
 
     def __init__(self, master=None):
-        master.title("LAM-0.2.0")
+        master.title("LAM-0.2.1")
         self.master = master
         self.master.grab_set()
         self.master.bind('<Escape>', self.func_destroy)

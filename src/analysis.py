@@ -88,63 +88,63 @@ class Samplegroups:
         # PLOT SAMPLE GROUP WIDTHS
         if Sett.plot_width:
             lg.logprint(LAM_logger, 'Plotting widths', 'i')
-            print('Plotting widths  ...')
+            print('  Plotting widths  ...')
             plotting(self).width()
             lg.logprint(LAM_logger, 'width plot done.', 'i')
 
         # CHANNEL PLOTTING
         if Sett.Create_Channel_Plots:
             lg.logprint(LAM_logger, 'Plotting channels', 'i')
-            print('Plotting channels  ...')
+            print('  Plotting channels  ...')
             plotting(self).channels()
             lg.logprint(LAM_logger, 'Channel plots done.', 'i')
 
         # ADDITIONAL DATA PLOTTING
         if Sett.Create_AddData_Plots:
             lg.logprint(LAM_logger, 'Plotting additional data', 'i')
-            print('Plotting additional data  ...')
+            print('  Plotting additional data  ...')
             plotting(self).add_data()
             lg.logprint(LAM_logger, 'Additional data plots done.', 'i')
 
         # CHANNEL MATRIX PLOTTING
         if Sett.Create_Channel_PairPlots:  # Plot pair plot
             lg.logprint(LAM_logger, 'Plotting channel matrix', 'i')
-            print('Plotting channel matrix  ...')
+            print('  Plotting channel matrix  ...')
             plotting(self).channel_matrix()
             lg.logprint(LAM_logger, 'Channel matrix done.', 'i')
 
         # SAMPLE AND SAMPLE GROUP HEATMAPS
         if Sett.Create_Heatmaps:  # Plot channel heatmaps
             lg.logprint(LAM_logger, 'Plotting heatmaps', 'i')
-            print('Plotting heatmaps  ...')
+            print('  Plotting heatmaps  ...')
             plotting(self).heatmaps()
             lg.logprint(LAM_logger, 'Heatmaps done.', 'i')
 
         # CHANNEL VS ADDITIONAL BIVARIATE
         if Sett.Create_ChanVSAdd_Plots:
             lg.logprint(LAM_logger, 'Plotting channel VS additional data', 'i')
-            print('Plotting channel VS additional data  ...')
+            print('  Plotting channel VS additional data  ...')
             plotting(self).chan_bivariate()
             lg.logprint(LAM_logger, 'Channels VS Add Data done.', 'i')
 
         # ADDITIONAL VS ADDITIONAL BIVARIATE
         if Sett.Create_AddVSAdd_Plots:  # Plot additional data against self
             lg.logprint(LAM_logger, 'Plotting add. data vs add. data', 'i')
-            print('Plotting additional data VS additional data  ...')
+            print('  Plotting additional data VS additional data  ...')
             plotting(self).add_bivariate()
             lg.logprint(LAM_logger, 'Add Data VS Add Data done', 'i')
 
         # CHANNEL AND ADD DISTRIBUTIONS
         if Sett.Create_Distribution_Plots:  # Plot distributions
             lg.logprint(LAM_logger, 'Plotting distributions', 'i')
-            print('Plotting distributions')
+            print('  Plotting distributions')
             plotting(self).distributions()
             lg.logprint(LAM_logger, 'Distributions done', 'i')
 
         # CLUSTER PLOTS
         if Sett.Create_Cluster_Plots:  # Plot cluster data
             lg.logprint(LAM_logger, 'Plotting clusters', 'i')
-            print('Plotting clusters  ...')
+            print('  Plotting clusters  ...')
             plotting(self).clusters()
             lg.logprint(LAM_logger, 'Clusters done', 'i')
 
@@ -174,7 +174,7 @@ class Samplegroups:
 
     def Get_Clusters(self):
         """Gather sample data to compute cell clusters."""
-        print('---Finding clusters---')
+        print('\n---Finding clusters---')
         lg.logprint(LAM_logger, 'Finding clusters', 'i')
 #        allpaths = [] ???
         for grp in self._groups:  # Get one sample group
@@ -190,7 +190,7 @@ class Samplegroups:
 
     def Get_DistanceMean(self):
         """Get sample data and pass for cell-to-cell distance calculation."""
-        print('---Feature-to-feature distances---')
+        print('\n---Feature-to-feature distances---')
         lg.logprint(LAM_logger, 'Finding feature-to-feature distances', 'i')
         for grp in self._groups:  # Get one sample group
             lg.logprint(LAM_logger, '-> Distances for group {}'.format(grp),
@@ -672,7 +672,7 @@ def test_control():
 
 
 def Get_Widths(samplesdir, datadir):
-    msg = "Necessary files for width approximation not be found for "
+    msg = "Necessary files for width approximation not found for "
     for path in samplesdir.iterdir():
         files = [p for p in path.iterdir() if p.is_file()]
         vreg = re.compile('^vector.', re.I)

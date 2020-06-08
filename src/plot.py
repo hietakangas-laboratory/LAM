@@ -514,7 +514,7 @@ class plotting:
                           'value_name': 'Value'},
                  'row': 'Channel', 'col': None, 'aspect': 1.75,
                  'drop_grouper': ['Sample Group', 'Channel']}
-        print('  Channels  ...')
+        print('   Channels  ...')
         new_kws = merge_kws(self.kws, m_kws)
         # Collect data:
         handle = system.DataHandler(self.sgroups, self.sgroups._chanPaths)
@@ -524,7 +524,7 @@ class plotting:
         plotter(pfunc.distribution, 'title', 'legend', 'labels', **new_kws)
 
         # Additional data
-        print("  Additional Data  ...")
+        print("   Additional Data  ...")
         # id_vars = ['Sample Group', 'Channel', 'Type']
         new_kws.update({'drop_grouper': ['Sample Group', 'Type'],
                         'row': 'Type', 'col': None,
@@ -537,7 +537,7 @@ class plotting:
                  if p.stem not in ['Vector', 'MPs', 'MP', Sett.MPname]]
         # Collect and plot each channel separately:
         for channel in store.channels:
-            print("    {}  ...".format(channel))
+            print("     {}  ...".format(channel))
             ch_paths = [p for p in paths if p.stem == channel]
             handle = system.DataHandler(self.sgroups, ch_paths)
             all_data = handle.get_sample_data(Sett.AddData.keys(),
