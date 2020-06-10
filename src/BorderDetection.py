@@ -32,8 +32,7 @@ except AttributeError:
 
 def detect_borders(paths, all_samples, palette, anchor,
                    threshold=Sett.peak_thresh, variables=Sett.border_vars,
-                   scoring=Sett.scoring_vars, channel=Sett.border_channel,
-                   gui_root=None):
+                   scoring=Sett.scoring_vars, channel=Sett.border_channel):
     """
     Midgut border detection by weighted scoring of binned variables.
     
@@ -75,11 +74,6 @@ def detect_borders(paths, all_samples, palette, anchor,
     # Save data
     flat.to_csv(paths.datadir.joinpath('Borders_scores.csv'), index=False)
     peaks.to_csv(paths.datadir.joinpath('Borders_peaks.csv'), index=False)
-    if Sett.add_peaks:
-        if Sett.select_peaks:
-            ask_peaks(peaks, gui_root)
-        else:
-            store.border_peaks = peaks
     lg.logprint(LAM_logger, 'Border detection done.', 'i')
 
 
@@ -543,3 +537,17 @@ def ask_peaks(peaks, gui_root):
             nums = [int(v) for v in ans.split(',')]
             if nums:
                 store.border_peaks = peaks.loc[nums, :]
+
+
+def peak_selection(datadir, gui_root=None):
+    try:
+        peaks = pd.read_csv(datadir.joinpath('Borders_peaks.csv'))
+    except FileNotFoundError:
+        msg = 'Borders NOT plotted - missing Border_peaks.csv'
+        print(f'\nWARNING: {msg}')
+        lg.logprint(LAM_logger, msg, 'w')
+        return
+    if Sett.select_peaks:
+            ask_peaks(peaks, gui_root)
+    else:
+        store.border_peaks = peaks

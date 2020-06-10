@@ -87,7 +87,8 @@ class MakePlot:
             self.stats(**kws)
         if 'total_stats' in args:
             self.stats_total(**kws)
-        if ('peaks' in args and Sett.add_peaks):
+        if ('peaks' in args and Sett.add_peaks and
+            store.border_peaks is not None):
             self.plot_peaks(**kws)
         if (kws.get('sharey') == 'row' or kws.get('sharex') == 'col'):
             self.visible_labels()
@@ -114,6 +115,7 @@ class MakePlot:
                 label = get_unit(label_strs[1])
                 ax.set_xlabel(label)
             ax.set_title(' | '.join(label_strs))
+
 
     def get_facet(self, **kws):
         g = sns.FacetGrid(self.data, row=kws.get('row'),
@@ -143,7 +145,7 @@ class MakePlot:
             peaks = store.border_peaks
         for ax in self.g.axes.flat:
             vmin, vtop = ax.get_ylim()
-            vmax = (vtop - self.data.Value.min()) * 0.2
+            vmax = vtop * 0.2
             for peak in peaks.iterrows():
                 loc = peak[1]['peak']
                 # prom = peak[1]['prominence']
@@ -151,7 +153,7 @@ class MakePlot:
                 color = self.handle.palette[grp]
                 # peak location line with prominence
                 ax.vlines(x=loc, ymin=vmin, ymax=vmax, color=color, alpha=0.5,
-                           linewidth=1, zorder=2, linestyle='dashed',)
+                           linewidth=1.5, zorder=2, linestyle='dashed',)
 
     def plot_significance(self, ix, row, ax, yaxis, yheight, fill=Sett.fill,
                           stars=Sett.stars):
@@ -508,7 +510,7 @@ class plotting:
         # Create plot
         plotter = MakePlot(avg_data, handle, 'Cluster Heatmaps - Groups')
         plotter(pfunc.heatmap, 'centerline', 'ticks', 'title', 'labels',
-                **new_kws)
+                'peaks', **new_kws)
 
         # CLUSTER LINEPLOT
         m_kws = {'ylabel': 'Clustered cells', 'titley': 1.01,
@@ -579,7 +581,8 @@ class plotting:
         all_data.drop('Sample Group', axis=1, inplace=True)
         plotter = MakePlot(all_data, handle, 'Heatmaps - Groups')
         p_kws = {'col': None, 'hue': None}
-        plotter(pfunc.heatmap, 'centerline', 'ticks', 'title', **p_kws)
+        plotter(pfunc.heatmap, 'centerline', 'ticks', 'title', 'peaks',
+                **p_kws)
 
         # Get and plot heatmap with _samples_
         HMpaths = self.sgroups.paths.datadir.glob("Norm_*")

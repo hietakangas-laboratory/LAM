@@ -1,7 +1,7 @@
-# Longitudinal Analysis of Midgut
-### ---------------LAM v1.0---------------
+# Linear Analysis of Midgut
+### ---------------LAM---------------
 
-Longitudinal Analysis of Midgut (LAM) is a tool for reducing the dimensionality
+Linear Analysis of Midgut (LAM) is a tool for reducing the dimensionality
 of microscopy image–obtained data, and for subsequent quantification of
 variables and feature counts while preserving regional context. LAM’s intended
 use is to analyze whole Drosophila melanogaster midguts or their sub-regions for
@@ -14,13 +14,15 @@ context. The analysis is performed after image processing and feature detection.
 Consequently, LAM requires coordinate data of the features as input.
 
 ### Installation
-LAM is used in Python 3.6=> environment. The distribution includes
-requirements.txt and environment.yml that both contain names and version numbers
+LAM is used in Python 3.7=> environment. The distribution includes
+requirements.txt and LAMenv.yml that both contain names and version numbers
 of LAM dependencies.
 
 ### Usage
 LAM is used by executing 'src/run.py', which by default opens up a graphical
-user interface. Refer to 'docs\UserManual.pdf' for additional information.
+user interface. Settings are handled through src/settings.py, but LAM
+includes argument parsing for most important settings ('python run.py -h').
+Refer to 'docs\UserManual.pdf' for additional information.
 
 ### Test data
 The 'data/'-directory includes a small test data set of three sample groups with

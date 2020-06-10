@@ -30,19 +30,19 @@ included.
         •	Windows:
             <yourenvname>\Scripts\activate.bat
     2.	pip install -r <path-to-requirements.txt>
-        •	On Windows you need to install Shapely separately (see below).
+        • !!!  On Windows you need to install Shapely separately (see below).
         You can either remove shapely from the requirements.txt or add ‘#’ in
         front of the line to pass it, in order to install all other necessary
         dependencies.
 
 - Anaconda3 base environment:
     1. install Anaconda3 distribution (https://www.anaconda.com/distribution/)
-    2. add Shapely-package:
-        open Anaconda prompt and write following command:
-        Windows:
-            conda install shapely=1.7.0 –c conda-forge
-        OS X & Linux:
-            pip install shapely=1.7.0
+    2. Add dependencies
+         Open Anaconda Prompt and write command:
+           conda install --file <LAM-master\requirements.txt>
+         (You may need to add conda-forge to conda channels:
+           conda config –add channels conda-forge           )
+ 
 
 USAGE:
 -----
@@ -136,8 +136,10 @@ def main(gui_root=None):
     # Find border regions
     if Sett.border_detection:
         bd.detect_borders(system_paths, sample_groups._samplePaths,
-                          sample_groups._grpPalette, store.center,
-                          gui_root=gui_root)
+                          sample_groups._grpPalette, store.center)
+    # Get and select border data if needed:
+    if Sett.Create_Plots and Sett.add_peaks:
+        bd.peak_selection(system_paths.datadir, gui_root)
     # Calculation of MWW-statistics for cell counts and other data
     if Sett.statistics:
         analysis.test_control()
@@ -173,6 +175,7 @@ def main_catch_exit(LAM_logger=None, gui_root=None):
         print(msg + '\n')
         lg.logprint(LAM_logger, msg, 'c')
         lg.log_Shutdown()
+
 
 if __name__ == '__main__':
     if len(sys.argv) > 1:
