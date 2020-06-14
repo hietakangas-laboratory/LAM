@@ -5,11 +5,18 @@ For creating positional plots of all channels for all samples in a dataset.
 Uses channel data found in the 'Samples'-directory (created during LAM
 'Project').
 
+The channel defined at base_channel will be used to plot underlying data, and
+all channels given at channel_names will be plotted over the base channel in
+separate plots. For example, giving 'DAPI' to base channel will plot scatters
+of stained cells to provide an approximation of the whole sample, on top of
+which cell types defined in channel_names will pe plotted to show how they are
+located in the samples.
+
 PLOTS CREATED TO THE "ANALYSIS DATA\SAMPLES"-DIRECTORY
 
 Created on Tue May  5 08:20:28 2020
 
-@author: ArtoVi
+@author: Arto I. Viitanen
 """
 
 import pathlib2 as pl
@@ -19,7 +26,7 @@ import seaborn as sns
 
 analysis_dir = pl.Path(r'E:\Code_folder\Josef_Indexerror\MARCM3 Statistics')
 base_channel = 'DAPI'
-channel_names = ['DAPI', 'GFP']
+channel_names = ['Pros', 'GFP']
 
 
 def main():

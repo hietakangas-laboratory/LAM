@@ -4,7 +4,7 @@ Split data sets by coordinate points to allow LAM analysis of sub-regions.
 
 Created on Thu Feb  6 12:14:14 2020
 
-@author: artoviit
+@author: Arto I. Viitanen
 -------------------------------------------------------------------------------
 DESCRIPTION:
 -----------
@@ -23,7 +23,7 @@ DESCRIPTION:
     combine the sets to possibly create better comparisons between sample
     groups when there is variability in region proportions. HOWEVER, this
     breaks the sample-specific equivalency of the bins at cut-off points, and
-    should be handled with great care.
+    should be handled with care.
 
 USAGE:
 -----

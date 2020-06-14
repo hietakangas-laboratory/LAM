@@ -65,7 +65,7 @@ class MakePlot:
             plt.subplots_adjust(top=kws['adjust'].get('top'),
                                 bottom=kws['adjust'].get('bottom'))
         else:
-            plt.subplots_adjust(top=0.85, bottom=0.2)
+            plt.subplots_adjust(top=0.85, bottom=0.2, hspace=0.75)
         self.add_elements(*args, **plot_kws)
         self.save_plot()
 
@@ -295,7 +295,7 @@ class plotting:
                           'var_name': 'Linear Position'},
                  'plot_kws': {'col': 'Type_X', 'row': 'Type_Y'},
                  'drop_grouper': ['Sample Group', 'Channel', 'Type'],
-                 'gridpec': {'hspace': 0.6}}
+                 'gridpec': {'hspace': 0.75}}
         new_kws = merge_kws(self.kws, m_kws)
         # If required data hasn't been yet collected
         savepath = self.sgroups.paths.plotdir.joinpath('Versus')
@@ -321,7 +321,7 @@ class plotting:
             grp, grp2 = grps
             data = grouped.get_group(grp)
             data2 = grouped.get_group(grp2)
-            print("  {} vs. {}  ...".format(grp, grp2))
+            print("   {} vs. {}  ...".format(grp, grp2))
             f_tit = 'Versus_Add {} Data - Add {} Data Matrix'.format(grp, grp2)
             # Take only data types present in both channels:
             diff = set(data.Type.unique()).symmetric_difference(set(
@@ -396,7 +396,7 @@ class plotting:
         # Make plot:
         grouped = all_add_data.groupby('Channel')
         for grp, data in grouped:
-            print("  {}  ...".format(grp))
+            print("   {}  ...".format(grp))
             f_title = 'Versus_Channels - Add {} Data Matrix'.format(grp)
             plotter = MakePlot(data, handle, f_title, sec_data=all_chan_data)
             plotter(pfunc.bivariate_kde, 'title', 'legend', 'no_grid',

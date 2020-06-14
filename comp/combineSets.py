@@ -15,22 +15,24 @@ same coordinate system, i.e. they can not be rotated individually, if you want
 to perform cell-to-cell calculations or clustering. For plotting and statistics
 each sets individual rotation does not matter.
 
+!!!!
 When using LAM to analyse the combined data set, you need to use 'Count'
 without projection; set 'project' to False. This way LAM uses the values given
 by the earlier projection.
+!!!!
 
 Vars:
 ----
-    data_sets - dict {int: [str, int]}:
+    data_sets : dict {int: [str, int]}:
         The data sets to combine. Key is the order in which the sets are
         combined, e.g. 1->3 from anterior to posterior. Values are the path to
         the root of LAM-hierarchical directory that contains the data set, and
         number of bins that the data set has been projected to.
         
-    combine_chans - list [str]:
+    combine_chans : list [str]:
         Names of the channels that are to be combined.
         
-    savepath - pathlib.Path:
+    savepath : pathlib.Path:
         Path to directory where the combined data set is to be saved.
         
 """

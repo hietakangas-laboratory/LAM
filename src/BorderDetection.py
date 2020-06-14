@@ -72,7 +72,7 @@ def detect_borders(paths, all_samples, palette, anchor,
     print('  Finding peaks  ...')
     flat, peaks = border_data(b_dirpath, threshold)
     # Save data
-    flat.to_csv(paths.datadir.joinpath('Borders_scores.csv'), index=False)
+    flat.T.to_csv(paths.datadir.joinpath('Borders_scores.csv'), index=False)
     peaks.to_csv(paths.datadir.joinpath('Borders_peaks.csv'), index=False)
     lg.logprint(LAM_logger, 'Border detection done.', 'i')
 
@@ -183,7 +183,7 @@ class FullBorders:
             ax.set_ylabel('Score')
         ax3.set_xlabel('Linear Position')
         plt.suptitle('GROUP BORDER SCORES')
-        plt.savefig(dirpath.joinpath(f'All-Border_Scores.pdf'))
+        plt.savefig(dirpath.joinpath(f'All-Border_Scores.{Sett.saveformat}'))
 
 
 class GetSampleBorders:
@@ -244,23 +244,27 @@ class GetSampleBorders:
         norm_mean = norm.mean()
         # Fit curve and get value deviations
         scurve = get_fit(scores.T)
-        fitted_mean = scores.apply(lambda x, c=scurve:
-                          x[:-1].subtract(c.iloc[0, :]), axis=0).mean(axis=1)
+        fitted = scores.apply(lambda x, c=scurve:
+                              x[:-1].subtract(c.iloc[0, :]), axis=0)
+        s_sum = smooth_data(fitted, win=7, tau=10).sum(axis=1)
         # Melt data to plottable form
         score = score.melt(id_vars=['var_name', 'stype'])
         norm = norm.melt(id_vars=['var_name', 'stype'])
         # Create canvas
         fig, (ax1, ax2, ax3) = plt.subplots(3, 1, figsize=(10, 5),
                                             gridspec_kw={
-                                                'height_ratios': [2, 5, 5]})
+                                                'height_ratios': [3.5, 5, 5]})
         # Fitted score plot
-        ax1.plot(fitted_mean.index, fitted_mean.values, 'dimgrey')
-        ax1.set_title('Flattened score deviance')
+        ax1.plot(s_sum.index, s_sum.values, 'dimgrey')
+        ax1.set_title('Smooth sum score')
+        left, right = ax1.get_xlim()
+        ax1.hlines(0, xmin=left, xmax=right, linewidth=1, zorder=0,
+                      linestyles='dashed', color='firebrick')
         # Score plot (raw scores)
         sns.lineplot(data=score.infer_objects(), x='variable', y='value',
                      hue='var_name', alpha=0.7, ax=ax2)
         ax2.legend(loc='center left', bbox_to_anchor=(1.01, 0.5), ncol=1)
-        ax2.set_title('Score deviance')
+        ax2.set_title('Scores')
         # Variable values plot
         sns.lineplot(data=norm.infer_objects(), x='variable', y='value',
                      hue='var_name', alpha=0.7, legend=False, ax=ax3)
@@ -282,7 +286,7 @@ class GetSampleBorders:
         # Adjust plot space, add title, and save
         plt.subplots_adjust(bottom=0.1, left=0.1, right=0.75, hspace=0.8)
         plt.suptitle(self.sample_name)
-        plt.savefig(dirpath.joinpath(f'{self.sample_name}.pdf'))
+        plt.savefig(dirpath.joinpath(f'{self.sample_name}.{Sett.saveformat}'))
         plt.close()
 
     def get_variables(self, FullBorders):
@@ -543,7 +547,7 @@ def peak_selection(datadir, gui_root=None):
     try:
         peaks = pd.read_csv(datadir.joinpath('Borders_peaks.csv'))
     except FileNotFoundError:
-        msg = 'Borders NOT plotted - missing Border_peaks.csv'
+        msg = 'Borders NOT added to plots - missing Border_peaks.csv'
         print(f'\nWARNING: {msg}')
         lg.logprint(LAM_logger, msg, 'w')
         return

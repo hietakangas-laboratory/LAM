@@ -6,8 +6,6 @@ Created on Wed Mar  6 12:42:28 2019
 @author: Arto I. Viitanen
 
 """
-import pathlib as pl
-
 
 class settings:
     """A class for holding all user-end settings for the analysis."""
@@ -22,7 +20,7 @@ class settings:
 
     # DEFINE PATH TO ANALYSIS FOLDER:
     # (Use input r'PATH' where PATH is your path)
-    workdir = pl.Path(r'C:')
+    workdir = r'C:'
     # Whether to gather raw data and create vectors. If False, expects to find
     # pre-created datafiles in the Analysis Data directory, i.e. a previous
     # full run has been made, and there has been no edits to the data files.
@@ -38,7 +36,9 @@ class settings:
     statistics = True
     ##################################################################
 
+
     # -#-#-#-#-#-#-#-# VECTOR CREATION & PROJECTION #-#-#-#-#-#-#-#-#- #
+
     # The channel based on which the vector is created
     vectChannel = "DAPI"
     # Whether to do projection when using count. If False, expects projection
@@ -63,14 +63,18 @@ class settings:
     medianBins = 100
     # -#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#- #
 
+
     # ---MEASUREMENT POINTS--- #
+
     # Whether to use measurement point coordinates for normalization. If False,
     # the samples will be handled as perfectly aligned from beginning to end.
     useMP = True
     # The name of the file used for normalizing between samples, i.e. anchoring
     MPname = "MP"
 
+
     # ---DATA GATHERING--- #
+
     header_row = 2  # On which row does the data have its header (start = 0)
 
     # Additional data to be collected from channels. Key (the first string
@@ -96,7 +100,10 @@ class settings:
     ###################################################################
 
     # ------ANALYSIS OPTIONS------ #
-    # ---DISTANCE MEANS--- #
+
+
+    # ---FEATURE-TO-FEATURE DISTANCE--- #
+
     # Define column name for filtering data (for inclusion and Cl_inclusion)
     incl_col = "Volume"
 
@@ -121,7 +128,9 @@ class settings:
     inclusion = 0
     incl_type = ""
 
+
     # ---CLUSTERS--- #
+
     # Whether to compute clusters
     Find_Clusters = False
     Cluster_Channels = ["GFP"]  # , "Pros"]
@@ -131,12 +140,14 @@ class settings:
     Cl_min = 3
     Cl_max = 50
     
-    # ---BORDERS--- #
+    
+    # ---BORDER DETECTION--- #
+    
     # Name of channel from which scoring variables are collected from
     border_channel = vectChannel  # Default is vector creation channel
     peak_thresh = 0.1  # Border score threshold for peak detection
     # Plot individual samples (requires Create_Border_Plots==True)
-    plot_samples = False
+    plot_samples = True
     # Data columns to use for detection (sample width is always collected)
     # Adding 'Count' will get cell counts
     border_vars = ['Area', f'Nearest_Dist_{border_channel}']
@@ -145,9 +156,11 @@ class settings:
     scoring_vars = {'width': -1.5,
                     'width_diff': 1.5,
                     'Area_diff': -1,
-                    'Nearest_Dist_{border_channel}_diff': 1.5}
+                    f'Nearest_Dist_{border_channel}_diff': 1.5}
+
 
     # ---STATISTICS OPTIONS--- #
+
     stat_versus = True
     stat_total = True
     windowed = True
@@ -159,11 +172,14 @@ class settings:
     stars = False  # Make P-value stars (*:<0.05 **:<0.01 ***:<0.001)
     fill = True  # fill significant bins with marker color
     negLog2 = True  # Forces stars to be False
-    observations = True  # Plot individual observations. NOT IN USE!
+    observations = True  # Plot individual observations. DEPRECATED!
     # The name of the control group that the statistics are run against.
     cntrlGroup = "starv"
 
+
+
     # ---PLOTTING OPTIONS--- #
+
     Create_Channel_Plots = True
     Create_AddData_Plots = True     # Plots also nearest distance & clusters
     Create_Channel_PairPlots = False
