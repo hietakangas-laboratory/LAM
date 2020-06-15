@@ -4,7 +4,7 @@ Run file for Longitudinal Analysis of Midgut.
 
 Created on Wed Mar  6 12:42:28 2019
 @author: Arto I. Viitanen
-@version: 0.2.1
+@version: 0.2.2
 
 Distributed under GNU General Public License v3.0
 -------------------------------------------------------------------------------

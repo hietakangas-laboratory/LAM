@@ -257,7 +257,7 @@ class MakePlot:
         """Save created plot."""
         fig = plt.gcf()
         fig.savefig(str(self.filepath), format=Sett.saveformat)
-        plt.close()
+        plt.close('all')
 
     def visible_labels(self):
         """Make tick labels visible."""

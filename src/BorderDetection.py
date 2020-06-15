@@ -59,7 +59,8 @@ def detect_borders(paths, all_samples, palette, anchor,
     print('  Scoring samples  ...')
     # Collect and score variables for each sample in the sample list
     for path in all_samples:
-        sample = GetSampleBorders(path, channel, scoring, anchor, variables)
+        sample = GetSampleBorders(path, channel, scoring, anchor, variables,
+                                  paths.datadir)
         # If expected variables are found, calculate sample scores
         if not sample.error:
             sample(border_data, b_dirpath)
@@ -184,28 +185,34 @@ class FullBorders:
         ax3.set_xlabel('Linear Position')
         plt.suptitle('GROUP BORDER SCORES')
         plt.savefig(dirpath.joinpath(f'All-Border_Scores.{Sett.saveformat}'))
+        plt.close()
 
 
 class GetSampleBorders:
     """Create sample-specific border scores."""
 
-    def __init__(self, samplepath, channel, scoring, anchor, variables):
-        self.sample_name = samplepath.name
+    def __init__(self, samplepath, channel, scoring, anchor, variables,
+                 datadir):
+        self.name = samplepath.name
         # Get anchoring point
-        mp_file = samplepath.joinpath('MPs.csv')
-        self.MP = pd.read_csv(mp_file, index_col=False).iat[0, 0]
-        # Find data of border detection channel
-        filepath = samplepath.joinpath(f'{channel}.csv')
-        data = pd.read_csv(filepath, index_col=False)
+        mp_file = datadir.joinpath('MPs.csv')
+        self.MP = pd.read_csv(mp_file, index_col=False).at[0, self.name]
         # Select necessary columns from the data
         id_cols = ['NormDist', 'DistBin']
         self.var_cols = variables
         try:
+            # Find data of border detection channel
+            filepath = samplepath.joinpath(f'{channel}.csv')
+            data = pd.read_csv(filepath, index_col=False)
             self.data = data.loc[:, id_cols + self.var_cols]
             self.error = False
         except KeyError:  # If all required columns are not found
-            print(f'All variables not found in data for {self.sample_name}.')
+            print(f'All variables not found in data for {self.name}.')
             print('Check data and/or border_vars-setting.')
+            self.error = True
+        except FileNotFoundError:
+            print(f'ERROR: {filepath.name} not found for {self.name}.')
+            print('--> Change border_channel -setting')
             self.error = True
         # Create series with the scoring weights
         self.scoring = pd.Series(scoring)
@@ -223,30 +230,34 @@ class GetSampleBorders:
         devs = deviate_data(normalized, curve)
         # Score the deviations
         scores = self.score_data(devs)
+        sum_score = self.get_sum_score(scores)
         # Create plots if needed
         if (Sett.plot_samples & Sett.Create_Border_Plots & Sett.Create_Plots):
-            self.sample_plot(normalized, curve, scores, dirpath)
+            self.sample_plot(normalized, curve, scores, sum_score, dirpath)
         # Insert scores to full data set
         FullBorders.scores.loc[scores.index,
-                               self.sample_name] = scores.sum(axis=1)
+                               self.name] = sum_score
+
+    def get_sum_score(self, scores):
+        # Fit curve and get value deviations
+        scurve = get_fit(scores.T)
+        fitted = scores.apply(lambda x, c=scurve:
+                              x[:-1].subtract(c.iloc[0, :]), axis=0)
+        s_sum = smooth_data(fitted, win=7, tau=10).sum(axis=1)
+        return s_sum
 
     def score_data(self, devs):
         """Score deciation values based on weights."""
         scores = devs.multiply(self.scoring, axis=1)
         return scores
 
-    def sample_plot(self, normalized, curve, scores, dirpath):
+    def sample_plot(self, normalized, curve, scores, sum_score, dirpath):
         """Create plots of the sample variable values and scores."""
         # Assign identifiers to data
         norm = normalized.T.assign(var_name=normalized.T.index, stype='norm')
         score = scores.T.assign(var_name=scores.T.index, stype='score')
         # Get mean score of variables
         norm_mean = norm.mean()
-        # Fit curve and get value deviations
-        scurve = get_fit(scores.T)
-        fitted = scores.apply(lambda x, c=scurve:
-                              x[:-1].subtract(c.iloc[0, :]), axis=0)
-        s_sum = smooth_data(fitted, win=7, tau=10).sum(axis=1)
         # Melt data to plottable form
         score = score.melt(id_vars=['var_name', 'stype'])
         norm = norm.melt(id_vars=['var_name', 'stype'])
@@ -255,7 +266,7 @@ class GetSampleBorders:
                                             gridspec_kw={
                                                 'height_ratios': [3.5, 5, 5]})
         # Fitted score plot
-        ax1.plot(s_sum.index, s_sum.values, 'dimgrey')
+        ax1.plot(sum_score.index, sum_score.values, 'dimgrey')
         ax1.set_title('Smooth sum score')
         left, right = ax1.get_xlim()
         ax1.hlines(0, xmin=left, xmax=right, linewidth=1, zorder=0,
@@ -269,24 +280,26 @@ class GetSampleBorders:
         sns.lineplot(data=norm.infer_objects(), x='variable', y='value',
                      hue='var_name', alpha=0.7, legend=False, ax=ax3)
         ax3.plot(norm_mean.index, norm_mean.values, 'dimgrey')
-        ax3.plot(curve.index, curve.values, 'r')
+        ax3.plot(curve.columns, curve.values.ravel(), 'r--')
         ax3.set_title('Normalized variables')
         plt.xlabel('Linear Distance')
         ax1.set_ylabel('Score')
         ax2.set_ylabel('Score')
         ax2.set_xlabel('')
-        # Readjust tick labels to original binning
-        locs, _ = plt.xticks()
-        lbls = [int(n/2) for n in locs]
+        # # Re-adjust tick labels to original binning
+        # x_vals = np.arange(0, norm_mean.shape[0])
+        # locs, _ = plt.xticks()
+        # lbls = [int(n/2) for n in locs]
         for ax in [ax1, ax2, ax3]:
+            locs = [int(n/2) for n in ax.get_xticks()]
             ybot, ytop = ax.get_ylim()
             ax.vlines(self.anchor, ybot, ytop, 'firebrick', zorder=0,
                       linestyles='dashed')
-            ax.set_xticklabels(labels=lbls)
+            ax.set_xticklabels(labels=locs)
         # Adjust plot space, add title, and save
         plt.subplots_adjust(bottom=0.1, left=0.1, right=0.75, hspace=0.8)
-        plt.suptitle(self.sample_name)
-        plt.savefig(dirpath.joinpath(f'{self.sample_name}.{Sett.saveformat}'))
+        plt.suptitle(self.name)
+        plt.savefig(dirpath.joinpath(f'{self.name}.{Sett.saveformat}'))
         plt.close()
 
     def get_variables(self, FullBorders):
@@ -344,7 +357,7 @@ class GetSampleBorders:
 
     def get_width(self, width_data):
         """Collect sample's width from full data."""
-        width = width_data.loc[:, self.sample_name]
+        width = width_data.loc[:, self.name]
         width = width.rename('width')
         return width.dropna()
 

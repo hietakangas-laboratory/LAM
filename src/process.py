@@ -565,7 +565,7 @@ class normalize:
                 if sampleData.empty:
                     continue
                 binnedData = data.loc[:, 'DistBin']
-                bins = np.arange(1, Sett.projBins+1)
+                bins = np.arange(0, Sett.projBins)
                 for col in sampleData:
                     avgS = pd.Series(np.full(TotalLen, np.nan), name=sample)
                     with warnings.catch_warnings():

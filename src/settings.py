@@ -144,7 +144,7 @@ class settings:
     # ---BORDER DETECTION--- #
     
     # Name of channel from which scoring variables are collected from
-    border_channel = vectChannel  # Default is vector creation channel
+    border_channel = 'DAPIall'  # Default is vector creation channel
     peak_thresh = 0.1  # Border score threshold for peak detection
     # Plot individual samples (requires Create_Border_Plots==True)
     plot_samples = True
@@ -202,7 +202,7 @@ class settings:
 
     # Whether to drop outliers from plots ONLY
     Drop_Outliers = True
-    dropSTD = 2.5  # The standard deviation limit for drop
+    dropSTD = 3  # The standard deviation limit for drop
     # NOTE ON DROPPING OUTLIERS:
     #   Some variables may not be normally distributed (e.g. feature counts),
     #   and using standard deviation for dropping on such data might remove
