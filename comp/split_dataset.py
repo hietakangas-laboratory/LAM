@@ -9,10 +9,11 @@ Created on Thu Feb  6 12:14:14 2020
 DESCRIPTION:
 -----------
     Splits a data set and its vectors based on user given points after their
-    projection during regular LAM 'Count'-functionality. In its simplicity, the
-    projected points determine cut-off points in the data set and its vectors.
-    The script creates LAM-hierarchical folders for each of the sub-sections of
-    the data set, that can then be analysed separately.
+    projection during regular LAM 'Count'-functionality, or alternatively based
+    on bins given for each sample. In its simplicity, the projected points
+    determine cut-off points in the data set and its vectors. The script
+    creates LAM-hierarchical folders for each of the sub-sections of the
+    dataset, that can then be analysed separately.
 
     Intended use is to input biologically identifiable cut-off points, i.e. co-
     ordinates of region borders as seen on the microscopy image. This allows
@@ -37,8 +38,10 @@ USAGE:
     ad infinitum, and then from the final cut point to the final bin of the
     samples (named as 'END').
 
+    !!!
     To analyze the split sets with LAM, make sure that settings.header_row is
-    set to zero (or the alternative in GUI).
+    set to zero (or the alternative setting in GUI).
+    !!!
 
 DEPS:
 ----
@@ -76,6 +79,23 @@ VARS:
         If True, continue the data set to the end of the vector after the final
         cut-off point. If False, the data after the final cut-off point is not
         used.
+    
+    SAMPLE_BINS : BOOL
+        If True, cut the dataset based on bins and not projected points. Each
+        sample must be given each cut point in the csv-file pointed by
+        BIN_PATH.
+    
+    BIN_PATH : pathlib.Path
+        Path to csv-file that contains each cut-off bin of each sample. Each
+        sample must have a value for each cut location for the split to work.
+        The file must have samplenames at the columns and names of cut points
+        as index. The data is collected based on CUT_POINTS -variable.
+        
+        Style of file:
+                ctrl1   ctrl2   ctrl3    ...
+        R1R2    5       6       7        ...
+        R2R3    25      26      26       ...
+        ...     ...     ...     ...
 """
 import numpy as np
 import pandas as pd
@@ -83,14 +103,21 @@ import pathlib as pl
 import shapely.geometry as gm
 import shapely.ops as op
 
+
 ROOT = pl.Path(r"E:\Code_folder\DSS")
-SAVEDIR = pl.Path(r"E:\Code_folder\DSS_62bin_split")
-CUT_POINTS = ["R2R3", "R3R4"]  # "R4R5"]
-CHANNELS = ['DAPI', 'GFP', 'Delta', 'Prospero', 'DAPIbig', 'DAPIpienet']
+SAVEDIR = pl.Path(r"E:\Code_folder\test_DSS_62bin_split")
+CUT_POINTS = ["R3R4", "R4R5"]
+CHANNELS = ['DAPI', 'GFP', 'Delta', 'Prospero']
 # Number of bins for whole length of samples. Script gives recommendation for
 # numbers of bins for each split region based on this value:
 TOTAL_BIN = 62
 CONT_END = True
+
+# Cutting of individual samples based on bin numbers:
+SAMPLE_BINS = True
+# Path to file containing cutting bins for each sample
+# (index = names of cut points, columns = samples)
+BIN_PATH = pl.Path(r"E:\Code_folder\DSS\samplebins.csv")
 
 
 def get_cut_points(CUT_POINTS, samplepath):
@@ -148,8 +175,23 @@ def save_vector(vector_dir, sub_vector):
     vector_df.to_csv(vector_dir.joinpath("Vector.csv"), index=False)
 
 
-def get_sample_data(samplepath, POINTS, length_data):
-    cut_distances = get_cut_points(CUT_POINTS, samplepath)
+def bins_to_dist(CUT_POINTS, samplepath, bins, total=TOTAL_BIN):
+    samplename = samplepath.name
+    cut_distances = []
+    for point in CUT_POINTS:
+        cbin = bins.at[point, samplename]
+        dist = cbin / total
+        cut_distances.append(dist)
+    if CONT_END:
+        cut_distances.append(1.0)
+    return cut_distances
+
+
+def get_sample_data(samplepath, POINTS, length_data, bins):
+    if not SAMPLE_BINS:
+        cut_distances = get_cut_points(CUT_POINTS, samplepath)
+    else:
+        cut_distances = bins_to_dist(CUT_POINTS, samplepath, bins)
     file_paths = samplepath.glob("*.csv")
     try:
         vector_path = next(samplepath.glob("Vector.*"))
@@ -179,7 +221,7 @@ class vector_lengths:
     
     def __init__(self, SAMPLES, POINTS):
         sample_list = [s.stem for s in SAMPLES]
-        group_list = set(sorted([s.split('_')[0] for s in sample_list]))
+        # group_list = set(sorted([s.split('_')[0] for s in sample_list]))
         # Data variables:
         self.lengths = pd.DataFrame(columns=sample_list, index=POINTS)
         self.averages = pd.DataFrame(index=POINTS)
@@ -205,12 +247,15 @@ if __name__ == '__main__':
     SAMPLES = [p for p in ROOT.joinpath("Analysis Data", "Samples").iterdir()
                if p.is_dir()]
     POINTS = CUT_POINTS.copy()
+    BIN_FILE = None
     if CONT_END:
         POINTS.append("END")
     length_data = vector_lengths(SAMPLES, POINTS)
+    if SAMPLE_BINS:
+        BIN_FILE = pd.read_csv(BIN_PATH, index_col=0)
     for path in SAMPLES:
         print(path.name)
-        get_sample_data(path, POINTS, length_data)
+        get_sample_data(path, POINTS, length_data, bins=BIN_FILE)
     print("Finding averages ...")
     length_data.find_averages()
     print("\n- Average lengths:\n", length_data.averages, "\n")

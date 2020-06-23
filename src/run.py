@@ -90,6 +90,7 @@ import ParseCmds as pc
 
 # Standard libs
 import sys
+import pathlib as pl
 
 
 def main(gui_root=None):
@@ -189,5 +190,6 @@ if __name__ == '__main__':
         ROOT = tk.Tk()
         GUI = interface.base_GUI(ROOT)
         ROOT.mainloop()
-    else:  # Otherwise create logger and start the analysis
+    else:  # Otherwise make workdir into usable path and start the analysis
+        Sett.workdir = pl.Path(Sett.workdir)
         main_catch_exit()

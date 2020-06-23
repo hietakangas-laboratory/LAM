@@ -45,7 +45,7 @@ class settings:
     # data to be found in channel files of './Analysis Data/Samples/'.
     project = True
     # Number of bins used for projection unto vector.
-    projBins = 40
+    projBins = 62
 
     # Make vector by creating binary image and then skeletonizing. If False,
     # vector is created by finding middle point between smallest and largest
@@ -144,10 +144,10 @@ class settings:
     # ---BORDER DETECTION--- #
     
     # Name of channel from which scoring variables are collected from
-    border_channel = 'DAPIall'  # Default is vector creation channel
-    peak_thresh = 0.1  # Border score threshold for peak detection
+    border_channel = 'DAPI'  # Default is vector creation channel
+    peak_thresh = 0.5  # Border score threshold for peak detection
     # Plot individual samples (requires Create_Border_Plots==True)
-    plot_samples = True
+    plot_samples = False
     # Data columns to use for detection (sample width is always collected)
     # Adding 'Count' will get cell counts
     border_vars = ['Area', f'Nearest_Dist_{border_channel}']
@@ -196,9 +196,10 @@ class settings:
     vs_channels = ['DAPI', 'GFP']
     vs_adds = ['Intensity Mean']  # Use the pre-defined keys
 
-    # Add border detection peaks to plots
+    # Add border detection peaks to other plots
     add_peaks = True
     select_peaks = True  # If true, LAM asks which detected peaks are plotted
+    # Use "All-Border_Scores"-plot to determine valid peaks
 
     # Whether to drop outliers from plots ONLY
     Drop_Outliers = True

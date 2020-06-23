@@ -449,6 +449,7 @@ class Sample(Group):
 
             maxDist = kws.get('Dist')  # max distance to consider clustering
             treedata = XYpos[['x', 'y', 'z']]
+            # Create K-D tree and query for nearest
             tree = KDTree(treedata)
             seed_ids = tree.query_radius(treedata, r=maxDist)
             # Merging of the seeds
@@ -672,26 +673,32 @@ def test_control():
 
 
 def Get_Widths(samplesdir, datadir):
+    """Find widths of samples along their vectors."""
     msg = "Necessary files for width approximation not found for "
     for path in samplesdir.iterdir():
+        # Find necessary data files:
         files = [p for p in path.iterdir() if p.is_file()]
-        vreg = re.compile('^vector.', re.I)
-        dreg = re.compile(f'^{Sett.vectChannel}.csv', re.I)
-        try:
+        # Search terms
+        vreg = re.compile('^vector.', re.I)  # vector
+        dreg = re.compile(f'^{Sett.vectChannel}.csv', re.I)  # channel data
+        try:  # Match terms to found paths
             vect_path = [p for p in files if vreg.match(p.name)]
             data_path = [p for p in files if dreg.match(p.name)]
+            # Read found paths
             vector_data = system.read_data(vect_path[0], header=0, test=False)
             data = system.read_data(data_path[0], header=0)
+        # Error handling
         except (StopIteration, IndexError):
             name = path.name
             full_msg = msg + name
             print(f"WARNING: {full_msg}")
-            if 'vector_data' not in locals():
+            if 'vector_data' not in locals():  # if vector not found
                 print("-> Could not read vector data.")
                 continue
-            if 'data' not in locals():
+            if 'data' not in locals(): # if channel data not found
                 print("Could not read channel data")
                 print("Make sure channel is set right (vector channel)\n")
                 continue
             lg.logprint(LAM_logger, full_msg, 'w')
+        # Compute widths
         process.DefineWidths(data, vector_data, path, datadir)

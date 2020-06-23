@@ -35,7 +35,7 @@ def detect_borders(paths, all_samples, palette, anchor,
                    scoring=Sett.scoring_vars, channel=Sett.border_channel):
     """
     Midgut border detection by weighted scoring of binned variables.
-    
+
     Args:
     ----
         paths - LAM system.paths-object that contains directory paths
@@ -96,6 +96,9 @@ class FullBorders:
         flattened, curves = self.flatten_scores()
         # Compute total scores of sample groups
         s_sums = get_group_total(flattened)
+        s_sums.value = s_sums.groupby(s_sums.group
+                                      ).apply(lambda x: x.assign(
+                                          value=norm_func(x.value)))
         # Find group peaks
         peaks = get_peak_data(s_sums, threshold)
         # Create plots
@@ -103,12 +106,11 @@ class FullBorders:
             print('  Creating border plot  ...')
             # Transform data to plottable format
             scores = prepare_data(self.scores.T)
-            flat = prepare_data(flattened)
             # Plot
-            self.group_plots(scores, flat, curves, s_sums, peaks, dirpath)
+            self.group_plots(scores, s_sums, peaks, dirpath)
         # Readjust peak locations to original bins
         peaks.peak = peaks.peak.divide(2)
-        return flattened, peaks
+        return self.scores.T, peaks
 
     def flatten_scores(self):
         """Subtract fitted curve from values of each group."""
@@ -126,46 +128,114 @@ class FullBorders:
                           x[:-1].subtract(c.loc[x.group, :]), axis=1)
         return devs, curves
 
-    def group_plots(self, scores, flat, curves, s_sums, peaks, dirpath):
+    def group_plots(self, scores, s_sums, peaks, dirpath):
         """Create plots of sample group border scores."""
         # Create canvas
-        fig, (ax1, ax2, ax3) = plt.subplots(3, 1, figsize=(10, 5),
-                                            gridspec_kw={
-                                                'height_ratios': [3, 5, 5]})
+        fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(10, 5),
+                                       gridspec_kw={'height_ratios': [5, 5]})
         plt.subplots_adjust(hspace=0.75, top=0.85, bottom=0.1, left=0.1,
                             right=0.85)
         # Plot smoothed summed scores
         sns.lineplot(data=s_sums.infer_objects(), x='variable', y='value',
-                     hue='group', palette=self.palette, alpha=0.7,
-                     legend=False, ax=ax1)
-        # Add peaks to plot
+                     hue='group', palette=self.palette,
+                     alpha=0.7, legend=False, ax=ax1)
+        # Add peaks to sum score plot
         for peak in peaks.iterrows():
             loc = peak[1]['peak']
             prom = peak[1]['prominence']
             grp = peak[1]['group']
             c_val = s_sums.loc[(grp, loc)].value
             color = self.palette[grp]
+            # add peak location lines with prominence
+            ax1.vlines(x=loc, ymin=c_val-prom, ymax=c_val, color=color,
+                       linewidth=1, zorder=2)
+            # Add peak location annotation
+            ax1.annotate(int(loc/2), (loc + 0.03, c_val * 1.03), color=color,
+                         alpha=0.7)
+        sns.lineplot(data=scores, x='variable', y='value', hue='group',
+                     palette=self.palette, alpha=0.7, ax=ax2)
+        # Readjust all plots' x-axis labels to original binning
+        left, right = plt.xlim()
+        locs, _ = plt.xticks()
+        lbls = [int(n/2) for n in locs]
+        for ax in (ax1, ax2):
+            ybot, ytop = ax.get_ylim()
+            # Add line to indicate anchoring bin
+            ax.vlines(self.anchor, ybot, ytop, 'firebrick', zorder=0,
+                      linestyles='dashed')
+            # Add peak detection threshold line
+            ax.hlines(Sett.peak_thresh, xmin=left, xmax=right, linewidth=1, zorder=0,
+                      linestyles='dashed', color='dimgrey')
+            # Define labels and ticks
+            ax.set_xticks(locs)
+            ax.set_xticklabels(labels=lbls)
+            ax.set_xlabel('')
+            ax.set_ylabel('Score')
+        # Change titles and legend location
+        ax1.set_title('Smoothed mean score')
+        ax2.set_title('Raw group score')
+        ax2.legend(loc='center left', bbox_to_anchor=(1.01, 0.5), ncol=1)
+        ax2.set_xlabel('Linear Position')
+        plt.suptitle('GROUP BORDER SCORES')
+        # Save figure
+        plt.savefig(dirpath.joinpath(f'All-Border_Scores.{Sett.saveformat}'))
+        plt.close()
+
+    def group_plots2(self, scores, s_sums, peaks, dirpath): # !!! REDUNDANT
+        """LAM publication plot."""
+        # Create canvas
+        fig, (ax1, ax2, ax3) = plt.subplots(3, 1, figsize=(10, 5),
+                                       gridspec_kw={'height_ratios': [5, 7, 5]})
+        plt.subplots_adjust(hspace=0.75, top=0.85, bottom=0.1, left=0.1,
+                            right=0.85)
+        # Plot smoothed summed scores
+        sns.lineplot(data=s_sums.infer_objects(), x='variable', y='value',
+                     hue='group', color="xkcd:greenish blue", #palette=self.palette, !!!
+                     alpha=0.7, legend=False, ax=ax1)
+        # Add peaks to plot
+        for peak in peaks.iterrows():
+            loc = peak[1]['peak']
+            prom = peak[1]['prominence']
+            grp = peak[1]['group']
+            c_val = s_sums.loc[(grp, loc)].value
+            color = "xkcd:greenish blue" # self.palette[grp] !!!
             # peak location line with prominence
             ax1.vlines(x=loc, ymin=c_val-prom, ymax=c_val, color=color,
                        linewidth=1, zorder=2)
             # Add peak location annotation
-            ax1.annotate(loc/2, (loc + 0.03, c_val * 1.03), color=color,
+            ax1.annotate(int(loc/2), (loc + 0.03, c_val * 1.03), color='k', #color, # !!!
                          alpha=0.7)
-        ax1.set_title('Smoothed sum scores')
-        # Plot flattened scores
-        sns.lineplot(data=flat, x='variable', y='value', hue='group',
-                     alpha=0.7, palette=self.palette, ax=ax2)
-        ax2.legend(loc='center left', bbox_to_anchor=(1.01, 0.5), ncol=1)
-        ax2.set_title('Flattened scores')
+        # !!! EXPERT LOCS
+        ybot, ytop = ax1.get_ylim()
+        for val in (11.0, 38.0, 56.0):
+            ax1.vlines(x=val * 2, ymin=ybot, ymax=ytop, color='dimgrey',
+                       linewidth=1.5, linestyles='dashed', zorder=0)
+        # !!!
+        ax1.set_title('Smoothed mean score')
+
+        # !!! ALL SAMPLES MANUAL PLOT
+        sample_n = self.scores.columns.size
+        ppalette = sns.color_palette("GnBu_d", sample_n)
+        pscores = self.scores.T
+        pscores = pscores.assign(sample=pscores.index)
+        pscores = pscores.melt(id_vars='sample')
+        sns.lineplot(data=pscores.infer_objects(), x='variable', y='value', hue='sample',
+                      alpha=0.45, palette=ppalette, ax=ax2, legend=False, linewidth=0.25)
+        sns.lineplot(data=pscores.infer_objects(), x='variable', y='value',
+              legend=False, alpha=0.9, linewidth=1.25, color='xkcd:puce', ax=ax2)
+        # !!!!
+        # ax2.legend(loc='center left', bbox_to_anchor=(1.01, 0.5), ncol=1)
+        # ax2.set_title('Flattened scores')
         # Plot scores and fitted curves
         sns.lineplot(data=scores, x='variable', y='value', hue='group',
-                     palette=self.palette, alpha=0.7, legend=False, ax=ax3)
-        p_curves = pd.DataFrame(data=curves.values)
-        p_curves = p_curves.assign(group=curves.index).melt('group')
-        sns.lineplot(data=p_curves.infer_objects(), x='variable', y='value',
-                     hue='group', style='group', alpha=0.9, legend=False,
-                     dashes=True, linewidth=0.5, palette=self.palette, ax=ax3)
-        ax3.set_title('Group scores')
+                     palette=self.palette, alpha=0.7, ax=ax3)
+        ax3.legend(loc='center left', bbox_to_anchor=(1.01, 0.5), ncol=1)
+        # p_curves = pd.DataFrame(data=curves.values)
+        # p_curves = p_curves.assign(group=curves.index).melt('group')
+        # sns.lineplot(data=p_curves.infer_objects(), x='variable', y='value',
+        #              hue='group', style='group', alpha=0.9, legend=False,
+        #              dashes=True, linewidth=0.5, palette=self.palette, ax=ax3)
+        ax3.set_title('Group score')
         left, right = plt.xlim()
         locs, _ = plt.xticks()
         # Readjust x-axis labels to origin binning
@@ -176,9 +246,10 @@ class FullBorders:
             ax.vlines(self.anchor, ybot, ytop, 'firebrick', zorder=0,
                       linestyles='dashed')
             # Add zero score line
-            ax.hlines(0, xmin=left, xmax=right, linewidth=1, zorder=0,
+            ax.hlines(Sett.peak_thresh, xmin=left, xmax=right, linewidth=1, zorder=0,
                       linestyles='dashed', color='dimgrey')
             # Define labels and ticks
+            ax.set_xticks(locs)
             ax.set_xticklabels(labels=lbls)
             ax.set_xlabel('')
             ax.set_ylabel('Score')
@@ -239,15 +310,24 @@ class GetSampleBorders:
                                self.name] = sum_score
 
     def get_sum_score(self, scores):
-        # Fit curve and get value deviations
-        scurve = get_fit(scores.T)
-        fitted = scores.apply(lambda x, c=scurve:
-                              x[:-1].subtract(c.iloc[0, :]), axis=0)
-        s_sum = smooth_data(fitted, win=7, tau=10).sum(axis=1)
-        return s_sum
+        """Find the summed score of the detection variables."""
+        # Smooth raw scores and the sum for total
+        s_sum = smooth_data(scores, win=7, tau=10).sum(axis=1)
+        # trim zeros from array ends
+        trimmed_sum = np.trim_zeros(s_sum)
+        # Get bin-to-bin score differential and drop outliers
+        diffs = np.diff(trimmed_sum)
+        diffs = drop_outlier(pd.Series(diffs, index=trimmed_sum.index[1:]))
+        # Normalize with end points dropped (they have highly variant values)
+        norm_diffs = norm_func(diffs[1:-1])
+        sum_score = pd.Series(norm_diffs, index=trimmed_sum.index[2:-1])
+        return sum_score
 
     def score_data(self, devs):
         """Score deciation values based on weights."""
+        # Minor smoothing to get rid of excess variance
+        devs = smooth_data(devs, win=3, tau=5)
+        # Multiply variable values by the scoring weights
         scores = devs.multiply(self.scoring, axis=1)
         return scores
 
@@ -256,8 +336,6 @@ class GetSampleBorders:
         # Assign identifiers to data
         norm = normalized.T.assign(var_name=normalized.T.index, stype='norm')
         score = scores.T.assign(var_name=scores.T.index, stype='score')
-        # Get mean score of variables
-        norm_mean = norm.mean()
         # Melt data to plottable form
         score = score.melt(id_vars=['var_name', 'stype'])
         norm = norm.melt(id_vars=['var_name', 'stype'])
@@ -265,31 +343,31 @@ class GetSampleBorders:
         fig, (ax1, ax2, ax3) = plt.subplots(3, 1, figsize=(10, 5),
                                             gridspec_kw={
                                                 'height_ratios': [3.5, 5, 5]})
-        # Fitted score plot
+        # Plot final score of sample
+        sum_score = sum_score.dropna()  # Drop missing values > plot cont. line
         ax1.plot(sum_score.index, sum_score.values, 'dimgrey')
-        ax1.set_title('Smooth sum score')
+        # Plot peak detection threshold line
         left, right = ax1.get_xlim()
-        ax1.hlines(0, xmin=left, xmax=right, linewidth=1, zorder=0,
+        ax1.hlines(Sett.peak_thresh, xmin=left, xmax=right, linewidth=1, zorder=0,
                       linestyles='dashed', color='firebrick')
-        # Score plot (raw scores)
+        # Plot raw scores of sample
         sns.lineplot(data=score.infer_objects(), x='variable', y='value',
                      hue='var_name', alpha=0.7, ax=ax2)
+        # Adjust legend location
         ax2.legend(loc='center left', bbox_to_anchor=(1.01, 0.5), ncol=1)
-        ax2.set_title('Scores')
         # Variable values plot
         sns.lineplot(data=norm.infer_objects(), x='variable', y='value',
                      hue='var_name', alpha=0.7, legend=False, ax=ax3)
-        ax3.plot(norm_mean.index, norm_mean.values, 'dimgrey')
         ax3.plot(curve.columns, curve.values.ravel(), 'r--')
+        # Set titles and other labels
+        ax1.set_title('Smooth score differential')
+        ax2.set_title('Raw scores')
         ax3.set_title('Normalized variables')
         plt.xlabel('Linear Distance')
         ax1.set_ylabel('Score')
         ax2.set_ylabel('Score')
         ax2.set_xlabel('')
-        # # Re-adjust tick labels to original binning
-        # x_vals = np.arange(0, norm_mean.shape[0])
-        # locs, _ = plt.xticks()
-        # lbls = [int(n/2) for n in locs]
+        # Re-adjust tick labels to original binning
         for ax in [ax1, ax2, ax3]:
             locs = [int(n/2) for n in ax.get_xticks()]
             ybot, ytop = ax.get_ylim()
@@ -309,7 +387,7 @@ class GetSampleBorders:
         self.var_data = pd.DataFrame(index=width.index)
         self.var_data = self.var_data.assign(width=width,
                                              width_diff=self.get_diff(width))
-        # Recalculate binning
+        # Recalculate binning for bin averages etc
         bins = np.linspace(0, 1, width.index.size + 1)
         self.data = self.data.assign(binning=pd.cut(self.data["NormDist"],
                                                     bins=bins))
@@ -327,6 +405,10 @@ class GetSampleBorders:
             if f'{var}_diff' in self.scoring.keys():
                 col.update({f'{var}_diff': self.get_diff(col.get(var))})
             self.var_data = self.var_data.assign(**col)
+        # Keep only necessary variables in DataFrame
+        self.var_data = self.var_data.loc[:, Sett.scoring_vars.keys()]
+        # Drop outliers (>3 SD)
+        self.var_data = self.var_data.apply(drop_outlier)
 
     def get_count(self):
         """Count binned features."""
@@ -338,7 +420,7 @@ class GetSampleBorders:
         """Calculate bin-to-bin differences"""
         diff = data.diff()[1:]
         # Shift data by one index position to match locations
-        diff.index = diff.index -1
+        diff.index = diff.index - 1
         return diff
 
     def get_std(self, var):
@@ -368,7 +450,8 @@ class GetSampleBorders:
 
 
 class PeakDialog(tks.Dialog):
-    
+    """Create user input-window for peak plotting."""
+
     def __init__(self, data=None, master=None):
         self.master = master
         top = tk.Toplevel(master)
@@ -387,7 +470,7 @@ class PeakDialog(tks.Dialog):
             self.values.append(val)
         self.top = top
         self.top.wait_window()
-    
+
     def apply(self):
         self.bools = [bool(v.get()) for v in self.values]
         self.top.destroy()
@@ -401,7 +484,7 @@ def deviate_data(data, curve):
     return devs
 
 
-def detect_peaks(score_arr, x_dist=6, thresh=0.15, width=1):
+def detect_peaks(score_arr, x_dist=6, thresh=0.15, width=2):
     """Find peaks from total scores of sample groups."""
     # Group data by sample group
     grouped = score_arr.groupby(score_arr.loc[:, 'group'])
@@ -439,13 +522,16 @@ def detect_peaks(score_arr, x_dist=6, thresh=0.15, width=1):
 
 def get_group_total(data):
     """Get smoothed total scores of groups."""
-    smoothed = smooth_data(data.T, win=7, tau=10).T
-    trimmed = prepare_data(smoothed)
-    # Drop outlier bins from individual samples
+    # smoothed = smooth_data(data.T, win=7, tau=10).T
+    trimmed = prepare_data(data)
+    # Get mean score for each bin
     s_sums = trimmed.groupby(['group', 'variable']
-                             ).apply(lambda x: drop_outlier(x.value).sum())
+                             ).apply(lambda x: x.value.mean())
     # Transform to dataframe and assign necessary identifier columns
     s_sums = s_sums.to_frame(name='value')
+    s_sums = s_sums.groupby('group').apply(lambda x: x.assign(
+        value=smooth_data(x.value, win=5, tau=10)))
+    # Add identifier columns, i.e. groups and bins
     s_sums = s_sums.assign(group=s_sums.index.get_level_values(0),
                            variable=s_sums.index.get_level_values(1))
     return s_sums
@@ -473,7 +559,9 @@ def get_peak_data(data, threshold):
 
 def prepare_data(data):
     """Transform data into long form."""
+    # Add group identifier
     data = data.assign(group=[s.split('_')[0] for s in data.index])
+    # Melt data with group as ID
     data = trim_data(data).melt(id_vars='group').infer_objects()
     return data
 
@@ -520,43 +608,52 @@ def apply_mask(arr, mask):
 
 
 def get_fit(data, name='c', id_var=None):
+    """Fit a curve to data for variable deviations."""
+    # Change to long format
     try:
         data = data.melt(id_vars=id_var)
     except KeyError:
          data = data.melt()
+    # Drop missing values
     data = data.dropna()
+    # Take all x and y data
     x_data = data.variable.values
     y_data = data.value.values
+    # Fit x and y data
     z = np.polyfit(x_data.astype(np.float), y_data.astype(np.float), 4)
     f = np.poly1d(z)
     x_curve = data.variable.unique()
     y_curve = f(x_curve)
+    # Create DF from obtained fit
     curve = pd.DataFrame(index=[name], columns=x_curve.astype(int),
                          data=np.reshape(y_curve, (-1, len(y_curve))))
     return curve
 
 
 def norm_func(arr):
-    return (arr-arr.min())/(arr.max()-arr.min())
+    """Normalize array between 0 and 1."""
+    return (arr-np.nanmin(arr))/(np.nanmax(arr)-np.nanmin(arr))
 
 
 def ask_peaks(peaks, gui_root):
-    if gui_root is not None:
+    """Ask user input to determine plottable peaks."""
+    if gui_root is not None:  # If GUI, make input window
         win = PeakDialog(data=peaks, master=gui_root)
         store.border_peaks = peaks.loc[win.bools, :]
-    else:
+    else:  # Otherwise ask for written input
         print('\aDetected peaks:')
         print(peaks)
-        ans = input('\nGive indices of peaks to drop (e.g. 1, 2): ')
+        ans = input('\nGive indices of peaks to DROP (e.g. 1, 2): ')
         if ans == '':
             store.border_peaks = peaks
         else:
             nums = [int(v) for v in ans.split(',')]
             if nums:
-                store.border_peaks = peaks.loc[nums, :]
+                store.border_peaks = peaks.loc[peaks.index.difference(nums), :]
 
 
 def peak_selection(datadir, gui_root=None):
+    """Collect detected peaks for plotting."""
     try:
         peaks = pd.read_csv(datadir.joinpath('Borders_peaks.csv'))
     except FileNotFoundError:
@@ -564,7 +661,7 @@ def peak_selection(datadir, gui_root=None):
         print(f'\nWARNING: {msg}')
         lg.logprint(LAM_logger, msg, 'w')
         return
-    if Sett.select_peaks:
+    if Sett.select_peaks:  # Ask for subset of peaks if needed
             ask_peaks(peaks, gui_root)
     else:
         store.border_peaks = peaks

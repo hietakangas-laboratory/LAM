@@ -138,11 +138,14 @@ class MakePlot:
                 return
 
     def plot_peaks(self, **kws):
+        """Add found border regions to plots."""
+        # Select only peaks that belong into groups being plotted
         if 'Sample Group' in self.data.columns:
             groups = self.data.loc[:, 'Sample Group'].unique()
             peaks = store.border_peaks[store.border_peaks.group.isin(groups)]
         else:
             peaks = store.border_peaks
+        # Add peaks to each plot in figure
         for ax in self.g.axes.flat:
             vmin, vtop = ax.get_ylim()
             vmax = vtop * 0.2
@@ -153,7 +156,7 @@ class MakePlot:
                 color = self.handle.palette[grp]
                 # peak location line with prominence
                 ax.vlines(x=loc, ymin=vmin, ymax=vmax, color=color, alpha=0.5,
-                           linewidth=1.5, zorder=2, linestyle='dashed',)
+                           linewidth=1.5, zorder=0, linestyle='dashed',)
 
     def plot_significance(self, ix, row, ax, yaxis, yheight, fill=Sett.fill,
                           stars=Sett.stars):

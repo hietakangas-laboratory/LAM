@@ -2,7 +2,9 @@
 """
 Created on Mon Mar 16 16:34:33 2020
 
-@author: Arto
+Individual plot functions for LAM.
+
+@author: Arto I. Viitanen
 """
 # LAM modules
 from settings import settings as Sett
