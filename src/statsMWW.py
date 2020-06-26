@@ -60,24 +60,28 @@ class statistics:
                     'Corr. Lesser', 'P Lesser', 'Reject Lesser',
                     'Corr. Two-sided', 'P Two-sided', 'Reject Two-sided']
         statData = pd.DataFrame(index=Data.index, columns=statCols)
-        if Sett.windowed:
+        if Sett.windowed:  # If doing rolling window stats
             for ind, __ in self.ctrlData.iloc[Sett.trail:-Sett.lead,
                                               :].iterrows():
-                sInd = ind - Sett.trail
+                sInd = ind - Sett.trail # Window edges
                 eInd = ind + Sett.lead
+                # Get values from both sample groups:
                 ctrlVals = self.ctrlData.iloc[sInd:eInd, :].values.flatten()
                 ctrlVals = ctrlVals[~np.isnan(ctrlVals)]
                 tstVals = self.tstData.iloc[sInd:eInd, :].values.flatten()
                 tstVals = tstVals[~np.isnan(tstVals)]
+                # Compare values
                 statData = get_stats(ctrlVals, tstVals, ind, statData)
-        else:
+        else:  # Bin-by-bin stats:
             for ind, row in self.ctrlData.iterrows():
                 ctrlVals = row.dropna().values
                 tstVals = self.tstData.loc[ind, :].dropna().values
                 statData = get_stats(ctrlVals, tstVals, ind, statData)
-        statData = correct(statData, statData.iloc[:, 2], 1, 3)
-        statData = correct(statData, statData.iloc[:, 5], 4, 6)
-        statData = correct(statData, statData.iloc[:, 8], 7, 9)
+        # Correct for multiple testing:
+        statData = correct(statData, statData.iloc[:, 2], 1, 3)  # greater
+        statData = correct(statData, statData.iloc[:, 5], 4, 6)  # lesser
+        statData = correct(statData, statData.iloc[:, 8], 7, 9)  # 2-sided
+        # Save statistics
         filename = 'Stats_{} = {}.csv'.format(self.title, self.channel)
         system.saveToFile(statData, self.statsDir, filename, append=False)
         self.statData = statData
@@ -102,26 +106,31 @@ class Total_Stats:
 
     def stats(self):
         """Calculate statistics of one variable between two groups."""
+        # Group all data by sample groups
         grpData = self.data.groupby(['Sample Group'])
+        # Find data of control group
         ctrlData = grpData.get_group(Sett.cntrlGroup)
-        cols = ['U Score', 'P Two-sided', 'Reject Two-sided']
+        # Make a DataFrame for results
+        cols = ['U Score', 'P Two-sided', 'Reject Two-sided']  # Needed columns
         mcols = pd.MultiIndex.from_product([self.tstGroups, cols],
                                            names=['Sample Group',
                                                   'Statistics'])
-        variables = self.data.Variable.unique()
-        TotalStats = pd.DataFrame(index=variables, columns=mcols)
+        variables = self.data.Variable.unique()  # Find analyzable variables
+        TotalStats = pd.DataFrame(index=variables, columns=mcols)  # create DF
         TotalStats.sort_index(level=['Sample Group', 'Statistics'],
                               inplace=True)
+        # Test each group against the control:
         for grp in self.tstGroups:
             tstData = grpData.get_group(grp)
-            for var in variables:
+            for var in variables:  # Test all found variables:
+                # Get data of both groups
                 cVals = ctrlData.loc[(ctrlData.Variable == var),
                                      ctrlData.columns.difference(
                                          ['Sample Group', 'Variable'])]
                 tVals = tstData.loc[(tstData.Variable == var),
                                     tstData.columns.difference(
                                         ['Sample Group', 'Variable'])]
-                try:
+                try:  # MWW test:
                     stat, pval = ss.mannwhitneyu(cVals.to_numpy().flatten(),
                                                  tVals.to_numpy().flatten(),
                                                  alternative='two-sided')
@@ -138,7 +147,9 @@ class Total_Stats:
                     else:
                         self.errorVars[grp].append(var)
                     continue
+                # Insert values to result DF
                 TotalStats.loc[var, (grp, cols)] = [stat, pval, reject]
+        # Save statistics
         savename = self.filename + ' Stats.csv'
         system.saveToFile(TotalStats, self.statsDir, savename,
                           append=False, w_index=True)

@@ -37,7 +37,7 @@ def bivariate_kde(plotter, **in_kws):
     g = sns.FacetGrid(data=plot_data, row=kws.get('row'), col=kws.get('col'),
                       hue="Sample Group", sharex=False, sharey=False,
                       height=5)
-    with warnings.catch_warnings():  # If
+    with warnings.catch_warnings():
         warnings.simplefilter('ignore', category=UserWarning)
         g = g.map(sns.kdeplot, 'Value_y', 'Value_x', shade_lowest=False,
                   shade=False, linewidths=2.5, alpha=0.6)

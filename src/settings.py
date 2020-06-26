@@ -117,9 +117,7 @@ class settings:
     target_chan = "Pros"
     # FILTERING DOES NOT AFFECT DATA ON TARGET CHANNEL (use_target/target_chan)
 
-    # The maximum distance the nearest cell will be looked at. Increase is
-    # computationally expensive, depending on the size of the dataset and the
-    # density of cells.
+    # The maximum distance the nearest cell will be looked at.
     maxDist = 99    # Radius around a cell
     # Whether to look only at cells with certain characteristics. Default is
     # to include cells smaller than 'inclusion'. If cells of greater volume are
@@ -136,7 +134,7 @@ class settings:
     Cluster_Channels = ["GFP"]  # , "Pros"]
     Cl_maxDist = 10         # Radius around a cell
     Cl_inclusion = 0    # Set to zero if not wanted.
-    Cl_incl_type = ""       # Same as above in Find_Distances
+    Cl_incl_type = ""       # Same as above in feature-to-feature distances
     Cl_min = 3
     Cl_max = 50
     

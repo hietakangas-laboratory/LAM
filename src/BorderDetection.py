@@ -30,9 +30,8 @@ except AttributeError:
     print('Cannot get logger')
 
 
-def detect_borders(paths, all_samples, palette, anchor,
-                   threshold=Sett.peak_thresh, variables=Sett.border_vars,
-                   scoring=Sett.scoring_vars, channel=Sett.border_channel):
+def detect_borders(paths, all_samples, palette, anchor, variables, scoring,
+                   threshold=0.5, channel='DAPI'):
     """
     Midgut border detection by weighted scoring of binned variables.
 
@@ -83,8 +82,8 @@ class FullBorders:
 
     def __init__(self, samples, widths, anchor, palette):
         self.samples = samples
-        self.groups = sorted(list(set([p.name.split('_')[0] for p in samples if
-                           len(p.name.split('_')) > 1])))
+        # self.groups = sorted(list({p.name.split('_')[0] for p in samples if
+        #                            len(p.name.split('_')) > 1}))
         self.width_data = widths
         self.anchor = anchor * 2
         self.palette = palette
@@ -93,7 +92,7 @@ class FullBorders:
 
     def __call__(self, dirpath, threshold):
         # Fit a curve to sample data and get divergence of values
-        flattened, curves = self.flatten_scores()
+        flattened = self.flatten_scores()
         # Compute total scores of sample groups
         s_sums = get_group_total(flattened)
         s_sums.value = s_sums.groupby(s_sums.group
@@ -126,12 +125,12 @@ class FullBorders:
         # Subtract curve from each sample
         devs = vals.apply(lambda x, c=curves:
                           x[:-1].subtract(c.loc[x.group, :]), axis=1)
-        return devs, curves
+        return devs
 
     def group_plots(self, scores, s_sums, peaks, dirpath):
         """Create plots of sample group border scores."""
         # Create canvas
-        fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(10, 5),
+        _, (ax1, ax2) = plt.subplots(2, 1, figsize=(10, 5),
                                        gridspec_kw={'height_ratios': [5, 5]})
         plt.subplots_adjust(hspace=0.75, top=0.85, bottom=0.1, left=0.1,
                             right=0.85)
@@ -184,7 +183,7 @@ class FullBorders:
     def group_plots2(self, scores, s_sums, peaks, dirpath): # !!! REDUNDANT
         """LAM publication plot."""
         # Create canvas
-        fig, (ax1, ax2, ax3) = plt.subplots(3, 1, figsize=(10, 5),
+        _, (ax1, ax2, ax3) = plt.subplots(3, 1, figsize=(10, 5),
                                        gridspec_kw={'height_ratios': [5, 7, 5]})
         plt.subplots_adjust(hspace=0.75, top=0.85, bottom=0.1, left=0.1,
                             right=0.85)
@@ -289,11 +288,12 @@ class GetSampleBorders:
         self.scoring = pd.Series(scoring)
         # Adjust anchor bin to the detection resolution (bins x 2)
         self.anchor = anchor * 2
+        self.var_data = pd.DataFrame()
 
-    def __call__(self, FullBorders, dirpath):
+    def __call__(self, Borders, dirpath):
         """Score sample."""
         # Collect variables and calculate diffs and stds
-        self.get_variables(FullBorders)
+        self.get_variables(Borders)
         # Normalize all variables between 0 and 1
         normalized = self.normalize_data()
         # Fit curve to variables and get deviations
@@ -306,8 +306,7 @@ class GetSampleBorders:
         if (Sett.plot_samples & Sett.Create_Border_Plots & Sett.Create_Plots):
             self.sample_plot(normalized, curve, scores, sum_score, dirpath)
         # Insert scores to full data set
-        FullBorders.scores.loc[scores.index,
-                               self.name] = sum_score
+        Borders.scores.loc[scores.index, self.name] = sum_score
 
     def get_sum_score(self, scores):
         """Find the summed score of the detection variables."""
@@ -340,7 +339,7 @@ class GetSampleBorders:
         score = score.melt(id_vars=['var_name', 'stype'])
         norm = norm.melt(id_vars=['var_name', 'stype'])
         # Create canvas
-        fig, (ax1, ax2, ax3) = plt.subplots(3, 1, figsize=(10, 5),
+        _, (ax1, ax2, ax3) = plt.subplots(3, 1, figsize=(10, 5),
                                             gridspec_kw={
                                                 'height_ratios': [3.5, 5, 5]})
         # Plot final score of sample
@@ -380,11 +379,11 @@ class GetSampleBorders:
         plt.savefig(dirpath.joinpath(f'{self.name}.{Sett.saveformat}'))
         plt.close()
 
-    def get_variables(self, FullBorders):
+    def get_variables(self, Borders):
         """Collect needed variables and calculate required characteristics."""
         # Get sample's width
-        width = self.get_width(FullBorders.width_data)
-        self.var_data = pd.DataFrame(index=width.index)
+        width = self.get_width(Borders.width_data)
+        self.var_data.index = width.index
         self.var_data = self.var_data.assign(width=width,
                                              width_diff=self.get_diff(width))
         # Recalculate binning for bin averages etc
@@ -588,12 +587,12 @@ def read_widths(datadir):
 
 def smooth_data(data, win=3, tau=10):
     """Perform rolling smoothing to data."""
-    smooth_data = data.rolling(win, center=True, win_type='exponential'
+    smoothed_data = data.rolling(win, center=True, win_type='exponential'
                              ).mean(tau=tau)
-    return smooth_data
+    return smoothed_data
 
 
-def trim_data(data, name='curve', grouper='group'):
+def trim_data(data, grouper='group'):
     """Trim bins where less than half of a sample group has values."""
     grouped = data.groupby(grouper)
     # Create mask
@@ -613,7 +612,7 @@ def get_fit(data, name='c', id_var=None):
     try:
         data = data.melt(id_vars=id_var)
     except KeyError:
-         data = data.melt()
+        data = data.melt()
     # Drop missing values
     data = data.dropna()
     # Take all x and y data
@@ -662,6 +661,6 @@ def peak_selection(datadir, gui_root=None):
         lg.logprint(LAM_logger, msg, 'w')
         return
     if Sett.select_peaks:  # Ask for subset of peaks if needed
-            ask_peaks(peaks, gui_root)
+        ask_peaks(peaks, gui_root)
     else:
         store.border_peaks = peaks

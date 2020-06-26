@@ -173,18 +173,15 @@ class Samplegroups:
         return readData, name, center
 
     def Get_Clusters(self):
-        """Gather sample data to compute cell clusters."""
+        """Gather sample data to compute clusters of cells."""
         print('\n---Finding clusters---')
         lg.logprint(LAM_logger, 'Finding clusters', 'i')
-#        allpaths = [] ???
         for grp in self._groups:  # Get one sample group
-            lg.logprint(LAM_logger, '-> clusters for group {}'.format(grp),
-                        'i')
+            lg.logprint(LAM_logger, '-> group {}'.format(grp), 'i')
             print('  {}  ...'.format(grp))
             SampleGroup = Group(grp)
             for path in SampleGroup.groupPaths:  # Get one sample of the group
                 Smpl = Sample(path, SampleGroup)
-                # print('{}  ...'.format(Smpl.name))
                 Smpl.Clusters(Sett.Cl_maxDist)  # Find clusters
         lg.logprint(LAM_logger, 'Clusters calculated', 'i')
 
@@ -193,24 +190,21 @@ class Samplegroups:
         print('\n---Feature-to-feature distances---')
         lg.logprint(LAM_logger, 'Finding feature-to-feature distances', 'i')
         for grp in self._groups:  # Get one sample group
-            lg.logprint(LAM_logger, '-> Distances for group {}'.format(grp),
-                        'i')
+            lg.logprint(LAM_logger, '-> group {}'.format(grp), 'i')
             print('  {}  ...'.format(grp))
             SampleGroup = Group(grp)
             for path in SampleGroup.groupPaths:  # Get one sample of the group
                 Smpl = Sample(path, SampleGroup)
-                # print('{}  ...'.format(Smpl.name))
-                # Find distances between nuclei within the sample
+                # Find distances between features within the sample
                 Smpl.DistanceMean(Sett.maxDist)
         lg.logprint(LAM_logger, 'Distances calculated', 'i')
 
     def Get_Statistics(self):
         """Handle data for group-wise statistical analysis."""
 
-        if len(self._groups) <= 1:
+        if len(self._groups) <= 1:  # Test whether enough groups for stats
             print("Statistics require multiple sample groups. Stats passed.")
-            lg.logprint(LAM_logger, 'Stats passed. Not enough sample groups',
-                        'i')
+            lg.logprint(LAM_logger, 'Stats passed. Too few groups', 'i')
             return
         lg.logprint(LAM_logger, 'Calculation of statistics', 'i')
         if Sett.Create_Plots and Sett.Create_Statistics_Plots:

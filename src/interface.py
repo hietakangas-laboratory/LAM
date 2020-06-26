@@ -576,6 +576,7 @@ class base_GUI(tk.Toplevel):
         self.Detect_Channels()
 
     def border_check(self):
+        """Control border detection related settings."""
         if PlotV.get():
             if self.borders.get():
                 self.borderC.configure(state='normal')
@@ -779,6 +780,7 @@ class base_GUI(tk.Toplevel):
                           c.lower() != Sett.MPname.lower()]
 
     def width_check(self):
+        """Enable width estimation related settings."""
         if PlotV.get():
             if self.widths.get():
                 self.widthC.configure(state='normal')

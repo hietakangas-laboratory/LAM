@@ -11,6 +11,7 @@ import pathlib as pl
 from settings import settings as Sett
 
 def make_parser():
+    """Make parser-object for LAM run."""
     parser = argparse.ArgumentParser(description='Perform LAM analysis.')
     # MAIN
     parser.add_argument("-p", "--path", help="analysis directory path",
@@ -57,6 +58,7 @@ def make_parser():
 
 
 def change_settings(parser):
+    """Use parsed arguments to change settings."""
     if parser.path:
         Sett.workdir = pl.Path(parser.path)
     print(f'Work directory: {Sett.workdir}')
@@ -98,6 +100,7 @@ def change_settings(parser):
 
 
 def primary_options(string):
+    """Define primary settings from argument string."""
     string = string.lower()
     Sett.process_samples = False
     Sett.process_counts = False

@@ -139,7 +139,9 @@ def main(gui_root=None):
     # Find border regions
     if Sett.border_detection:
         bd.detect_borders(system_paths, sample_groups._samplePaths,
-                          sample_groups._grpPalette, store.center)
+                          sample_groups._grpPalette, store.center,
+                          Sett.border_vars, Sett.scoring_vars,
+                          Sett.peak_thresh, Sett.border_channel)
     # Get and select border data if needed:
     if Sett.Create_Plots and Sett.add_peaks:
         bd.peak_selection(system_paths.datadir, gui_root)

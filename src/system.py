@@ -101,14 +101,15 @@ class DataHandler:
     def get_data(self, *args, **kws):
         """Collect data from files and modify."""
         melt = False
+        # Create a DF for holding data of all samples, add identifiers, format:
         all_data = pd.DataFrame()
         for path in self.paths:
             data = read_data(path, header=0, test=False)
-            if 'IDs' in kws.keys():
+            if 'IDs' in kws.keys():  # Identifiers
                 data = plot.identifiers(data, path, kws.get('IDs'))
-            if 'melt' in kws.keys():
+            if 'melt' in kws.keys():  # Data to long format
                 m_kws = kws.get('melt')
-                if 'path_id' in args:
+                if 'path_id' in args:  # Get ID from filepath
                     id_sep = kws.get('id_sep')
                     try:
                         id_var = path.stem.split('_')[id_sep]
@@ -125,18 +126,19 @@ class DataHandler:
                 melt = True
             else:
                 data = data.T
-            if 'merge' in args:
+            if 'merge' in args: # Merge data with data from other paths
                 if all_data.empty:
                     all_data = data
                 else:
                     all_data = all_data.merge(data, how='outer', copy=False,
                                               on=kws.get('merge_on'))
                 continue
+            # If not merging, concatenate the data with others
             all_data = pd.concat([all_data, data], sort=True)
         all_data.index = pd.RangeIndex(stop=all_data.shape[0])
-        if 'drop_outlier' in args and Sett.Drop_Outliers:
+        if 'drop_outlier' in args and Sett.Drop_Outliers:  # Drop outliers
             all_data = drop_outliers(all_data, melt, **kws)
-        all_data = all_data.infer_objects()
+        all_data = all_data.infer_objects()  # Determine column data types
         return all_data
 
     def get_sample_data(self, col_ids, *args, **kws):
@@ -219,12 +221,12 @@ def read_data(filepath, header=Sett.header_row, test=True, index_col=False):
 def saveToFile(data, directory, filename, append=True, w_index=False):
     """Save series or DF to a file."""
     path = directory.joinpath(filename)
-    if not append:
+    if not append:  # If saving full data, just save it
         if isinstance(data, pd.DataFrame):
             data.to_csv(str(path), index=w_index)
         else:
             data.to_frame().to_csv(str(path), index=w_index)
-    elif path.exists():
+    elif path.exists():  # Add the data into an existing file
         file = pd.read_csv(str(path), index_col=w_index)
         if data.name not in file.columns:
             file = pd.concat([file, data], axis=1)
@@ -232,7 +234,7 @@ def saveToFile(data, directory, filename, append=True, w_index=False):
             file.loc[:, data.name] = data
         file = file.sort_index(axis=1)
         file.to_csv(str(path), index=w_index)
-    else:
+    else:  # If path doesn't yet exist, create it
         if isinstance(data, pd.DataFrame):
             data.to_csv(str(path), index=w_index)
         else:
@@ -346,6 +348,7 @@ def drop_outliers(all_data, melted=False, raw=False, **kws):
 
 
 def ask_user(dlg, dlgtype='string', use_gui=Sett.GUI):
+    """Create input dialog."""
     if use_gui:
         if dlgtype == 'string':
             ans = sd.askstring(title="Dialog", prompt=dlg)

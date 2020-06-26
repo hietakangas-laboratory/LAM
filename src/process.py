@@ -99,14 +99,16 @@ class get_sample:
     def get_vectData(self, channel):
         """Get channel data that is used for vector creation."""
         try:
+            # Search string:
             namer = str("_{}_".format(channel))
             namerreg = re.compile(namer, re.I)
+            # Search found paths with string
             dirPath = [self.channelpaths[i] for i, s in
                        enumerate(self.channelpaths)
                        if namerreg.search(str(s))][0]
             vectPath = next(dirPath.glob('*Position.csv'))
-            vectData = system.read_data(vectPath)
-        except FileNotFoundError:
+            vectData = system.read_data(vectPath)  # Read data
+        except FileNotFoundError:  # If data file not found
             msg = 'No valid file for vector creation.'
             lg.logprint(LAM_logger, msg, 'w')
             print('-> {}'.format(msg))
@@ -538,11 +540,12 @@ class normalize:
 
     def averages(self, NormCounts):
         """Find bin averages of channels."""
+        # Find groups of each sample based on samplenames
         samples = NormCounts.columns.tolist()
         Groups = set({s.casefold(): s.split('_')[0] for s in samples}.values())
         cols = ["{}_All".format(g) for g in Groups]
         Avgs = pd.DataFrame(index=NormCounts.index, columns=cols)
-        for grp in Groups:
+        for grp in Groups:  # For each group found in data
             namer = "{}_".format(grp)
             grpData = NormCounts.loc[:, NormCounts.columns.str.startswith(
                 namer)]
@@ -606,6 +609,7 @@ class normalize:
 
 
 class DefineWidths:
+    """Find widths of samples along the vector."""
     
     def __init__(self, data, vector, path, datadir):
         self.name = path.name
@@ -629,13 +633,16 @@ class DefineWidths:
         pond to [right side, on vector, left side] respectively.
         """
         def _get_sign(arr, p1x, p1y, p2x, p2y):
+            """Find which side of vector a feature is."""
             X, Y = arr[0], arr[1]
             val = math.copysign(1, (p2x - p1x) * (Y - p1y) -
                                 (p2y - p1y) * (X - p1x))
             return val
 
+        # Define bin edges
         edges, edge_points = self.get_vector_edges(multip=2)
         data = self.data.sort_values(by='NormDist')
+        # Find features in every bin and define hand-side
         for ind, point1 in enumerate(edge_points[:-1]):
             point2 = edge_points[ind+1]
             p1x, p1y = point1.x, point1.y
@@ -643,10 +650,12 @@ class DefineWidths:
             d_index = data.loc[(data.NormDist >= edges[ind]) &
                                (data.NormDist < edges[ind+1])].index
             points = data.loc[d_index, ['Position X', 'Position Y']]
+            # Assign hand-side of features
             data.loc[d_index, 'hand'] = points.apply(
                 _get_sign, args=(p1x, p1y, p2x, p2y), axis=1, raw=True
                 ).replace(np.nan, 0)
         data = data.sort_index()
+        # Save calculated data
         ChString = str('{}.csv'.format(Sett.vectChannel))
         system.saveToFile(data, self.sampledir, ChString, append=False)
         return data
@@ -671,7 +680,9 @@ class DefineWidths:
         return edges
 
     def average_width(self, datadir):
+        """Calculate width based on feature distance and side."""
         def _get_approx_width(data):
+            """Approximate sample's width at bin."""
             width = 0
             for val in [-1, 1]:
                 distances = data.loc[(data.hand == val)].ProjDist

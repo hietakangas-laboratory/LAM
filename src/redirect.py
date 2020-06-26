@@ -4,7 +4,7 @@ LAM-module for output window when using executibles.
 
 Created on Thu Jan 16 10:37:42 2020
 
-@author: artoviit
+@author: Arto I. Viitanen
 """
 import tkinter as tk
 import sys

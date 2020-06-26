@@ -70,26 +70,27 @@ class MakePlot:
         self.save_plot()
 
     def add_elements(self, *args, **kws):
-        """Add plot elements."""
-        if 'centerline' in args:
+        """Add additional plot elements."""
+        if 'centerline' in args:  # Add anchoring point line
             self.centerline()
-        if 'ticks' in args:
+        if 'ticks' in args:  # Adjust axis ticks
             self.xticks()
-        if 'labels' in args:
+        if 'labels' in args:  # Change plot axis labels
             self.collect_labels(kws.get('xlabel'), kws.get('ylabel'))
             self.labels(kws.get('xlabel'), kws.get('ylabel'),
                         kws.get('label_first_only'))
-        if 'legend' in args:
+        if 'legend' in args:  # Add legend to plot
             self.g.add_legend()
-        if 'title' in args:
+        if 'title' in args:  # Add title
             self.set_title(**kws)
-        if 'stats' in args:
+        if 'stats' in args:  # Include statistics, e.g. neg log or stars
             self.stats(**kws)
-        if 'total_stats' in args:
+        if 'total_stats' in args:  # Add total stat significances
             self.stats_total(**kws)
         if ('peaks' in args and Sett.add_peaks and
-            store.border_peaks is not None):
+            store.border_peaks is not None):  # Add detected peaks
             self.plot_peaks(**kws)
+        # Make labels visible even when sharing axes
         if (kws.get('sharey') == 'row' or kws.get('sharex') == 'col'):
             self.visible_labels()
 
@@ -104,10 +105,13 @@ class MakePlot:
         """Collect plot labels from plot title."""
         if 'collect' not in (xlabel, ylabel):
             return
+        # For each plot on canvas
         for ax in self.g.axes.flat:
+            # Take apart info in seaborn generated title
             title = ax.get_title()
             var_strs = title.split(' | ')
             label_strs = [l.split(' = ')[1] for l in var_strs]
+            # Collect and set needed labels
             if ylabel == 'collect':
                 label = get_unit(label_strs[0])
                 ax.set_ylabel(label)
@@ -118,6 +122,7 @@ class MakePlot:
 
 
     def get_facet(self, **kws):
+        """Create a FacetGrid for plotting."""
         g = sns.FacetGrid(self.data, row=kws.get('row'),
                           col=kws.get('col'), hue=kws.get('hue'),
                           sharex=kws.get('sharex'), sharey=kws.get('sharey'),
@@ -258,7 +263,7 @@ class MakePlot:
 
     def save_plot(self):
         """Save created plot."""
-        fig = plt.gcf()
+        fig = plt.gcf()  # Get ref to current figure
         fig.savefig(str(self.filepath), format=Sett.saveformat)
         plt.close('all')
 
@@ -370,7 +375,7 @@ class plotting:
 
         # Get Add data
         all_add_data = pd.DataFrame()
-        for channel in Sett.vs_channels:
+        for channel in Sett.vs_channels:  # Only channels named in settings
             paths = [p for p in paths1 if channel == str(p.name).split('_')[1]]
             if not paths:
                 print("-> No data found for {}".format(channel))
