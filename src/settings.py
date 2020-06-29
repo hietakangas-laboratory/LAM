@@ -142,7 +142,7 @@ class settings:
     # ---BORDER DETECTION--- #
     
     # Name of channel from which scoring variables are collected from
-    border_channel = 'DAPI'  # Default is vector creation channel
+    border_channel = vectChannel  # Default is vector creation channel
     peak_thresh = 0.5  # Border score threshold for peak detection
     # Plot individual samples (requires Create_Border_Plots==True)
     plot_samples = False

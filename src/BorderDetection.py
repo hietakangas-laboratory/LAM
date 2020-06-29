@@ -12,6 +12,7 @@ Created on Fri May  8 19:03:36 2020
 # LAM modules
 from settings import settings as Sett, store
 import logger as lg
+import system
 # Other
 import numpy as np
 import pandas as pd
@@ -282,7 +283,6 @@ class GetSampleBorders:
             self.error = True
         except FileNotFoundError:
             print(f'ERROR: {filepath.name} not found for {self.name}.')
-            print('--> Change border_channel -setting')
             self.error = True
         # Create series with the scoring weights
         self.scoring = pd.Series(scoring)
@@ -383,7 +383,6 @@ class GetSampleBorders:
         """Collect needed variables and calculate required characteristics."""
         # Get sample's width
         width = self.get_width(Borders.width_data)
-        self.var_data.index = width.index
         self.var_data = self.var_data.assign(width=width,
                                              width_diff=self.get_diff(width))
         # Recalculate binning for bin averages etc
@@ -664,3 +663,61 @@ def peak_selection(datadir, gui_root=None):
         ask_peaks(peaks, gui_root)
     else:
         store.border_peaks = peaks
+
+
+def test_channel(samplepaths, border_vars, scoring_vars, border_channel):
+    """Test existence of required channel data for border detection."""
+    not_found = 0  # Number of samples with no data
+    for path in samplepaths:  # Test all samples
+        if path.joinpath(f'{border_channel}.csv').is_file():  # If file found
+            continue
+        else:  # When no file found
+            not_found += 1
+    if not_found == len(samplepaths):  # File not found for any sample
+        print('Border detection data not found for any sample.')
+        changed = ask_new_channel(border_channel)  # Confirm channel
+        if changed:  # If channel is changed
+            return True
+        return False
+    elif not_found > 0:  # If data not found for some samples
+        print('Border detection data not found for some samples.')
+        _ = ask_new_channel(border_channel)
+        return True
+    return True
+
+        
+def ask_new_channel(border_channel):
+    """Ask user input to determine new border detection channel."""
+    flag = True
+    while flag:  # Ask input until satisfied
+        dlg = f'Current channel is {border_channel}. Change channel? [y/n]'
+        ans = system.ask_user(dlg)  # Ask whether to change channel
+        if ans in ('Y', 'y'):
+            dlg = "Give name of new border detection channel: "
+            new_channel = system.ask_user(dlg)  # Ask channel name
+            change_keys(border_channel, new_channel)  # Change variables
+            Sett.border_channel = new_channel
+            msg = (f'\nBorder detection channel changed from ' +
+                   f'{border_channel} to {new_channel}.\n')
+            print(msg)
+            lg.logprint(LAM_logger, msg, 'i')
+            return True
+        elif ans in ('N', 'n'):
+            return False
+        else:
+            print('Command not understood.\n')
+
+
+def change_keys(old_channel, new_channel):
+    """Change border detection variables between two channels."""
+    old = f'_{old_channel}'
+    new = f'_{new_channel}'
+    # Change column names
+    Sett.border_vars = [col.replace(old, new) for col in Sett.border_vars]
+    items = list(Sett.scoring_vars.items())
+    # Update scoring dictionary
+    for key, value in items:
+        if old in key:
+            new_key = key.replace(old, new)
+            Sett.scoring_vars.update({new_key: value})
+            del Sett.scoring_vars[key]

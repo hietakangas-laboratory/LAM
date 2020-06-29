@@ -68,7 +68,7 @@ The script first creates a vector based on one channel ("vectChannel",
 typically DAPI), in order to approximate the midgut along its length. Positions
 on other channels can then be projected onto the vector, and cell numbers can
 be quantified along the midgut. The vector is divided into user-defined number
-of bins that are used for comparative analyses
+of bins that are used for comparative analyses.
 
 On some experiments the size proportions of different regions may alter, e.g.
 when comparing starved and fully-fed midguts, more accurate results can be
@@ -82,7 +82,7 @@ from the MP grows. When MP is not used, the samples are lined at bin 0, and
 compared bin-by-bin. The MP-input is done similarly to channel data, i.e. as a
 separate directory that contains position.csv for a single coordinate, the MP.
 
-For more extensive instructions, see user manual.
+For more extensive description and instructions, see user manual.
 """
 # LAM module
 from settings import settings as Sett
@@ -138,10 +138,13 @@ def main(gui_root=None):
         sample_groups.Get_Totals()
     # Find border regions
     if Sett.border_detection:
-        bd.detect_borders(system_paths, sample_groups._samplePaths,
-                          sample_groups._grpPalette, store.center,
-                          Sett.border_vars, Sett.scoring_vars,
-                          Sett.peak_thresh, Sett.border_channel)
+        conf = bd.test_channel(sample_groups._samplePaths, Sett.border_vars,
+                               Sett.scoring_vars, Sett.border_channel)
+        if conf:
+            bd.detect_borders(system_paths, sample_groups._samplePaths,
+                              sample_groups._grpPalette, store.center,
+                              Sett.border_vars, Sett.scoring_vars,
+                              Sett.peak_thresh, Sett.border_channel)
     # Get and select border data if needed:
     if Sett.Create_Plots and Sett.add_peaks:
         bd.peak_selection(system_paths.datadir, gui_root)
