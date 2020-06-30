@@ -71,7 +71,7 @@ def channel_matrix(plotter, **kws):
             ax.set_xlim(left=0)
     # In case of missing or erroneous data, linalgerror can be raised
     except np.linalg.LinAlgError:  # Then, exit plotting
-        msg = '-> Confirm that all samples have proper channel data'
+        msg = '-> Confirm that all channels have proper data'
         fullmsg = 'Pairplot singular matrix\n{}'.format(msg)
         lg.logprint(LAM_logger, fullmsg, 'ex')
         print('ERROR: Pairplot singular matrix')
@@ -79,7 +79,7 @@ def channel_matrix(plotter, **kws):
         plotter.plot_error = True
         return None
     except RuntimeError:
-        msg = '-> Confirm that all samples have proper channel data'
+        msg = '-> Confirm that all channels have proper data'
         fullmsg = 'Pairplot RuntimeError\n{}'.format(msg)
         lg.logprint(LAM_logger, fullmsg, 'ex')
         print('ERROR: Pairplot RuntimeError')

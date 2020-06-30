@@ -659,7 +659,9 @@ def peak_selection(datadir, gui_root=None):
         print(f'\nWARNING: {msg}')
         lg.logprint(LAM_logger, msg, 'w')
         return
-    if Sett.select_peaks:  # Ask for subset of peaks if needed
+    if Sett.force_dialog:
+        store.border_peaks = peaks
+    elif Sett.select_peaks:  # Ask for subset of peaks if needed
         ask_peaks(peaks, gui_root)
     else:
         store.border_peaks = peaks
@@ -674,13 +676,13 @@ def test_channel(samplepaths, border_vars, scoring_vars, border_channel):
         else:  # When no file found
             not_found += 1
     if not_found == len(samplepaths):  # File not found for any sample
-        print('Border detection data not found for any sample.')
+        print('\nBorder detection data not found for any sample.')
         changed = ask_new_channel(border_channel)  # Confirm channel
         if changed:  # If channel is changed
             return True
         return False
     elif not_found > 0:  # If data not found for some samples
-        print('Border detection data not found for some samples.')
+        print('\nBorder detection data not found for some samples.')
         _ = ask_new_channel(border_channel)
         return True
     return True
@@ -688,7 +690,12 @@ def test_channel(samplepaths, border_vars, scoring_vars, border_channel):
         
 def ask_new_channel(border_channel):
     """Ask user input to determine new border detection channel."""
+    if Sett.force_dialog:  # If forcing no user input
+        msg = "Border detection data not found for all samples."
+        lg.logprint(LAM_logger, msg, 'i')
+        return False
     flag = True
+    print('\a')
     while flag:  # Ask input until satisfied
         dlg = f'Current channel is {border_channel}. Change channel? [y/n]'
         ans = system.ask_user(dlg)  # Ask whether to change channel
@@ -697,9 +704,9 @@ def ask_new_channel(border_channel):
             new_channel = system.ask_user(dlg)  # Ask channel name
             change_keys(border_channel, new_channel)  # Change variables
             Sett.border_channel = new_channel
-            msg = (f'\nBorder detection channel changed from ' +
-                   f'{border_channel} to {new_channel}.\n')
-            print(msg)
+            msg = (f'Border detection channel changed from ' +
+                   f'{border_channel} to {new_channel}.')
+            print('\n' + msg)
             lg.logprint(LAM_logger, msg, 'i')
             return True
         elif ans in ('N', 'n'):

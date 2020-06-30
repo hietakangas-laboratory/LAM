@@ -21,7 +21,7 @@ class base_GUI(tk.Toplevel):
     """Container for the most important settings of the GUI."""
 
     def __init__(self, master=None):
-        master.title("LAM-0.2.2")
+        master.title("LAM-0.2.3")
         self.master = master
         self.master.grab_set()
         self.master.bind('<Escape>', self.func_destroy)
@@ -496,6 +496,8 @@ class base_GUI(tk.Toplevel):
         if not StatsV.get():
             self.statsbutton.configure(state='disable')
             self.statC.configure(state='disable')
+            global Pstats
+            Pstats.set(False)
         else:
             self.statsbutton.configure(state='normal')
             if PlotV.get():

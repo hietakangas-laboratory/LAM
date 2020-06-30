@@ -12,6 +12,7 @@ class settings:
 
     # ####################### PRIMARY SETTINGS #######################
     GUI = True  # Use graphical user interface (True / False)
+    force_dialog = False  # Force no user input (True for no dialog)
     # Detect border regions
     border_detection = True
     # Determine width of gut based on vector channel projection distances

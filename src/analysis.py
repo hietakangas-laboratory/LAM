@@ -626,23 +626,33 @@ def test_control():
     """Assert that control group exists, and if not, handle it."""
     # If control group is not found:
     if Sett.cntrlGroup in store.samplegroups:
-        return
+        return True
     lg.logprint(LAM_logger, 'Set control group not found', 'c')
     # Test if entry is due to capitalization error:
     namer = re.compile(r"{}$".format(re.escape(Sett.cntrlGroup)), re.I)
     for group in store.samplegroups:
         if re.match(namer, group):  # If different capitalization:
             msg = "Control group-setting is case-sensitive!"
-            print("WARNING: {}".format(msg))
+            print(f"WARNING: {msg}")
             # Change control to found group
             Sett.cntrlGroup = group
             msg = "Control group has been changed to"
             print("{} '{}'\n".format(msg, group))
-            lg.logprint(LAM_logger, '-> Changed to {}'.format(group), 'i')
-            return
+            lg.logprint(LAM_logger, f"-> Changed to {group}", 'i')
+            return True
     # If control not found at all:
-    msg = "control group NOT found in sample groups!"
+    msg = "Control group NOT found in sample groups!"
     print("\nWARNING: {}\n".format(msg))
+    if Sett.force_dialog:
+        lg.logprint(LAM_logger, msg, 'e')
+        Sett.statistics = False
+        return False
+    ask_control()
+    return True
+
+
+def ask_control():
+    """Ask new control group if one not found."""
     flag = 1
     # Print groups and demand input for control:
     while flag:
@@ -657,12 +667,11 @@ def test_control():
         if 0 <= ans <= len(store.samplegroups):
             # Change control based on input
             Sett.cntrlGroup = store.samplegroups[ans]
-            print("Control group set as '{}'.\n".format(Sett.cntrlGroup))
+            print(f"Control group set as '{Sett.cntrlGroup}'.\n")
             flag = 0
         else:
             print('Command not understood.')
-    msg = "-> Changed to group '{}' by user".format(
-        Sett.cntrlGroup)
+    msg = f"-> Changed to group '{Sett.cntrlGroup}' by user"
     lg.logprint(LAM_logger, msg, 'i')
 
 

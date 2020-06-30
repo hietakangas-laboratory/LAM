@@ -132,6 +132,14 @@ def print_settings():
                 MPmsg = "Using MP with label {}.\n".format(Sett.MPname)
             else:
                 MPmsg = "Not using MP.\n"
+                
+        if Sett.border_detection or Sett.measure_width:
+            sn = ['Widths', 'Borders']
+            ss = [Sett.measure_width, Sett.border_detection]
+            msg = ', '.join([sn[i] for i, s in enumerate(ss) if s is True])
+            if Sett.border_detection:
+                msg = msg + f', Border channel = {Sett.border_channel}'
+            file.write("Secondary: {}\n".format(msg))
         # If creating vectors, get and print related settings
         if Sett.process_samples:
             file.write("--- Process Settings ---\n")
@@ -208,11 +216,12 @@ def print_settings():
         if Sett.Create_Plots:  # Plotting settings
             file.write("--- Plot Settings ---\n")
             plotnames = ['Channels', 'Additional', 'Pair', 'Heatmap',
-                         'Distribution', 'Statistics', 'ChanVSAdd',
-                         'AddVSAdd']
+                         'Distribution', 'Borders', 'Sample borders', 'Width',
+                         'Statistics', 'ChanVSAdd', 'AddVSAdd']
             plots = [Sett.Create_Channel_Plots, Sett.Create_AddData_Plots,
                      Sett.Create_Channel_PairPlots, Sett.Create_Heatmaps,
-                     Sett.Create_Distribution_Plots,
+                     Sett.Create_Distribution_Plots, Sett.Create_Border_Plots,
+                     Sett.plot_samples, Sett.plot_width,
                      Sett.Create_Statistics_Plots,
                      Sett.Create_ChanVSAdd_Plots, Sett.Create_AddVSAdd_Plots]
             plotmsg = ', '.join([plotnames[i] for i, s in enumerate(plots)

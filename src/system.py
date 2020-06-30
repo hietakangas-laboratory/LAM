@@ -41,23 +41,7 @@ class paths:
             # If samples are to be processed and output data directory exists,
             # the directory will be removed with all files as not to interfere
             # with analysis.
-            if self.datadir.exists() and Sett.process_counts:
-                files = list(self.datadir.glob('*'))
-                if files:
-                    flag = 1
-                    msg = "Data Files-folder will be cleared. Continue? [y/n]"
-                    print('\a')
-                    while flag:
-                        ans = ask_user(msg)
-                        if ans in ("y", "Y"):
-                            flag = 0
-                            shutil.rmtree(self.datadir)
-                        elif ans in ("n", "N"):
-                            flag = 0
-                            print('Analysis terminated')
-                            raise KeyboardInterrupt
-                        else:
-                            print('Command not understood.')
+            self.clear_analysis()
             # Create output directories
             pl.Path.mkdir(self.outputdir, exist_ok=True)
             pl.Path.mkdir(self.plotdir, exist_ok=True)
@@ -67,6 +51,28 @@ class paths:
         except KeyboardInterrupt:
             raise KeyboardInterrupt
         lg.logprint(LAM_logger, 'Directories successfully created.', 'i')
+
+    def clear_analysis(self):
+        """Clear existing analysis data files."""
+        if self.datadir.exists() and Sett.process_counts:
+            if Sett.force_dialog:
+                shutil.rmtree(self.datadir)
+            files = list(self.datadir.glob('*'))
+            if files:
+                flag = 1
+                msg = "Data Files-folder will be cleared. Continue? [y/n]"
+                print('\a')
+                while flag:
+                    ans = ask_user(msg)
+                    if ans in ("y", "Y"):
+                        flag = 0
+                        shutil.rmtree(self.datadir)
+                    elif ans in ("n", "N"):
+                        flag = 0
+                        print('Analysis terminated')
+                        raise KeyboardInterrupt
+                    else:
+                        print('Command not understood.')
 
     def save_AnalysisInfo(self, samples, groups, channels):
         """For saving information of all analyzed samples."""
@@ -277,6 +283,8 @@ def start():
 
 def test_vector_ext(dir_path):
     """Test if vectors exist and ask permission to remove."""
+    if Sett.force_dialog:  # If forcing no dialog
+        return
     # Get all existing sample output folders
     samples = iter([p for p in dir_path.iterdir() if p.is_dir()])
     if samples is None:  # if no pre-made samples found, continue analysis

@@ -12,22 +12,27 @@ from settings import settings as Sett
 
 def make_parser():
     """Make parser-object for LAM run."""
-    parser = argparse.ArgumentParser(description='Perform LAM analysis.')
+    hmsg = ("""Perform LAM analysis from command line. Args described as toggle
+            alter the default value in settings.py to the opposite Boolean.
+            Example:
+                python src\\run.py -p C:\\DSS -o cds -MGD -F -f GFP -f DAPI
+            """)
+    parser = argparse.ArgumentParser(description=hmsg)
     # MAIN
-    parser.add_argument("-p", "--path", help="analysis directory path",
+    parser.add_argument("-p", "--path", help="Analysis directory path",
                         type=str)
     ops = "r (process), c (count), d (distance), l (plots), s (stats)"
     htext = f"primary option string: {ops}"
     parser.add_argument("-o", "--options", help=htext, type=str)
-    parser.add_argument("-b", "--bins", help="sample bin number", type=int)
-    parser.add_argument("-v", "--channel", help="vector channel name",
+    parser.add_argument("-b", "--bins", help="Sample bin number", type=int)
+    parser.add_argument("-v", "--channel", help="Vector channel name",
                         type=str)
-    parser.add_argument("-g", "--control_group", help="name of control group",
+    parser.add_argument("-g", "--control_group", help="Name of control group",
                         type=str)
-    parser.add_argument("-H", "--header", help="header row number", type=int)
+    parser.add_argument("-H", "--header", help="Header row number", type=int)
     parser.add_argument("-M", "--measurement_point", help="toggle useMP",
                         action="store_true")
-    parser.add_argument("-m", "--mp_name", help="name of MP", type=str)
+    parser.add_argument("-m", "--mp_name", help="Name of MP", type=str)
     parser.add_argument("-G", "--GUI", help="toggle GUI", action="store_true")
 
     # Distance args
@@ -38,20 +43,22 @@ def make_parser():
                         action='append')
 
     # Cluster args
-    parser.add_argument("-C", "--clusters", help="feature clustering",
+    parser.add_argument("-C", "--clusters", help="Feature clustering",
                         action="store_true")
     parser.add_argument("-c", "--cluster_channels",
-                        help="clustering channels", type=str, action='append')
+                        help="Clustering channels", type=str, action='append')
     parser.add_argument("-d", "--cluster_distance",
-                        help="clustering max distance", type=int)
+                        help="Clustering max distance", type=int)
 
     # Other operations
     parser.add_argument("-B", "--borders",
-                        help="toggle border detection",
+                        help="Toggle border detection",
                         action="store_true")
-    parser.add_argument("-W", "--widths", help="toggle width calculation",
+    parser.add_argument("-W", "--widths", help="Toggle width calculation",
                         action="store_true")
-    parser.add_argument("-r", "--no_projection", help="projection to false",
+    parser.add_argument("-r", "--no_projection", help="Projection to false",
+                        action="store_true")
+    parser.add_argument("-D", "--force_dialog", help="Force no user input",
                         action="store_true")
     parser = parser.parse_args()
     return parser
@@ -97,6 +104,8 @@ def change_settings(parser):
         Sett.MPname = parser.mp_name
     if parser.GUI:
         Sett.GUI = not Sett.GUI
+    if parser.force_dialog:
+        Sett.force_dialog = parser.force_dialog
 
 
 def primary_options(string):

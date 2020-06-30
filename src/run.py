@@ -4,7 +4,7 @@ Run file for Longitudinal Analysis of Midgut.
 
 Created on Wed Mar  6 12:42:28 2019
 @author: Arto I. Viitanen
-@version: 0.2.2
+@version: 0.2.3
 
 Distributed under GNU General Public License v3.0
 -------------------------------------------------------------------------------
@@ -32,10 +32,11 @@ included.
         •	Windows:
             <yourenvname>\Scripts\activate.bat
     2.	pip install -r <path-to-requirements.txt>
-        • !!!  On Windows you need to install Shapely separately (see below).
-        You can either remove shapely from the requirements.txt or add ‘#’ in
-        front of the line to pass it, in order to install all other necessary
-        dependencies.
+        • !!!  On Windows you need to install Shapely separately
+               https://pypi.org/project/Shapely/
+          You can either remove shapely from the requirements.txt or add ‘#’ in
+          front of the line to pass it, in order to install all other necessary
+          dependencies.
 
 - Anaconda3 base environment:
     1. install Anaconda3 distribution (https://www.anaconda.com/distribution/)
@@ -43,7 +44,7 @@ included.
          Open Anaconda Prompt and write command:
            conda install --file <LAM-master\requirements.txt>
          (You may need to add conda-forge to conda channels:
-           conda config –add channels conda-forge           )
+           conda config --add channels conda-forge           )
  
 
 USAGE:
@@ -150,8 +151,9 @@ def main(gui_root=None):
         bd.peak_selection(system_paths.datadir, gui_root)
     # Calculation of MWW-statistics for cell counts and other data
     if Sett.statistics:
-        analysis.test_control()
-        sample_groups.Get_Statistics()
+        conf = analysis.test_control()
+        if conf:
+            sample_groups.Get_Statistics()
     # Creation of plots from various data (excluding statistical plots)
     if Sett.Create_Plots:
         sample_groups.create_plots()

@@ -329,7 +329,7 @@ class plotting:
             grp, grp2 = grps
             data = grouped.get_group(grp)
             data2 = grouped.get_group(grp2)
-            print("   {} vs. {}  ...".format(grp, grp2))
+            print("    {} vs. {}  ...".format(grp, grp2))
             f_tit = 'Versus_Add {} Data - Add {} Data Matrix'.format(grp, grp2)
             # Take only data types present in both channels:
             diff = set(data.Type.unique()).symmetric_difference(set(
@@ -404,7 +404,7 @@ class plotting:
         # Make plot:
         grouped = all_add_data.groupby('Channel')
         for grp, data in grouped:
-            print("   {}  ...".format(grp))
+            print("    {}  ...".format(grp))
             f_title = 'Versus_Channels - Add {} Data Matrix'.format(grp)
             plotter = MakePlot(data, handle, f_title, sec_data=all_chan_data)
             plotter(pfunc.bivariate_kde, 'title', 'legend', 'no_grid',
