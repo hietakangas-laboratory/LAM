@@ -7,6 +7,12 @@ created during LAM 'Project').
 
 PLOTS CREATED TO THE "ANALYSIS DATA\SAMPLES"-DIRECTORY
 
+USAGE:
+    1. Input path to the analysis directory to variable analysis_dir below.
+    2. Give name of a channel to variable base_channel, which will be plotted
+       alongside the vector
+    3. Run script
+
 Created on Tue May  5 08:20:28 2020
 
 @author: ArtoVi
@@ -19,7 +25,7 @@ import seaborn as sns
 
 
 # Path to analysis directory
-analysis_dir = pl.Path(r'E:\Code_folder\Josef_Indexerror\MARCM3 Statistics')
+analysis_dir = pl.Path(r'E:\Mireia\Arginine Statistics')
 base_channel = 'DAPI'
 
 
@@ -67,7 +73,7 @@ def make_plots(sample_path, base_data, vector_data):
     g = g.map(sns.scatterplot, data=base_data, x='Position X', y='Position Y',
               color='xkcd:tan', linewidth=0, s=10, legend=False)
     g = g.map(sns.lineplot, data=vector_data, x='X', y='Y',
-              color='cyan', linewidth=1)
+              color='cyan', linewidth=1, sort=False)
     g.axes.flat[0].set_aspect('equal')
     # title
     g.fig.suptitle(sample_path.name)

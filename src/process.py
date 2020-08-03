@@ -395,6 +395,8 @@ class get_sample:
         Positions["DistBin"] = pd.cut(Positions["NormDist"], edges,
                                       labels=labels)
         MPbin = pd.Series(Positions.loc[:, "DistBin"], name=self.name)
+        self.data = Positions
+        self.test_projection(Sett.MPname)
         # Save the obtained data:
         system.saveToFile(MPbin, datadir, filename)
         return MPbin
@@ -421,6 +423,8 @@ class get_sample:
         # Assign data to DF and save the dataframe:
         data["VectPoint"] = [(p.x, p.y) for p in proj_points]
         data["ProjDist"] = proj_dist
+        self.data = data
+        self.test_projection(channel.name)
         ChString = '{}.csv'.format(channel.name)
         system.saveToFile(data, self.sampledir, ChString, append=False)
         return data
@@ -433,6 +437,10 @@ class get_sample:
         ChString = 'All_{}.csv'.format(channelName)
         system.saveToFile(counts, datadir, ChString)
 
+    def test_projection(self, name):
+        if self.data["DistBin"].isna().any():
+            msg = "All features were not projected. Check vector and data."
+            print(f"   -> {name}: {msg}")
 
 class get_channel:
     """Find and read channel data plus additional data."""
@@ -891,6 +899,12 @@ def relate_data(data, MP=0, center=50, TotalLength=100):
         length = data.shape[0]
     except AttributeError:
         length = len(data)
+        print(MP, type(MP))
+    if np.isnan(MP):
+        msg = "Missing MP-projection(s). See 'Analysis Data/MPs.csv'."
+        print(f"CRITICAL: {msg}")
+        lg.logprint(LAM_logger, msg, 'c')
+        raise SystemExit
     # Insert smaller input data into larger DF defined by TotalLength
     insx = int(center - MP)
     end = int(insx + length)
@@ -902,7 +916,7 @@ def relate_data(data, MP=0, center=50, TotalLength=100):
         msg = "relate_data() call from {} line {}".format(
             inspect.stack()[1][1], inspect.stack()[1][2])
         print('ERROR: {}'.format(msg))
-        lg.logprint(LAM_logger, 'Failed {}\n'.format(msg), 'ex')
+        lg.logprint(LAM_logger, f'Failed {msg}\n', 'ex')
         msg = "If not using MPs, remove MPs.csv from 'Data Files'."
         if insert[insx:end].size - length == MP:
             lg.logprint(LAM_logger, msg, 'i')

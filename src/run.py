@@ -101,6 +101,7 @@ def main(gui_root=None):
     import process
     import BorderDetection as bd
     from settings import store
+
     system_paths = system.start()
     # If sample processing set to True, create vectors, collect and project
     # data etc. Otherwise continue to plotting and group-wise operations.
@@ -177,7 +178,7 @@ def main_catch_exit(LAM_logger=None, gui_root=None):
         lg.logprint(LAM_logger, 'STOPPED: keyboard interrupt', 'e')
         print("STOPPED: Keyboard interrupt by user.\n")
     except SystemExit:
-        lg.logprint(LAM_logger, 'EXIT\n', 'ex')
+        lg.logprint(LAM_logger, 'EXIT\n\n', 'ex')
         print("STOPPED\n")
         lg.log_Shutdown()
     except AssertionError:
