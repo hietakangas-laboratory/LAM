@@ -13,7 +13,10 @@ from settings import settings as Sett
 def make_parser():
     """Make parser-object for LAM run."""
     hmsg = ("""Perform LAM analysis from command line. Args described as toggle
-            alter the default value in settings.py to the opposite Boolean.
+            alter the default value in settings.py to the opposite Boolean. All
+            settings that are not altered through parsed arguments will use
+            default values from settings.py.
+            
             Example:
                 python src\\run.py -p C:\\DSS -o cds -MGD -F -f GFP -f DAPI
             """)
@@ -66,63 +69,109 @@ def make_parser():
 
 def change_settings(parser):
     """Use parsed arguments to change settings."""
+    changed_settings = {}
     if parser.path:
         Sett.workdir = pl.Path(parser.path)
     print(f'Work directory: {Sett.workdir}')
     if parser.options:
-        primary_options(parser.options)
-    if parser.bins:
+        primaries = primary_options(parser.options)
+        print(f"Primary settings: {', '.join(primaries)}")
+
+    if parser.bins is not None:
         Sett.projBins = parser.bins
-    if parser.channel:
+        changed_settings.update({'Bins': Sett.projBins})
+
+    if parser.channel is not None:
         Sett.vectChannel = parser.channel
-    if parser.control_group:
+        changed_settings.update({'Vector channel': Sett.vectChannel})
+
+    if parser.control_group is not None:
         Sett.cntrlGroup = parser.control_group
-    if parser.header:
+        changed_settings.update({'Control group': Sett.cntrlGroup})
+
+    if parser.header is not None:
         Sett.header_row = parser.header
+        changed_settings.update({'Header row': Sett.header_row})
 
-    if parser.feature_distances:
+    if parser.feature_distances is not None:
         Sett.Find_Distances = parser.feature_distances
-    if parser.distance_channels:
+        changed_settings.update({'Distance': Sett.Find_Distances})
+
+    if parser.distance_channels is not None:
         Sett.Distance_Channels = parser.distance_channels
+        changed_settings.update({'Distance channels': Sett.Distance_Channels})
 
-    if parser.clusters:
+    if parser.clusters is not None:
         Sett.Find_Clusters = parser.clusters
-    if parser.cluster_channels:
-        Sett.Cluster_Channels = parser.cluster_channels
-    if parser.cluster_distance:
-        Sett.Cl_maxDist = parser.cluster_distance
+        changed_settings.update({'Clusters': Sett.Find_Clusters})
 
-    if parser.borders:
+    if parser.cluster_channels is not None:
+        Sett.Cluster_Channels = parser.cluster_channels
+        changed_settings.update({'Cluster channels': Sett.Cluster_Channels})
+
+    if parser.cluster_distance is not None:
+        Sett.Cl_maxDist = parser.cluster_distance
+        changed_settings.update({'Cluster max distance': Sett.Cl_maxDist})
+
+    if parser.borders  is True:
         Sett.border_detection = not Sett.border_detection
-    if parser.widths:
+        changed_settings.update({'Detect borders': Sett.border_detection})
+
+    if parser.widths  is True:
         Sett.measure_width = not Sett.measure_width
-    if parser.no_projection:
+        changed_settings.update({'Width estimation': Sett.measure_width})
+
+    if parser.no_projection is True:
         Sett.project = False
-    if parser.measurement_point:
+        changed_settings.update({'Projection': Sett.project})
+
+    if parser.measurement_point is True:
         Sett.useMP = not Sett.useMP
-    if parser.mp_name:
+        changed_settings.update({'MP': Sett.useMP})
+
+    if parser.mp_name is not None:
         Sett.MPname = parser.mp_name
-    if parser.GUI:
+        changed_settings.update({'MP name': Sett.MPname})
+
+    if parser.GUI is True:
         Sett.GUI = not Sett.GUI
-    if parser.force_dialog:
+        changed_settings.update({'GUI': Sett.GUI})
+
+    if parser.force_dialog is True:
         Sett.force_dialog = parser.force_dialog
+        changed_settings.update({'Force pass dialog': Sett.force_dialog})
+    
+    if changed_settings:
+        print("\nCHANGED SETTINGS:")
+        for (key, value) in changed_settings.items():
+            print(f"{key}: {value}")
+        print("\n")
 
 
 def primary_options(string):
     """Define primary settings from argument string."""
     string = string.lower()
+    setting_list = []
+
     Sett.process_samples = False
     Sett.process_counts = False
     Sett.process_dists = False
     Sett.Create_Plots = False
     Sett.statistics = False
+
     if 'r' in string:
         Sett.process_samples = True
+        setting_list.append("Process")
     if 'c' in string:
         Sett.process_counts = True
+        setting_list.append("Count")
     if 'd' in string:
         Sett.process_dists = True
+        setting_list.append("Distance")
     if 'l' in string:
         Sett.Create_Plots = True
+        setting_list.append("Plots")
     if 's' in string:
         Sett.statistics = True
+        setting_list.append("Stats")
+    return setting_list

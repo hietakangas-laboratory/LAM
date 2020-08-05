@@ -9,16 +9,18 @@ Created on Thu Feb  6 12:14:14 2020
 DESCRIPTION:
 -----------
     Splits a data set and its vectors based on user given points after their
-    projection during regular LAM 'Count'-functionality, or alternatively based
-    on bins given for each sample. In its simplicity, the projected points
+    projection during regular LAM 'Count'-functionality, or alternatively split
+    based on given bins for samples. In its simplicity, the projected points
     determine cut-off points in the data set and its vectors. The script
     creates LAM-hierarchical folders for each of the sub-sections of the
-    dataset, that can then be analysed separately.
+    dataset that can then be analysed separately.
 
     Intended use is to input biologically identifiable cut-off points, i.e. co-
     ordinates of region borders as seen on the microscopy image. This allows
     proper alignment of the different regions between the samples, and enables
-    data collection from specific regions.
+    data collection from specific regions. Alternatively, the border detection
+    of LAM outputs indexes of each sample at detected average group peaks to
+    "Borders_peaks.csv" that can be used for cutting each sample.
 
     After projecting each of the subsets, you can use combineSets.py to re-
     combine the sets to possibly create better comparisons between sample
@@ -28,20 +30,39 @@ DESCRIPTION:
 
 USAGE:
 -----
+    1. Using projected coordinates:
+    -------------------------------
     Perform a LAM projection (i.e. 'Count') using a full data set, with each
     cut-off point determined by a separate 'channel', similar to a MP. After
-    projection, define the required variables below and run the script. The
-    script creates N+1 directories, where N is the number of defined cutpoints.
-    The directories will contain the data of all samples cut followingly: from
-    the first bin to the first cut-off point (directory named by the point),
-    from that point to the next cut-off point (named by the second cut point),
-    ad infinitum, and then from the final cut point to the final bin of the
-    samples (named as 'END').
+    projection, define the required variables below and run the script.
+    -------------------------------
+
+    2. Using bins of samples:
+    -------------------------
+    Perform LAM 'Count' with border detection amd get border location indices
+    of samples from "Borders_peaks.csv" (see variables SAMPLE_BINS and
+    BIN_PATH below). Alternatively, just run 'Count' and provide self-defined
+    bins to the file that is pointed to by BIN_PATH. Set 
+    -------------------------
+
+    By default, N+1 directoriesare created, where N is the number of defined
+    cutpoints. The directories will contain the data of all samples cut
+    followingly: from the first bin to the first cut-off point (directory named
+    by the point), from the first point to the next cut-off point (named by the
+    second cut point), etc., and then from the final cut point to the final bin
+    of the samples (named as 'END').
 
     !!!
     To analyze the split sets with LAM, make sure that settings.header_row is
     set to zero (or the alternative setting in GUI).
     !!!
+
+    FOR SPLIT-AND-COMBINE:
+        After splitting, you can use a batch-file (or similar) to just run the
+        'Count'-option for each of the split sets to get projections and counts
+            (see LAM-master/src/examples/run_split_count.bat).
+        After running 'Count' for each of the split sets, you can use the
+        CombineSets.py-script.
 
 DEPS:
 ----
