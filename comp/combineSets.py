@@ -45,12 +45,14 @@ from shapely.ops import linemerge
 
 # GIVE DATA SETS:
 # format: {<order of combining>: [r"<path_to_dataset_root>", <bins>]}
-data_sets = {1: [r"E:\Code_folder\DSS_split\R2R3", 19],
-             2: [r"E:\Code_folder\DSS_split\R3R4", 3],
-             3: [r"E:\Code_folder\DSS_split\END", 18]             
+data_sets = {1: [r"E:\Code_folder\test_ALLSTAT_split\R1R2", 7],
+             2: [r"E:\Code_folder\test_ALLSTAT_split\R2R3", 24],
+             3: [r"E:\Code_folder\test_ALLSTAT_split\R3R4", 7],
+             4: [r"E:\Code_folder\test_ALLSTAT_split\R4R5", 15],
+             5: [r"E:\Code_folder\test_ALLSTAT_split\END", 7]
              }
-combine_chans = ['DAPI', 'DAPIEC', 'DAPIsmall', 'GFP', 'Prospero', 'Delta']
-savepath = pl.Path(r"E:\Code_folder\DSS_split\Combined")
+combine_chans = ['DAPI', 'GFP']#'DAPIEC', 'DAPIsmall', 'GFP', 'Prospero', 'Delta']
+savepath = pl.Path(r"E:\Code_folder\test_ALLSTAT_split\Combined")
 
 
 def combine(path):
@@ -113,7 +115,7 @@ def combine(path):
 
     # Find channel data
     for ind, path in enumerate(set_paths):
-        print("Data set {}: {}".format(ind+1, path.parents[1].name))
+        print("Dataset {}: {}".format(ind+1, path.parents[1].name))
         samples = [[p.name, p] for p in path.iterdir() if p.is_dir()]
         for smpl in samples:
             smplpath = fullpath.joinpath(smpl[0])
@@ -161,3 +163,4 @@ def combine_chan(data, filepath, add_bin):
 
 if __name__ == '__main__':
     combine(savepath)
+    print("DONE")

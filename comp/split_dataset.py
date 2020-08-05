@@ -71,9 +71,11 @@ VARS:
 
     TOTAL_BIN : int
         The wanted bin number of the full data set. The script gives suggestion
-        for how many bins each sub-set should be analyzed on in order to retain
-        better biological relevancy. The suggestion is calculated from the
-        total vector lengths and the lengths of the divided vectors.
+        for how many bins each sub-set should be analyzed with in order to
+        retain better biological relevancy. The suggestion is calculated from
+        the total vector lengths and the lengths of the divided vectors. Note
+        that the suggestions are given in floats to allow user decision, but
+        the used bin numbers in analysis must naturally be integers.
 
     CONT_END : BOOL
         If True, continue the data set to the end of the vector after the final
@@ -86,16 +88,25 @@ VARS:
         BIN_PATH.
     
     BIN_PATH : pathlib.Path
-        Path to csv-file that contains each cut-off bin of each sample. Each
-        sample must have a value for each cut location for the split to work.
-        The file must have samplenames at the columns and names of cut points
-        as index. The data is collected based on CUT_POINTS -variable.
+        Path to csv-file that contains each cut-off bin of each sample. The bin
+        value must be the bin number of the SAMPLE and not the bin number in
+        the anchored matrix that contains all samples. The border detection of
+        LAM automatically outputs the sample indexes of found borders into the
+        peak-file "Borders_peaks.csv". Each sample must have a value for each
+        cut location for the split to work. The file must have samplenames at
+        the columns and names of cut points as index. The data is collected in
+        row-order defined by CUT_POINTS -variable. The given bin-values can be
+        floats; the value is only used to determine distance along the full-
+        length sample.
         
-        Style of file:
-                ctrl1   ctrl2   ctrl3    ...
-        R1R2    5       6       7        ...
-        R2R3    25      26      26       ...
+        Style of file: (index = cut point name, columns = samplenames)
+
+                ctrl_1  ctrl_2  ctrl_3   ...
+        R1R2    5.5     6       7        ...
+        R2R3    25      26      26.5     ...
         ...     ...     ...     ...
+
+        !!! Use the exact sample names !!!
 """
 import numpy as np
 import pandas as pd
@@ -104,9 +115,9 @@ import shapely.geometry as gm
 import shapely.ops as op
 
 
-ROOT = pl.Path(r"E:\Code_folder\DSS")
-SAVEDIR = pl.Path(r"E:\Code_folder\test_DSS_62bin_split")
-CUT_POINTS = ["R3R4", "R4R5"]
+ROOT = pl.Path(r"E:\Code_folder\ALLSTATS")
+SAVEDIR = pl.Path(r"E:\Code_folder\test_ALLSTAT_split")
+CUT_POINTS = ["R1R2", "R2R3", "R3R4", "R4R5"]
 CHANNELS = ['DAPI', 'GFP', 'Delta', 'Prospero']
 # Number of bins for whole length of samples. Script gives recommendation for
 # numbers of bins for each split region based on this value:
@@ -117,7 +128,7 @@ CONT_END = True
 SAMPLE_BINS = True
 # Path to file containing cutting bins for each sample
 # (index = names of cut points, columns = samples)
-BIN_PATH = pl.Path(r"E:\Code_folder\DSS\samplebins.csv")
+BIN_PATH = pl.Path(r"E:\Code_folder\ALLSTATS\Analysis Data\cutpoints_ALLSTATS.csv")
 
 
 def get_cut_points(CUT_POINTS, samplepath):
@@ -258,7 +269,7 @@ if __name__ == '__main__':
         get_sample_data(path, POINTS, length_data, bins=BIN_FILE)
     print("Finding averages ...")
     length_data.find_averages()
-    print("\n- Average lengths:\n", length_data.averages, "\n")
+    print(f"\n- Average lengths:\n {length_data.averages.round(decimals=2)}\n")
 
     summed_length = length_data.averages.sum(axis=0)
     bin_suggestion = pd.DataFrame(index=length_data.averages.index,
@@ -268,9 +279,8 @@ if __name__ == '__main__':
         bins = TOTAL_BIN * fraction
         bin_suggestion.loc[:, grp] = bins
     if len(bin_suggestion.columns) > 1:
+        bin_suggestion.loc[:, 'MEAN'] = bin_suggestion.mean(axis=1).values
         bin_suggestion.loc['TOTAL', :] = bin_suggestion.sum().values
-        bin_suggestion.loc[:, 'MEAN'] = bin_suggestion.mean(
-            axis=1).values.astype(int)
-    print("- Bin fractions:\n", bin_suggestion)
+    print("- Bin fractions:\n", bin_suggestion.round(decimals=2))
     bin_suggestion.to_csv(SAVEDIR.joinpath('Bin_suggestions.csv'))
     print('\n\nSPLIT DONE')

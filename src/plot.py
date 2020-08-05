@@ -677,7 +677,7 @@ class plotting:
         name = 'Sample_widths_norm.csv'
         filepath = list(self.sgroups.paths.datadir.glob(name))
         if not filepath:
-            print("No width file found. Perform 'Count' with measure_width")
+            print("   No width file found. Perform 'Count' with measure_width")
             lg.logprint(LAM_logger, 'No width file found', 'w')
             return
         # Collect data:

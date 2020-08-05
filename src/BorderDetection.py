@@ -72,9 +72,11 @@ def detect_borders(paths, all_samples, palette, anchor, variables, scoring,
     # Once sample scores have been collected, find peaks
     print('  Finding peaks  ...')
     flat, peaks = border_data(b_dirpath, threshold)
+    # Add the locations of border peaks in each sample's individual binning
+    binned_peaks = append_binning(border_data.sample_starts, peaks)
     # Save data
     flat.T.to_csv(paths.datadir.joinpath('Borders_scores.csv'), index=False)
-    peaks.to_csv(paths.datadir.joinpath('Borders_peaks.csv'), index=False)
+    binned_peaks.to_csv(paths.datadir.joinpath('Borders_peaks.csv'), index=False)
     lg.logprint(LAM_logger, 'Border detection done.', 'i')
 
 
@@ -83,10 +85,9 @@ class FullBorders:
 
     def __init__(self, samples, widths, anchor, palette):
         self.samples = samples
-        # self.groups = sorted(list({p.name.split('_')[0] for p in samples if
-        #                            len(p.name.split('_')) > 1}))
         self.width_data = widths
         self.anchor = anchor * 2
+        self.sample_starts = pd.Series()
         self.palette = palette
         self.scores = pd.DataFrame(columns=[p.name for p in samples],
                                    index=widths.index)
@@ -108,8 +109,9 @@ class FullBorders:
             scores = prepare_data(self.scores.T)
             # Plot
             self.group_plots(scores, s_sums, peaks, dirpath)
-        # Readjust peak locations to original bins
+        # Readjust peak locations and indexing to original bins
         peaks.peak = peaks.peak.divide(2)
+        self.sample_starts = self.sample_starts.divide(2)
         return self.scores.T, peaks
 
     def flatten_scores(self):
@@ -181,83 +183,6 @@ class FullBorders:
         plt.savefig(dirpath.joinpath(f'All-Border_Scores.{Sett.saveformat}'))
         plt.close()
 
-    def group_plots2(self, scores, s_sums, peaks, dirpath): # !!! REDUNDANT
-        """LAM publication plot."""
-        # Create canvas
-        _, (ax1, ax2, ax3) = plt.subplots(3, 1, figsize=(10, 5),
-                                       gridspec_kw={'height_ratios': [5, 7, 5]})
-        plt.subplots_adjust(hspace=0.75, top=0.85, bottom=0.1, left=0.1,
-                            right=0.85)
-        # Plot smoothed summed scores
-        sns.lineplot(data=s_sums.infer_objects(), x='variable', y='value',
-                     hue='group', color="xkcd:greenish blue", #palette=self.palette, !!!
-                     alpha=0.7, legend=False, ax=ax1)
-        # Add peaks to plot
-        for peak in peaks.iterrows():
-            loc = peak[1]['peak']
-            prom = peak[1]['prominence']
-            grp = peak[1]['group']
-            c_val = s_sums.loc[(grp, loc)].value
-            color = "xkcd:greenish blue" # self.palette[grp] !!!
-            # peak location line with prominence
-            ax1.vlines(x=loc, ymin=c_val-prom, ymax=c_val, color=color,
-                       linewidth=1, zorder=2)
-            # Add peak location annotation
-            ax1.annotate(int(loc/2), (loc + 0.03, c_val * 1.03), color='k', #color, # !!!
-                         alpha=0.7)
-        # !!! EXPERT LOCS
-        ybot, ytop = ax1.get_ylim()
-        for val in (11.0, 38.0, 56.0):
-            ax1.vlines(x=val * 2, ymin=ybot, ymax=ytop, color='dimgrey',
-                       linewidth=1.5, linestyles='dashed', zorder=0)
-        # !!!
-        ax1.set_title('Smoothed mean score')
-
-        # !!! ALL SAMPLES MANUAL PLOT
-        sample_n = self.scores.columns.size
-        ppalette = sns.color_palette("GnBu_d", sample_n)
-        pscores = self.scores.T
-        pscores = pscores.assign(sample=pscores.index)
-        pscores = pscores.melt(id_vars='sample')
-        sns.lineplot(data=pscores.infer_objects(), x='variable', y='value', hue='sample',
-                      alpha=0.45, palette=ppalette, ax=ax2, legend=False, linewidth=0.25)
-        sns.lineplot(data=pscores.infer_objects(), x='variable', y='value',
-              legend=False, alpha=0.9, linewidth=1.25, color='xkcd:puce', ax=ax2)
-        # !!!!
-        # ax2.legend(loc='center left', bbox_to_anchor=(1.01, 0.5), ncol=1)
-        # ax2.set_title('Flattened scores')
-        # Plot scores and fitted curves
-        sns.lineplot(data=scores, x='variable', y='value', hue='group',
-                     palette=self.palette, alpha=0.7, ax=ax3)
-        ax3.legend(loc='center left', bbox_to_anchor=(1.01, 0.5), ncol=1)
-        # p_curves = pd.DataFrame(data=curves.values)
-        # p_curves = p_curves.assign(group=curves.index).melt('group')
-        # sns.lineplot(data=p_curves.infer_objects(), x='variable', y='value',
-        #              hue='group', style='group', alpha=0.9, legend=False,
-        #              dashes=True, linewidth=0.5, palette=self.palette, ax=ax3)
-        ax3.set_title('Group score')
-        left, right = plt.xlim()
-        locs, _ = plt.xticks()
-        # Readjust x-axis labels to origin binning
-        lbls = [int(n/2) for n in locs]
-        for ax in (ax1, ax2, ax3):
-            ybot, ytop = ax.get_ylim()
-            # Add line to indicate anchoring bin
-            ax.vlines(self.anchor, ybot, ytop, 'firebrick', zorder=0,
-                      linestyles='dashed')
-            # Add zero score line
-            ax.hlines(Sett.peak_thresh, xmin=left, xmax=right, linewidth=1, zorder=0,
-                      linestyles='dashed', color='dimgrey')
-            # Define labels and ticks
-            ax.set_xticks(locs)
-            ax.set_xticklabels(labels=lbls)
-            ax.set_xlabel('')
-            ax.set_ylabel('Score')
-        ax3.set_xlabel('Linear Position')
-        plt.suptitle('GROUP BORDER SCORES')
-        plt.savefig(dirpath.joinpath(f'All-Border_Scores.{Sett.saveformat}'))
-        plt.close()
-
 
 class GetSampleBorders:
     """Create sample-specific border scores."""
@@ -266,8 +191,7 @@ class GetSampleBorders:
                  datadir):
         self.name = samplepath.name
         # Get anchoring point
-        mp_file = datadir.joinpath('MPs.csv')
-        self.MP = pd.read_csv(mp_file, index_col=False).at[0, self.name]
+        self.ind_start = 0
         # Select necessary columns from the data
         id_cols = ['NormDist', 'DistBin']
         self.var_cols = variables
@@ -289,6 +213,7 @@ class GetSampleBorders:
         # Adjust anchor bin to the detection resolution (bins x 2)
         self.anchor = anchor * 2
         self.var_data = pd.DataFrame()
+        
 
     def __call__(self, Borders, dirpath):
         """Score sample."""
@@ -305,8 +230,9 @@ class GetSampleBorders:
         # Create plots if needed
         if (Sett.plot_samples & Sett.Create_Border_Plots & Sett.Create_Plots):
             self.sample_plot(normalized, curve, scores, sum_score, dirpath)
-        # Insert scores to full data set
+        # Insert scores and sample's start index to full data set
         Borders.scores.loc[scores.index, self.name] = sum_score
+        Borders.sample_starts.at[self.name] = self.ind_start
 
     def get_sum_score(self, scores):
         """Find the summed score of the detection variables."""
@@ -385,6 +311,9 @@ class GetSampleBorders:
         width = self.get_width(Borders.width_data)
         self.var_data = self.var_data.assign(width=width,
                                              width_diff=self.get_diff(width))
+        # Get sample's start index in the full dataset (for determining border
+        # locations in the sample's own indexing).
+        self.ind_start = self.var_data.index[0]
         # Recalculate binning for bin averages etc
         bins = np.linspace(0, 1, width.index.size + 1)
         self.data = self.data.assign(binning=pd.cut(self.data["NormDist"],
@@ -461,7 +390,7 @@ class PeakDialog(tks.Dialog):
         self.values = []
         self.bools = None
         for i, row in data.iterrows():
-            string = ',  '.join(row[:-1].values.astype(str))
+            string = ',  '.join(row[:3].values.astype(str))
             val = tk.IntVar(value=1)
             wg = tk.Checkbutton(top, text=string, variable=val)
             wg.grid(row=i+2, columnspan=2, sticky='W')
@@ -476,13 +405,31 @@ class PeakDialog(tks.Dialog):
         return self.bools
 
 
+def append_binning(sample_starts, peaks):
+    """Append sample index locations to detected peaks."""
+    def _define_sample_bin(row):
+        """Find given borders peak's index location on specific samples."""
+        # Select samples relevant  to peak at hand
+        ind = sample_starts.index.str.contains(f'{row.group}_')
+        # Subtract offset of the samples from the peak location
+        row[sample_starts.index[ind]] = row.peak - sample_starts[ind]
+        return row
+    
+    # Reindex DF to have all samples
+    peaks = peaks.reindex(columns=peaks.columns.append(sample_starts.index))
+    # Define index location of each group's peaks on each sample
+    peaks = peaks.apply(lambda x: _define_sample_bin(x), axis=1)
+    return peaks
+    
+
+
 def deviate_data(data, curve):
     """Subtract fitted curve from variable values."""
     devs = data.subtract(curve.iloc[0, :], axis=0)
     return devs
 
 
-def detect_peaks(score_arr, x_dist=6, thresh=0.15, width=2):
+def detect_peaks(score_arr, x_dist=6, thresh=0.15, width=1):
     """Find peaks from total scores of sample groups."""
     # Group data by sample group
     grouped = score_arr.groupby(score_arr.loc[:, 'group'])
