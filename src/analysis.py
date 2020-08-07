@@ -10,17 +10,19 @@ Created on Wed Mar  6 12:42:28 2019
 import re
 import warnings
 from itertools import product, chain
+import pathlib as pl
+
 # Other packages
 import numpy as np
 import pandas as pd
-import pathlib as pl
 import seaborn as sns
 from sklearn.neighbors import KDTree
+
 # LAM imports
-import system as system
-import process as process
+import system
+import process
 from settings import store, settings as Sett
-from statsMWW import statistics, Total_Stats
+from statsMWW import statistics, TotalStats
 from plot import plotting
 import logger as lg
 
@@ -42,30 +44,37 @@ class Samplegroups:
     _center = None
 
     def __init__(self, PATHS=None, child=False):
+        if child:
+            return
+
         # Creation of variables related to all samples, that are later passed
         # on to child classes.
-        if not child:
-            Samplegroups._groups = sorted(store.samplegroups)
-            Samplegroups._chanPaths = list(PATHS.datadir.glob('Norm_*'))
-            Samplegroups._samplePaths = [p for p in PATHS.samplesdir.iterdir()
-                                         if p.is_dir()]
-            Samplegroups._addData = list(PATHS.datadir.glob('Avg_*'))
-            # Data and other usable directories
-            Samplegroups.paths = PATHS
-            # Total length of needed data matrix of all anchored samples
-            Samplegroups._length = store.totalLength
-            # Get MPs of all samples
-            MPpath = PATHS.datadir.joinpath('MPs.csv')
-            Samplegroups._AllMPs = system.read_data(MPpath, header=0,
-                                                    test=False)
-            # If anchor point index is defined, find the start index of samples
-            if store.center is not None:
-                Samplegroups._center = store.center
-            # Assign color for each sample group
-            groupcolors = sns.xkcd_palette(Sett.palette_colors)
-            for i, grp in enumerate(Samplegroups._groups):
-                Samplegroups._grpPalette.update({grp: groupcolors[i]})
-            lg.logprint(LAM_logger, 'Sample groups established.', 'i')
+        Samplegroups._groups = sorted(store.samplegroups)
+        Samplegroups._chanPaths = list(PATHS.datadir.glob('Norm_*'))
+        Samplegroups._samplePaths = [p for p in PATHS.samplesdir.iterdir()
+                                     if p.is_dir()]
+        Samplegroups._addData = list(PATHS.datadir.glob('Avg_*'))
+
+        # Data and other usable directories
+        Samplegroups.paths = PATHS
+
+        # Total length of needed data matrix of all anchored samples
+        Samplegroups._length = store.totalLength
+
+        # Get MPs of all samples
+        MPpath = PATHS.datadir.joinpath('MPs.csv')
+        Samplegroups._AllMPs = system.read_data(MPpath, header=0, test=False)
+
+        # If anchor point index is defined, find the start index of samples
+        if store.center is not None:
+            Samplegroups._center = store.center
+
+        # Assign color for each sample group
+        groupcolors = sns.xkcd_palette(Sett.palette_colors)
+        for i, grp in enumerate(Samplegroups._groups):
+            Samplegroups._grpPalette.update({grp: groupcolors[i]})
+
+        lg.logprint(LAM_logger, 'Sample groups established.', 'i')
 
     def create_plots(self):
         """Handle data for the creation of most plots."""
@@ -79,7 +88,7 @@ class Samplegroups:
         if not any(plots):
             return
 
-        # Conditional function calls to create each of the plots.
+        # Conditional function cfull_dfs to create each of the plots.
         lg.logprint(LAM_logger, 'Begin plotting.', 'i')
         print("\n---Creating plots---")
         # Update addData variable to contain newly created average-files
@@ -152,51 +161,59 @@ class Samplegroups:
 
     def read_channel(self, path, groups, drop=False, name_sep=1):
         """Read channel data and concatenate sample group info into DF."""
-        Data = system.read_data(path, header=0, test=False)
-        readData = pd.DataFrame()
+        data = system.read_data(path, header=0, test=False)
+        read_data = pd.DataFrame()
+
         # Loop through given groups and give an identification variable for
         # each sample belonging to the group.
         for grp in groups:
             namerreg = re.compile('^{}_'.format(grp), re.I)
             # Get only the samples that belong to the loop's current group
-            temp = Data.loc[:, Data.columns.str.contains(namerreg)].T
-            if Sett.Drop_Outliers and drop:  # conditionally drop outliers
+            temp = data.loc[:, data.columns.str.contains(namerreg)].T
+            if Sett.Drop_Outliers and drop:  # conditionfull_dfy drop outliers
                 temp = DropOutlier(temp)
             temp['Sample Group'] = grp  # Giving of sample group identification
-            if readData.empty:
-                readData = temp
+            if read_data.empty:
+                read_data = temp
             else:
-                readData = pd.concat([readData, temp])
+                read_data = pd.concat([read_data, temp])
+
         # Finding the name of the data under analysis from its filepath
         name = '_'.join(str(path.stem).split('_')[name_sep:])
         center = self._center  # Getting the bin to which samples are centered
-        return readData, name, center
+        return read_data, name, center
 
     def Get_Clusters(self):
         """Gather sample data to compute clusters of cells."""
         print('\n---Finding clusters---')
         lg.logprint(LAM_logger, 'Finding clusters', 'i')
+
         for grp in self._groups:  # Get one sample group
             lg.logprint(LAM_logger, '-> group {}'.format(grp), 'i')
             print('  {}  ...'.format(grp))
-            SampleGroup = Group(grp)
-            for path in SampleGroup.groupPaths:  # Get one sample of the group
-                Smpl = Sample(path, SampleGroup)
-                Smpl.Clusters(Sett.Cl_maxDist)  # Find clusters
+            samplegroup = Group(grp)
+
+            for path in samplegroup.groupPaths:  # Get one sample of the group
+                test_sample = Sample(path, samplegroup)
+                test_sample.Clusters(Sett.Cl_maxDist)  # Find clusters
+
         lg.logprint(LAM_logger, 'Clusters calculated', 'i')
 
     def Get_DistanceMean(self):
         """Get sample data and pass for cell-to-cell distance calculation."""
         print('\n---Feature-to-feature distances---')
         lg.logprint(LAM_logger, 'Finding feature-to-feature distances', 'i')
+
         for grp in self._groups:  # Get one sample group
             lg.logprint(LAM_logger, '-> group {}'.format(grp), 'i')
             print('  {}  ...'.format(grp))
-            SampleGroup = Group(grp)
-            for path in SampleGroup.groupPaths:  # Get one sample of the group
-                Smpl = Sample(path, SampleGroup)
+            samplegroup = Group(grp)
+
+            for path in samplegroup.groupPaths:  # Get one sample of the group
+                test_sample = Sample(path, samplegroup)
                 # Find distances between features within the sample
-                Smpl.DistanceMean(Sett.maxDist)
+                test_sample.DistanceMean(Sett.maxDist)
+
         lg.logprint(LAM_logger, 'Distances calculated', 'i')
 
     def Get_Statistics(self):
@@ -206,6 +223,8 @@ class Samplegroups:
             print("Statistics require multiple sample groups. Stats passed.")
             lg.logprint(LAM_logger, 'Stats passed. Too few groups', 'i')
             return
+
+        # Print info
         lg.logprint(LAM_logger, 'Calculation of statistics', 'i')
         if Sett.Create_Plots and Sett.Create_Statistics_Plots:
             print('\n---Calculating and plotting statistics---')
@@ -216,109 +235,141 @@ class Samplegroups:
         if Sett.stat_versus:
             lg.logprint(LAM_logger, '-> Versus statistics', 'i')
             print('  -Versus-')
+
             # Finding control and other groups
             control = Sett.cntrlGroup
-            ctrlName = re.compile(control, re.I)
-            others = [g for g in self._groups if not ctrlName.fullmatch(g)]
-            # Create all possible combinations of control versus other groups
+            ctrl_name = re.compile(control, re.I)
+            others = [g for g in self._groups if not ctrl_name.fullmatch(g)]
+
+            # Create all possible combinations of control vs other groups
             grouping = [[control], others]
             pairs = product(*grouping)
+
             # Loop through all the possible group pairs
             for pair in pairs:
                 (__, testgroup) = pair
+
                 # Initiate group-class for both groups
                 ctrl = Group(control)
-                Grp = Group(testgroup)
+                test_grp = Group(testgroup)
                 # Print names of groups under statistical analysis
-                print("    {} Vs. {}  ...".format(ctrl.group, Grp.group))
+                print("    {} Vs. {}  ...".format(ctrl.group, test_grp.group))
+
                 # Initiate statistics-class with the two groups
-                Stats = statistics(ctrl, Grp)
+                stats = statistics(ctrl, test_grp)
+
                 # Find stats of cell counts and additional data by looping
                 # through each.
                 for path in chain(self.paths.datadir.glob('Norm_*'),
                                   self.paths.datadir.glob('Avg_*'),
                                   self.paths.datadir.glob('ClNorm_*')):
-                    Stats = Stats.MWW_test(path)
-                    if Stats.error:
+                    stats = stats.MWW_test(path)
+
+                    if stats.error:
                         msg = "Missing or faulty data for {}".format(path.name)
                         lg.logprint(LAM_logger, msg, 'e')
                         continue
+
                     # If plotting set to True, make plots of current stats
                     if Sett.Create_Statistics_Plots and Sett.Create_Plots:
-                        plotting(self).stat_versus(Stats, path)
+                        plotting(self).stat_versus(stats, path)
             lg.logprint(LAM_logger, '--> Versus done', 'i')
 
         # TOTAL STATS
         if Sett.stat_total:
             lg.logprint(LAM_logger, '-> Total statistics', 'i')
             print('  -Totals-')
+
             # Find the data file, initialize class, and count stats
             datapaths = self.paths.datadir.glob('Total*.csv')
             for path in datapaths:
-                TCounts = Total_Stats(path, self._groups, self.paths.plotdir,
-                                      self.paths.statsdir)
+                total_counts = TotalStats(path, self._groups,
+                                          self.paths.plotdir,
+                                          self.paths.statsdir)
+
                 # If error in data, continue to next totals file
-                if TCounts.dataerror:
+                if total_counts.dataerror:
                     continue
-                TCounts.stats()
-                for key in TCounts.errorVars.keys():
-                    msg = "Value Error between control and {} in".format(key)
-                    errVars = ', '.join(TCounts.errorVars.get(key))
-                    lg.logprint(LAM_logger, '{} {}'.format(msg, errVars), 'e')
+
+                # Calculate stats
+                total_counts.stats()
+
+                for key, vals in total_counts.error_vars.items():
+                    evars = ', '.join(vals)
+                    msg = f"Value Error between control and {key} in {evars}"
+                    lg.logprint(LAM_logger, '{} {}'.format(msg, evars), 'e')
+
                 # If wanted, create plots of the stats
                 if Sett.Create_Plots and Sett.Create_Statistics_Plots:
-                    plotting(self).stat_totals(TCounts, path)
+                    plotting(self).stat_totals(total_counts, path)
+
             lg.logprint(LAM_logger, '--> Totals done', 'i')
         lg.logprint(LAM_logger, 'All statistics done', 'i')
 
     def Get_Totals(self):
         """Count sample & channel -specific cell totals."""
-        def _readAndSum():
+
+        def _read_and_sum():
             """Read path and sum cell numbers of bins for each sample."""
-            ChData, __, _ = self.read_channel(path, self._groups, drop=dropB)
+            chan_data, __, _ = self.read_channel(path, self._groups, drop=drpb)
             # Get sum of cells for each sample
-            ChSum = ChData.sum(axis=1, skipna=True, numeric_only=True)
+            ch_sum = chan_data.sum(axis=1, skipna=True, numeric_only=True)
             # Get group of each sample
-            groups = ChData.loc[:, 'Sample Group']
+            groups = chan_data.loc[:, 'Sample Group']
             # Change the sum data into dataframe and add group identifiers
-            ChSum = ChSum.to_frame().assign(group=groups.values)
-            ChSum.rename(columns={'group': 'Sample Group'}, inplace=True)
-            return ChSum
+            ch_sum = ch_sum.to_frame().assign(group=groups.values)
+            ch_sum.rename(columns={'group': 'Sample Group'}, inplace=True)
+            return ch_sum
 
         lg.logprint(LAM_logger, 'Finding total counts', 'i')
-        dropB = Sett.Drop_Outliers  # Find if dropping outliers
+        drpb = Sett.Drop_Outliers  # Find if dropping outliers
         datadir = self.paths.datadir
-        All = pd.DataFrame()
+        full_df = pd.DataFrame()
+
         # Loop through files containing cell count data, read, and find sums
-        for path in datadir.glob('All_*'):
-            ChSum = _readAndSum()
+        for path in datadir.glob('All*'):
+            ch_sum = _read_and_sum()
             channel = path.stem.split('_')[1]  # Channel name
-            ChSum = ChSum.assign(Variable=channel)
-            All = pd.concat([All, ChSum], ignore_index=False, sort=False)
+            ch_sum = ch_sum.assign(Variable=channel)
+            full_df = pd.concat([full_df, ch_sum], ignore_index=False,
+                                sort=False)
+
         # Save dataframe containing sums of each channel for each sample
-        system.saveToFile(All, datadir, 'Total Counts.csv',
-                          append=False, w_index=True)
+        system.saveToFile(full_df, datadir, 'Total Counts.csv', append=False,
+                          w_index=True)
 
         # Find totals of additional data
         for channel in [c for c in store.channels if c not in ['MP', 'R45',
                                                                Sett.MPname]]:
-            All = pd.DataFrame()
+            full_df = pd.DataFrame()
+
             for path in datadir.glob('Avg_{}_*'.format(channel)):
-                ChData, __, _ = self.read_channel(path, self._groups,
-                                                  drop=dropB)
+                chan_data, __, _ = self.read_channel(path, self._groups,
+                                                     drop=drpb)
                 # Assign channel identifier
                 add_name = path.stem.split('_')[2:]  # Channel name
-                ChData = ChData.assign(Variable='_'.join(add_name))
-                All = pd.concat([All, ChData], ignore_index=False, sort=False)
+                chan_data = chan_data.assign(Variable='_'.join(add_name))
+
+                # Concatenate new data to full set
+                full_df = pd.concat([full_df, chan_data], ignore_index=False,
+                                    sort=False)
+
+            # Adjust column order so that identifiers are first
+            ordered = ['Sample Group', 'Variable']
+            cols = ordered + (full_df.columns.drop(ordered).tolist())
+            full_df = full_df[cols]
+
             # Drop samples that have nonvariant data
-            All = All[All.iloc[:, :-3].nunique(axis=1, dropna=True) > 1]
+            full_df = full_df[full_df.iloc[:, :-3].nunique(axis=1,
+                                                           dropna=True) > 1]
+
             # Save dataframe containing sums of each channel for each sample
             filename = 'Total {} AddData.csv'.format(channel)
-            system.saveToFile(All, datadir, filename, append=False,
+            system.saveToFile(full_df, datadir, filename, append=False,
                               w_index=True)
 
         # Find totals of data obtained from distance calculations
-        All = pd.DataFrame()
+        full_df = pd.DataFrame()
         for path in chain(datadir.glob('Clusters-*.csv'),
                           datadir.glob('*Distance Means.csv'),
                           datadir.glob('Sample_widths_norm.csv')):
@@ -328,15 +379,24 @@ class Samplegroups:
                 name = "{} Distances".format(path.name.split('_')[1])
             else:
                 name = "Widths"
-            ChData, __, _ = self.read_channel(path, self._groups,
-                                              drop=dropB)
+            chan_data, __, _ = self.read_channel(path, self._groups, drop=drpb)
+
             # Assign data type identifier
-            ChData = ChData.assign(Variable=name)
-            All = pd.concat([All, ChData], ignore_index=False, sort=False)
-        if not All.empty:
+            chan_data = chan_data.assign(Variable=name)
+            full_df = pd.concat([full_df, chan_data], ignore_index=False,
+                                sort=False)
+
+        if not full_df.empty:  # If data obtained
+            # Adjust column order so that identifiers are first
+            ordered = ['Sample Group', 'Variable']
+            cols = ordered + (full_df.columns.drop(ordered).tolist())
+            full_df = full_df[cols]
+
+            # Save DF
             filename = 'Total Distance Data.csv'
-            system.saveToFile(All, datadir, filename, append=False,
+            system.saveToFile(full_df, datadir, filename, append=False,
                               w_index=True)
+
         lg.logprint(LAM_logger, 'Total counts done', 'i')
 
 
@@ -348,14 +408,15 @@ class Group(Samplegroups):
         self.group = group  # group
         # For finding group-specific columns etc.
         self.namer = '{}_'.format(group)
+
         # When first initialized, create variables inherited by samples:
         if not child:
             self.color = self._grpPalette.get(self.group)
             namerreg = re.compile("^{}".format(self.namer), re.I)
             self.groupPaths = [p for p in self._samplePaths if namerreg.search(
                                 p.name)]
-            self.MPs = self._AllMPs.loc[:, self._AllMPs.columns.str.contains(
-                                        self.namer)]
+            inds = self._AllMPs.columns.str.contains(self.namer)
+            self.MPs = self._AllMPs.loc[:, inds]
 
 
 class Sample(Group):
@@ -373,193 +434,225 @@ class Sample(Group):
         self.color = grp.color
         self.MP = grp.MPs.loc[0, self.name]
 
-    def Count_clusters(self, Data, name):
+    def count_clusters(self, data, name):
         """Count total clustered cells per bin."""
+
         # Find bins of the clustered cells to find counts per bin
-        idx = Data.loc[:, 'ClusterID'].notna().index
-        binnedData = Data.loc[Data.dropna(subset=['ClusterID']).index,
-                              'DistBin']
+        idx = data.loc[:, 'ClusterID'].notna().index
+        binned_data = data.loc[data.dropna(subset=['ClusterID']).index,
+                               'DistBin']
+
         # Sort values and then get counts
-        bins = binnedData.sort_values().to_numpy()
+        bins = binned_data.sort_values().to_numpy()
         unique, counts = np.unique(bins, return_counts=True)
         idx = np.arange(0, Sett.projBins)
+
         # Create series to store the cell count data
-        binnedCounts = pd.Series(np.full(len(idx), np.nan), index=idx,
-                                 name=self.name)
-        binnedCounts.loc[unique] = counts
+        binned_counts = pd.Series(np.full(len(idx), 0), index=idx,
+                                  name=self.name)
+        binned_counts.loc[unique] = counts
         filename = 'Clusters-{}.csv'.format(name)
-        system.saveToFile(binnedCounts, self.paths.datadir, filename)
+        system.saveToFile(binned_counts, self.paths.datadir, filename)
+
         # Relate the counts to context, i.e. anchor them at the MP
-        insert, _ = process.relate_data(binnedCounts, self.MP,
+        insert, _ = process.relate_data(binned_counts, self.MP,
                                         self._center, self._length)
+
         # Save the data
-        SCounts = pd.Series(data=insert, name=self.name)
+        counts_series = pd.Series(data=insert, name=self.name)
         filename = 'ClNorm_Clusters-{}.csv'.format(name)
-        system.saveToFile(SCounts, self.paths.datadir, filename)
+        system.saveToFile(counts_series, self.paths.datadir, filename)
 
     def Clusters(self, dist=10):
         """Handle data for finding clusters of cells."""
         kws = {'Dist': dist}  # Maximum distance for considering clustering
+
         # Listing of paths of channels on which clusters are to be found
-        clustChans = [p for p in self.channelPaths for t in
-                      Sett.Cluster_Channels if t.lower() == p.stem.lower()]
-        for path in clustChans:  # Loop paths, read file, and find clusters
+        cluster_chans = [p for p in self.channelPaths for t in
+                         Sett.Cluster_Channels if t.lower() == p.stem.lower()]
+        for path in cluster_chans:  # Loop paths, read file, and find clusters
             try:
-                Data = system.read_data(path, header=0)
+                data = system.read_data(path, header=0)
             except (FileNotFoundError, AttributeError):
                 msg = "No file for channel {}".format(path.stem)
                 lg.logprint(LAM_logger, "{}: {}".format(self.name, msg), 'w')
                 print("-> {}".format(msg))
+
             # Discard earlier versions of found clusters, if present
-            Data = Data.loc[:, ~Data.columns.str.contains('ClusterID')]
-            Data.name = path.stem  # The name of the clustering channel
+            data = data.loc[:, ~data.columns.str.contains('ClusterID')]
+            data.name = path.stem  # The name of the clustering channel
+
             # Find clusters
-            self.find_distances(Data, volIncl=Sett.Cl_inclusion,
+            self.find_distances(data, vol_incl=Sett.Cl_inclusion,
                                 compare=Sett.Cl_incl_type, clusters=True,
                                 **kws)
 
-    def find_distances(self, Data, volIncl=200, compare='smaller',
+    def find_distances(self, data, vol_incl=200, compare='smfull_dfer',
                        clusters=False, **kws):
         """Calculate cell-to-cell distances or find clusters."""
 
         def _find_clusters():
             """Find cluster 'seeds' and merge to create full clusters."""
-            def __merge(Seeds):
+
+            def __merge(seeds):
                 """Merge seeds that share cells."""
-                r = sum(Seeds, [])  # List of all cells
+                cells = sum(seeds, [])  # List of all cells
+
                 # Create map object containing a set for each cell ID:
-                r = map(lambda x: set([x]), set(r))
+                cells = map(lambda x: set([x]), set(cells))
+
                 # Loop through a set of each seed
-                for item in map(set, Seeds):
+                for item in map(set, seeds):
                     # For each seed, find IDs from the set of cell
                     # IDs and merge them
-                    out = [x for x in r if not x & item]  # ID-sets not in seed
-                    mSeeds = [x for x in r if x & item]  # found ID-sets
-                    # make union of the ID sets that are found
-                    mSeeds = set([]).union(*mSeeds)
-                    # Reassign r to contain the newly merged ID-sets
-                    r = out + [mSeeds]
-                yield r
 
-            maxDist = kws.get('Dist')  # max distance to consider clustering
-            treedata = XYpos[['x', 'y', 'z']]
+                    # ID-sets not in seed:
+                    out = [x for x in cells if not x & item]
+                    # found ID-sets:
+                    m_seeds = [x for x in cells if x & item]
+
+                    # make union of the ID sets that are found
+                    m_seeds = set([]).union(*m_seeds)
+
+                    # Reassign cells to contain the newly merged ID-sets
+                    cells = out + [m_seeds]
+                yield cells
+
+            max_dist = kws.get('Dist')  # max distance to consider clustering
+            treedata = xy_pos[['x', 'y', 'z']]
+
             # Create K-D tree and query for nearest
             tree = KDTree(treedata)
-            seed_ids = tree.query_radius(treedata, r=maxDist)
+            seed_ids = tree.query_radius(treedata, r=max_dist)
+
             # Merging of the seeds
-            seed_lst = [XYpos.iloc[a, :].ID.tolist() for a in seed_ids]
-            Cl_gen = __merge(seed_lst)
+            seed_lst = [xy_pos.iloc[a, :].ID.tolist() for a in seed_ids]
+            cl_gen = __merge(seed_lst)
+
             # Change the generator into list of lists and drop clusters of size
             # under/over limits
-            Clusters = [list(y) for x in Cl_gen for y in x if y and len(y) >=
+            Clusters = [list(y) for x in cl_gen for y in x if y and len(y) >=
                         Sett.Cl_min and len(y) <= Sett.Cl_max]
             return Clusters
 
         def _find_nearest():
             """Iterate passed data to determine nearby cells."""
-            maxDist = kws.get('Dist')  # distance used for subsetting target
+
+            max_dist = kws.get('Dist')  # distance used for subsetting target
+
             # If distances are found to features on another channel:
-            if 'targetXY' in locals():
-                target = targetXY
+            if 'target_xy' in locals():
+                target = target_xy
                 comment = Sett.target_chan
-                filename = 'Avg_{} VS {}_Distance Means.csv'.format(Data.name,
-                                                                    comment)
+                filename = f'Avg_{data.name} VS {comment}_Distance Means.csv'
             else:  # If using the same channel:
-                target = XYpos
-                comment = Data.name
-                filename = 'Avg_{}_Distance Means.csv'.format(Data.name)
+                target = xy_pos
+                comment = data.name
+                filename = f'Avg_{data.name}_Distance Means.csv'
+
             # Creation of DF to store found data (later concatenated to data)
             cols = [f'Nearest_Dist_{comment}', f'Nearest_ID_{comment}']
-            NewData = pd.DataFrame(index=XYpos.index)
+            new_data = pd.DataFrame(index=xy_pos.index)
+
             # KD tree
             treedata = target[['x', 'y', 'z']]
             tree = KDTree(treedata)
-            dist, ind = tree.query(XYpos[['x', 'y', 'z']], k=2)
+            dist, ind = tree.query(xy_pos[['x', 'y', 'z']], k=2)
 
             col_dict = {cols[0]: dist[:, 1],
                         cols[1]: target.iloc[ind[:, 1]].ID.values}
-            NewData = NewData.assign(**col_dict)
+            new_data = new_data.assign(**col_dict)
+
             # Concatenate the obtained data with the read data.
-            NewData = pd.concat([Data, NewData], axis=1)
+            new_data = pd.concat([data, new_data], axis=1)
+
             # limit data based on maxDist
-            NewData[cols] = NewData[cols].where((NewData[cols[0]]<=maxDist))
+            new_data[cols] = new_data[cols].where((new_data[cols[0]]
+                                                   <= max_dist))
+
             # Get bin and distance to nearest cell for each cell, calculate
             # average distance within each bin.
-            binnedData = NewData.loc[:, 'DistBin']
-            distances = NewData.loc[:, cols[0]].astype('float64')
+            binned_data = new_data.loc[:, 'DistBin']
+            distances = new_data.loc[:, cols[0]].astype('float64')
             with warnings.catch_warnings():
                 warnings.simplefilter('ignore', category=RuntimeWarning)
-                means = [np.nanmean(distances[binnedData.values == k]) for k in
-                         np.arange(0, Sett.projBins)]
-            return NewData, means, filename
+                means = [np.nanmean(distances[binned_data.values == k]) for
+                         k in np.arange(0, Sett.projBins)]
+            return new_data, means, filename
 
-        if volIncl > 0:  # Subsetting of data based on cell volume
-            dInd = subset_data(Data, compare, volIncl)
-            if 'tData' in kws.keys():  # Obtain target channel if used
-                tData = kws.pop('tData')
-                tData.name = Data.name
-                tInd = subset_data(tData, compare, volIncl)
-        elif 'tData' in kws.keys():
-            tData = kws.pop('tData')
-            tInd = tData.index
-            dInd = Data.index
+        if vol_incl > 0:  # Subsetting of data based on cell volume
+            data_ind = subset_data(data, compare, vol_incl)
+            if 'test_data' in kws.keys():  # Obtain target channel if used
+                test_data = kws.pop('test_data')
+                test_data.name = data.name
+                test_ind = subset_data(test_data, compare, vol_incl)
+        elif 'test_data' in kws.keys():
+            test_data = kws.pop('test_data')
+            test_ind = test_data.index
+            data_ind = data.index
         else:
-            dInd = Data.index
+            data_ind = data.index
+
         # Accessing the data for the analysis via the indexes taken before.
         # Cells for which the nearest cells will be found:
-        XYpos = Data.loc[dInd, ['Position X', 'Position Y', 'Position Z',
-                                'ID', 'DistBin']]
+        xy_pos = data.loc[data_ind, ['Position X', 'Position Y', 'Position Z',
+                                     'ID', 'DistBin']]
         renames = {'Position X': 'x', 'Position Y': 'y', 'Position Z': 'z'}
-        XYpos.rename(columns=renames, inplace=True)  # rename for dot notation
-        if 'tInd' in locals():  # Get data from target channel, if used
-            targetXY = tData.loc[tInd, ['Position X', 'Position Y',
-                                        'Position Z', 'ID']]
-            targetXY.rename(columns=renames, inplace=True)
+        xy_pos.rename(columns=renames, inplace=True)  # rename for dot notation
+
+        if 'test_ind' in locals():  # Get data from target channel, if used
+            target_xy = test_data.loc[test_ind, ['Position X', 'Position Y',
+                                                 'Position Z', 'ID']]
+            target_xy.rename(columns=renames, inplace=True)
+
         if not clusters:  # Finding nearest distances
-            NewData, Means, filename = _find_nearest()
-            SMeans = pd.Series(Means, name=self.name)
-            insert, _ = process.relate_data(SMeans, self.MP, self._center,
-                                            self._length)
-            IMeans = pd.Series(data=insert, name=self.name)
-            system.saveToFile(IMeans, self.paths.datadir, filename)
+            new_data, means, filename = _find_nearest()
+            means_series = pd.Series(means, name=self.name)
+            insert, _ = process.relate_data(means_series, self.MP,
+                                            self._center, self._length)
+            means_insert = pd.Series(data=insert, name=self.name)
+            system.saveToFile(means_insert, self.paths.datadir, filename)
+
         else:  # Finding clusters
             Clusters = _find_clusters()
             # Create dataframe for storing the obtained data
-            clustData = pd.DataFrame(index=Data.index, columns=['ID',
-                                                                'ClusterID'])
-            clustData = clustData.assign(ID=Data.ID)  # Copy ID column
+            cl_data = pd.DataFrame(index=data.index,
+                                   columns=['ID', 'ClusterID'])
+            cl_data = cl_data.assign(ID=data.ID)  # Copy ID column
             # Give name from a continuous range to each of the found clusters
             # and add it to cell-specific data (for each belonging cell).
             if Clusters:
                 for i, vals in enumerate(Clusters):
                     vals = [int(v) for v in vals]
-                    clustData.loc[clustData.ID.isin(vals), 'ClusterID'] = i + 1
+                    cl_data.loc[cl_data.ID.isin(vals), 'ClusterID'] = i + 1
             else:
                 print(f"-> No clusters found for {self.name}.")
-                clustData.loc[:, 'ClusterID'] = np.nan
+                cl_data.loc[:, 'ClusterID'] = np.nan
             # Merge obtained data with the original data
-            NewData = Data.merge(clustData, how='outer', copy=False, on=['ID'])
-            self.Count_clusters(NewData, Data.name)
+            new_data = data.merge(cl_data, how='outer', copy=False, on=['ID'])
+            self.count_clusters(new_data, data.name)
+
         # Overwrite original sample data with the data containing new columns
-        OW_name = '{}.csv'.format(Data.name)
-        system.saveToFile(NewData, self.path, OW_name, append=False)
+        write_name = '{}.csv'.format(data.name)
+        system.saveToFile(new_data, self.path, write_name, append=False)
 
     def DistanceMean(self, dist=25):
         """Prepare and handle data for cell-to-cell distances."""
         kws = {'Dist': dist}  # Maximum distance used to find cells
+
         # List paths of channels where distances are to be found
-        distChans = [p for p in self.channelPaths for t in
-                     Sett.Distance_Channels if t.lower() == p.stem.lower()]
+        dist_chans = [p for p in self.channelPaths for t in
+                      Sett.Distance_Channels if t.lower() == p.stem.lower()]
 
         if Sett.use_target:  # If distances are found against other channel:
             target = Sett.target_chan  # Get the name of the target channel
             try:  # Find target's data file, read, and update data to keywords
                 file = '{}.csv'.format(target)
-                tNamer = re.compile(file, re.I)
-                targetPath = [p for p in self.channelPaths if
-                              tNamer.fullmatch(str(p.name))]
-                tData = system.read_data(targetPath[0], header=0)
-                kws.update({'tData': tData})
+                test_namer = re.compile(file, re.I)
+                target_path = [p for p in self.channelPaths if
+                               test_namer.fullmatch(str(p.name))]
+                test_data = system.read_data(target_path[0], header=0)
+                kws.update({'test_data': test_data})
             except (FileNotFoundError, IndexError):
                 msg = "No file for channel {}".format(target)
                 lg.logprint(LAM_logger, "{}: {}".format(self.name, msg), 'w')
@@ -567,59 +660,62 @@ class Sample(Group):
                 return
 
         # Loop through the channels, read, and find distances
-        for path in distChans:
+        for path in dist_chans:
             try:
-                Data = system.read_data(path, header=0)
+                data = system.read_data(path, header=0)
             except FileNotFoundError:
                 msg = "No file for channel {}".format(path.stem)
                 lg.logprint(LAM_logger, "{}: {}".format(self.name, msg), 'w')
                 print("-> {}".format(msg))
                 return
             # Discard earlier versions of calculated distances, if present
-            Data = Data.loc[:, ~Data.columns.str.startswith('Nearest_')]
+            data = data.loc[:, ~data.columns.str.startswith('Nearest_')]
             # Find distances
-            Data.name = path.stem
-            self.find_distances(Data, volIncl=Sett.inclusion,
+            data.name = path.stem
+            self.find_distances(data, vol_incl=Sett.inclusion,
                                 compare=Sett.incl_type, **kws)
 
 
-def DropOutlier(Data):
+def DropOutlier(data):
     """Drop outliers from a dataframe."""
     with warnings.catch_warnings():  # Ignore warnings regarding empty bins
         warnings.simplefilter('ignore', category=RuntimeWarning)
-        mean = np.nanmean(Data.values)
-        std = np.nanstd(Data.values)
+        mean = np.nanmean(data.values)
+        std = np.nanstd(data.values)
         dropval = Sett.dropSTD * std
-        if isinstance(Data, pd.DataFrame):
-            Data = Data.applymap(lambda x, dropval=dropval: x if
+        if isinstance(data, pd.DataFrame):
+            data = data.applymap(lambda x, dropval=dropval: x if
                                  np.abs(x - mean) <= dropval else np.nan)
-        elif isinstance(Data, pd.Series):
-            Data = Data.apply(lambda x, dropval=dropval: x if np.abs(x - mean)
+        elif isinstance(data, pd.Series):
+            data = data.apply(lambda x, dropval=dropval: x if np.abs(x - mean)
                               <= dropval else np.nan)
-    return Data
+    return data
 
 
-def subset_data(Data, compare, volIncl):
+def subset_data(data, compare, vol_incl):
     """Get indexes of cells based on values in a column."""
-    if not isinstance(Data, pd.DataFrame):
+
+    if not isinstance(data, pd.DataFrame):
         lg.logprint(LAM_logger, 'Wrong data type for subset_data()', 'e')
-        C = 'Wrong datatype for find_distance, Has to be pandas DataFrame.'
-        print(C)
+        msg = 'Wrong datatype for find_distance, Has to be pandas DataFrame.'
+        print(msg)
         return None
-    ErrorM = "Column {} not found for {}".format(Sett.incl_col, Data.name)
+
+    error_msg = "Column {} not found for {}".format(Sett.incl_col, data.name)
     match_str = re.compile(Sett.incl_col, re.I)
-    cols = Data.columns.str.match(match_str)
+    cols = data.columns.str.match(match_str)
+
     if compare.lower() == 'greater':
         try:  # Get only cells that are of greater volume
-            subInd = Data.loc[(Data.loc[:, cols].values >= volIncl), :].index
+            sub_ind = data.loc[(data.loc[:, cols].values >= vol_incl), :].index
         except KeyError:
-            print(ErrorM)
+            print(error_msg)
     else:
         try:  # Get only cells that are of lesser volume
-            subInd = Data.loc[(Data.loc[:, cols].values <= volIncl), :].index
+            sub_ind = data.loc[(data.loc[:, cols].values <= vol_incl), :].index
         except KeyError:
-            print(ErrorM)
-    return subInd
+            print(error_msg)
+    return sub_ind
 
 
 def test_control():
@@ -628,18 +724,21 @@ def test_control():
     if Sett.cntrlGroup in store.samplegroups:
         return True
     lg.logprint(LAM_logger, 'Set control group not found', 'c')
+
     # Test if entry is due to capitalization error:
     namer = re.compile(r"{}$".format(re.escape(Sett.cntrlGroup)), re.I)
     for group in store.samplegroups:
         if re.match(namer, group):  # If different capitalization:
             msg = "Control group-setting is case-sensitive!"
             print(f"WARNING: {msg}")
+
             # Change control to found group
             Sett.cntrlGroup = group
             msg = "Control group has been changed to"
             print("{} '{}'\n".format(msg, group))
             lg.logprint(LAM_logger, f"-> Changed to {group}", 'i')
             return True
+
     # If control not found at all:
     msg = "Control group NOT found in sample groups!"
     print("\nWARNING: {}\n".format(msg))
@@ -654,6 +753,7 @@ def test_control():
 def ask_control():
     """Ask new control group if one not found."""
     flag = 1
+
     # Print groups and demand input for control:
     while flag:
         print('Found groups:')
@@ -671,6 +771,7 @@ def ask_control():
             flag = 0
         else:
             print('Command not understood.')
+
     msg = f"-> Changed to group '{Sett.cntrlGroup}' by user"
     lg.logprint(LAM_logger, msg, 'i')
 
@@ -678,18 +779,22 @@ def ask_control():
 def Get_Widths(samplesdir, datadir):
     """Find widths of samples along their vectors."""
     msg = "Necessary files for width approximation not found for "
+
     for path in samplesdir.iterdir():
         # Find necessary data files:
         files = [p for p in path.iterdir() if p.is_file()]
+
         # Search terms
         vreg = re.compile('^vector.', re.I)  # vector
         dreg = re.compile(f'^{Sett.vectChannel}.csv', re.I)  # channel data
+
         try:  # Match terms to found paths
             vect_path = [p for p in files if vreg.match(p.name)]
             data_path = [p for p in files if dreg.match(p.name)]
             # Read found paths
             vector_data = system.read_data(vect_path[0], header=0, test=False)
             data = system.read_data(data_path[0], header=0)
+
         # Error handling
         except (StopIteration, IndexError):
             name = path.name
@@ -698,10 +803,11 @@ def Get_Widths(samplesdir, datadir):
             if 'vector_data' not in locals():  # if vector not found
                 print("-> Could not read vector data.")
                 continue
-            if 'data' not in locals(): # if channel data not found
+            if 'data' not in locals():  # if channel data not found
                 print("Could not read channel data")
                 print("Make sure channel is set right (vector channel)\n")
                 continue
             lg.logprint(LAM_logger, full_msg, 'w')
+
         # Compute widths
         process.DefineWidths(data, vector_data, path, datadir)

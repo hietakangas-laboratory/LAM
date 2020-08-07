@@ -52,7 +52,7 @@ class settings:
     # vector is created by finding middle point between smallest and largest
     # Y-axis position in bin.
     SkeletonVector = True
-    SkeletonResize = 0.4    # Binary image resize. Keep at steps of 0.1.
+    SkeletonResize = 0.5    # Binary image resize. Keep at steps of 0.1.
     # Find distance (in input coords) in skeleton vector creation
     find_dist = 75
     BDiter = 5          # Binary dilation iterations (set to 0 if not needed)
@@ -251,4 +251,4 @@ class store:
     totalLength = 0  # The length of DataFrame after all samples are anchored
     center = 0  # The index of the anchoring point within the DataFrame
     clusterPaths = []
-    border_peaks = None
+    border_peaks = []

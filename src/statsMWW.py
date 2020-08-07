@@ -25,166 +25,227 @@ class statistics:
     def __init__(self, control, group2):
         """Create statistics for two Group-objects, i.e. sample groups."""
         # Sample groups
-        self.ctrlGroup = control.group
-        self.tstGroup = group2.group
+        self.ctrl_grp = control.group
+        self.test_grp = group2.group
+
         # Common / Stat object variables
-        self.title = '{} VS. {}'.format(self.ctrlGroup, self.tstGroup)
-        self.statsDir = control.paths.statsdir
-        self.plotDir = control.paths.plotdir.joinpath("Stats")
-        self.plotDir.mkdir(exist_ok=True)
+        self.title = '{} VS. {}'.format(self.ctrl_grp, self.test_grp)
+        self.stat_dir = control.paths.statsdir
+        self.plot_dir = control.paths.plotdir.joinpath("Stats")
+        self.plot_dir.mkdir(exist_ok=True)
+
         # Statistics and data
-        self.statData = None
-        self.ctrlData = None
-        self.tstData = None
+        self.stat_data = None
+        self.ctrl_data = None
+        self.test_data = None
         self.error = False
         self.channel = ""
 
-    def MWW_test(self, Path):
+    def MWW_test(self, channel_path):
         """Perform MWW-test for a data set of two groups."""
         self.error = False
-        self.channel = ' '.join(str(Path.stem).split('_')[1:])
-        Data = system.read_data(Path, header=0, test=False)
+        self.channel = ' '.join(str(channel_path.stem).split('_')[1:])
+        data = system.read_data(channel_path, header=0, test=False)
+
         # Test that data exists and has non-zero, numeric values
-        cols = Data.any().index
-        validData = Data.loc[:, cols]
-        validGrpN = cols.map(lambda x: str(x).split('_')[0]).unique().size
-        if validData.empty or validGrpN < 2:
+        cols = data.any().index
+        valid_data = data.loc[:, cols]
+        valid_grp_n = cols.map(lambda x: str(x).split('_')[0]).unique().size
+        if valid_data.empty or valid_grp_n < 2:
             print("-> {}: Insufficient data, passed.".format(self.channel))
             self.error = True
             return self
+
         # Find group-specific data
-        grpData = validData.T.groupby(lambda x: str(x).split('_')[0])
-        self.ctrlData = grpData.get_group(self.ctrlGroup).T
-        self.tstData = grpData.get_group(self.tstGroup).T
-        statCols = ['U Score', 'Corr. Greater', 'P Greater', 'Reject Greater',
-                    'Corr. Lesser', 'P Lesser', 'Reject Lesser',
-                    'Corr. Two-sided', 'P Two-sided', 'Reject Two-sided']
-        statData = pd.DataFrame(index=Data.index, columns=statCols)
+        grp_data = valid_data.T.groupby(lambda x: str(x).split('_')[0])
+        self.ctrl_data = grp_data.get_group(self.ctrl_grp).T
+        self.test_data = grp_data.get_group(self.test_grp).T
+        stat_cols = ['U Score', 'Corr. Greater', 'P Greater', 'Reject Greater',
+                     'Corr. Lesser', 'P Lesser', 'Reject Lesser',
+                     'Corr. Two-sided', 'P Two-sided', 'Reject Two-sided']
+        stat_data = pd.DataFrame(index=data.index, columns=stat_cols)
+
         if Sett.windowed:  # If doing rolling window stats
-            for ind, __ in self.ctrlData.iloc[Sett.trail:-Sett.lead,
-                                              :].iterrows():
-                sInd = ind - Sett.trail # Window edges
-                eInd = ind + Sett.lead
-                # Get values from both sample groups:
-                ctrlVals = self.ctrlData.iloc[sInd:eInd, :].values.flatten()
-                ctrlVals = ctrlVals[~np.isnan(ctrlVals)]
-                tstVals = self.tstData.iloc[sInd:eInd, :].values.flatten()
-                tstVals = tstVals[~np.isnan(tstVals)]
-                # Compare values
-                statData = get_stats(ctrlVals, tstVals, ind, statData)
+            stat_data = self.windowed_test(stat_data)
+
         else:  # Bin-by-bin stats:
-            for ind, row in self.ctrlData.iterrows():
-                ctrlVals = row.dropna().values
-                tstVals = self.tstData.loc[ind, :].dropna().values
-                statData = get_stats(ctrlVals, tstVals, ind, statData)
+            stat_data = self.bin_test(stat_data)
+
         # Correct for multiple testing:
-        statData = correct(statData, statData.iloc[:, 2], 1, 3)  # greater
-        statData = correct(statData, statData.iloc[:, 5], 4, 6)  # lesser
-        statData = correct(statData, statData.iloc[:, 8], 7, 9)  # 2-sided
+        stat_data = correct(stat_data, stat_data.iloc[:, 2], 1, 3)  # greater
+        stat_data = correct(stat_data, stat_data.iloc[:, 5], 4, 6)  # lesser
+        stat_data = correct(stat_data, stat_data.iloc[:, 8], 7, 9)  # 2-sided
+
         # Save statistics
         filename = 'Stats_{} = {}.csv'.format(self.title, self.channel)
-        system.saveToFile(statData, self.statsDir, filename, append=False)
-        self.statData = statData
+        system.saveToFile(stat_data, self.stat_dir, filename, append=False)
+        self.stat_data = stat_data
         return self
 
+    def bin_test(self, stat_data):
+        """Perform MWW test bin-to-bin."""
+        # Loop bins
+        for ind, row in self.ctrl_data.iterrows():
+            ctrl_vals = row.dropna().values
+            tst_vals = self.test_data.loc[ind, :].dropna().values
+            stat_data = get_stats(ctrl_vals, tst_vals, ind, stat_data)
+        return stat_data
 
-class Total_Stats:
+    def windowed_test(self, stat_data):
+        """Perform windowed MWW test."""
+        trail, lead = Sett.trail, Sett.lead
+        for idx, __ in self.ctrl_data.iloc[trail:-lead, :].iterrows():
+
+            # Define window edges
+            s_ind = idx - trail
+            e_ind = idx + lead
+
+            # Get values from both sample groups:
+            ctrl_vals = self.ctrl_data.iloc[s_ind:e_ind, :].values.flatten()
+            ctrl_vals = ctrl_vals[~np.isnan(ctrl_vals)]
+            tst_vals = self.test_data.iloc[s_ind:e_ind, :].values.flatten()
+            tst_vals = tst_vals[~np.isnan(tst_vals)]
+
+            # Compare values
+            stat_data = get_stats(ctrl_vals, tst_vals, idx, stat_data)
+        return stat_data
+
+
+class TotalStats:
     """Find statistics based on sample-specific totals."""
 
-    def __init__(self, path, groups, plotDir, statsdir):
+    def __init__(self, path, groups, plot_dir, stat_dir):
         self.dataerror = False
-        self.errorVars = {}
-        self.plotDir = plotDir
-        self.statsDir = statsdir
+        self.error_vars = {}
+        self.plot_dir = plot_dir
+        self.stat_dir = stat_dir
         self.filename = path.stem
         self.data = system.read_data(path, header=0, test=False, index_col=0)
-        if self.data is None or self.data.empty:  # Test that data is fine
+
+        # Test that data exists
+        if self.data is None or self.data.empty:
             self.dataerror = True
+
         self.groups = groups
-        self.tstGroups = [g for g in groups if g != Sett.cntrlGroup]
-        self.statData = None
+        self.test_grps = [g for g in groups if g != Sett.cntrlGroup]
+        self.stat_data = None
 
     def stats(self):
         """Calculate statistics of one variable between two groups."""
         # Group all data by sample groups
-        grpData = self.data.groupby(['Sample Group'])
+        grp_data = self.data.groupby(['Sample Group'])
+
         # Find data of control group
-        ctrlData = grpData.get_group(Sett.cntrlGroup)
-        # Make a DataFrame for results
+        ctrl_data = grp_data.get_group(Sett.cntrlGroup)
+
+        # Make indices for DataFrame
         cols = ['U Score', 'P Two-sided', 'Reject Two-sided']  # Needed columns
-        mcols = pd.MultiIndex.from_product([self.tstGroups, cols],
-                                           names=['Sample Group',
-                                                  'Statistics'])
-        variables = self.data.Variable.unique()  # Find analyzable variables
-        TotalStats = pd.DataFrame(index=variables, columns=mcols)  # create DF
-        TotalStats.sort_index(level=['Sample Group', 'Statistics'],
-                              inplace=True)
+        mcol = pd.MultiIndex.from_product([self.test_grps, cols],
+                                          names=['Sample Group', 'Statistics'])
+        variables = self.data.Variable.unique()  # Index
+
+        # Create the DataFrame
+        total_stats = pd.DataFrame(index=variables, columns=mcol)
+        total_stats.sort_index(level=['Sample Group', 'Statistics'],
+                               inplace=True)
+
         # Test each group against the control:
-        for grp in self.tstGroups:
-            tstData = grpData.get_group(grp)
-            for var in variables:  # Test all found variables:
+        for grp in self.test_grps:
+            test_data = grp_data.get_group(grp)
+
+            # Loop all variables to test
+            for var in variables:
                 # Get data of both groups
-                cVals = ctrlData.loc[(ctrlData.Variable == var),
-                                     ctrlData.columns.difference(
-                                         ['Sample Group', 'Variable'])]
-                tVals = tstData.loc[(tstData.Variable == var),
-                                    tstData.columns.difference(
-                                        ['Sample Group', 'Variable'])]
-                try:  # MWW test:
-                    stat, pval = ss.mannwhitneyu(cVals.to_numpy().flatten(),
-                                                 tVals.to_numpy().flatten(),
-                                                 alternative='two-sided')
-                    reject = bool(pval < Sett.alpha)
-                except ValueError as e:
-                    if str(e) == 'All numbers are identical in mannwhitneyu':
-                        msg = 'Identical {}-values between control and {}'\
-                            .format(var, grp)
-                    else:
-                        msg = 'ValueError for {}'.format(var)
-                    print('WARNING: {}'.format(msg))
-                    if grp not in self.errorVars.keys():
-                        self.errorVars.update({grp: [var]})
-                    else:
-                        self.errorVars[grp].append(var)
-                    continue
+                c_vals = ctrl_data.loc[(ctrl_data.Variable == var),
+                                       ctrl_data.columns.difference(
+                                           ['Sample Group', 'Variable'])]
+                t_vals = test_data.loc[(test_data.Variable == var),
+                                       test_data.columns.difference(
+                                           ['Sample Group', 'Variable'])]
+
+                # Perform test
+                test_values = self.total_MWW(grp, c_vals, t_vals, var)
+
                 # Insert values to result DF
-                TotalStats.loc[var, (grp, cols)] = [stat, pval, reject]
+                total_stats.loc[var, (grp, cols)] = test_values
+
         # Save statistics
         savename = self.filename + ' Stats.csv'
-        system.saveToFile(TotalStats, self.statsDir, savename,
+        system.saveToFile(total_stats, self.stat_dir, savename,
                           append=False, w_index=True)
-        self.statData = TotalStats
+
+        # Store to object
+        self.stat_data = total_stats
+
+    def total_MWW(self, grp, c_vals, t_vals, var):
+        """Perform MWW-test for group totals of a variable."""
+
+        # Flatten matrix and drop missing values
+        c_vals = c_vals.to_numpy().flatten()
+        t_vals = t_vals.to_numpy().flatten()
+        c_vals = c_vals[~np.isnan(c_vals)]
+        t_vals = t_vals[~np.isnan(t_vals)]
+
+        try:  # MWW test:
+            stat, pval = ss.mannwhitneyu(c_vals, t_vals,
+                                         alternative='two-sided')
+            reject = bool(pval < Sett.alpha)
+
+        except ValueError as err:
+            if str(err) == 'All numbers are identical in mannwhitneyu':
+                msg = 'Identical {}-values between control and {}'\
+                    .format(var, grp)
+            else:
+                msg = 'ValueError for {}'.format(var)
+
+            print('WARNING: {}'.format(msg))
+
+            if grp not in self.error_vars.keys():
+                self.error_vars.update({grp: [var]})
+            else:
+                self.error_vars[grp].append(var)
+            return [0, 0, 0]
+
+        return [stat, pval, reject]
 
 
-def get_stats(row, row2, ind, statData):
+def get_stats(row, row2, ind, stat_data):
     """Compare respective bins of both groups."""
     unqs = np.unique(np.hstack((row, row2))).size
+
+    # If data rows are different, get stats
     if ((row.any() or row2.any()) and not np.array_equal(
             np.unique(row), np.unique(row2)) and unqs > 1):
+
         with warnings.catch_warnings():
             warnings.simplefilter('ignore', category=RuntimeWarning)
             # Whether ctrl is greater
             stat, pval = ss.mannwhitneyu(row, row2, alternative='greater')
-            statData.iat[ind, 0], statData.iat[ind, 2] = stat, pval
+            stat_data.iat[ind, 0], stat_data.iat[ind, 2] = stat, pval
             # Whether ctrl is lesser
             __, pval = ss.mannwhitneyu(row, row2, alternative='less')
-            statData.iat[ind, 5] = pval
+            stat_data.iat[ind, 5] = pval
             # Whether significant difference exists
             __, pval = ss.mannwhitneyu(row, row2, alternative='two-sided')
-            statData.iat[ind, 8] = pval
-    else:
-        statData.iat[ind, 0], statData.iat[ind, 2] = 0, 0
-        statData.iat[ind, 5] = 0
-        statData.iat[ind, 8] = 0
-    return statData
+            stat_data.iat[ind, 8] = pval
+
+    else:  # If rows are same. input zeros
+        stat_data.iat[ind, 0], stat_data.iat[ind, 2] = 0, 0
+        stat_data.iat[ind, 5] = 0
+        stat_data.iat[ind, 8] = 0
+    return stat_data
 
 
-def correct(statData, Pvals, corrInd, rejInd):
-    """Perform multipletest correction."""
-    vals = Pvals.values
-    with warnings.catch_warnings():
+def correct(stat_data, p_vals, corr_ind, rej_ind):
+    """Correct for multipletesting."""
+
+    vals = p_vals.values  # Get P-values
+
+    with warnings.catch_warnings():  # Correct
         warnings.simplefilter('ignore', category=RuntimeWarning)
-        Reject, CorrP, _, _ = multi.multipletests(vals, method='fdr_bh',
-                                                  alpha=Sett.alpha)
-    statData.iloc[:, corrInd], statData.iloc[:, rejInd] = CorrP, Reject
-    return statData
+        reject, corr_p, _, _ = multi.multipletests(vals, method='fdr_bh',
+                                                   alpha=Sett.alpha)
+
+    # Add corrected values to DF
+    stat_data.iloc[:, corr_ind], stat_data.iloc[:, rej_ind] = corr_p, reject
+    return stat_data

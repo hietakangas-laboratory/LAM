@@ -42,7 +42,7 @@ USAGE:
     Perform LAM 'Count' with border detection amd get border location indices
     of samples from "Borders_peaks.csv" (see variables SAMPLE_BINS and
     BIN_PATH below). Alternatively, just run 'Count' and provide self-defined
-    bins to the file that is pointed to by BIN_PATH. Set 
+    bins to the file that is pointed to by BIN_PATH. Set
     -------------------------
 
     By default, N+1 directoriesare created, where N is the number of defined
@@ -102,12 +102,12 @@ VARS:
         If True, continue the data set to the end of the vector after the final
         cut-off point. If False, the data after the final cut-off point is not
         used.
-    
+
     SAMPLE_BINS : BOOL
         If True, cut the dataset based on bins and not projected points. Each
         sample must be given each cut point in the csv-file pointed by
         BIN_PATH.
-    
+
     BIN_PATH : pathlib.Path
         Path to csv-file that contains each cut-off bin of each sample. The bin
         value must be the bin number of the SAMPLE and not the bin number in
@@ -119,15 +119,15 @@ VARS:
         row-order defined by CUT_POINTS -variable. The given bin-values can be
         floats; the value is only used to determine distance along the full-
         length sample.
-        
+
         Style of file: (index = cut point name, columns = samplenames)
 
-                ctrl_1  ctrl_2  ctrl_3   ...
-        R1R2    5.5     6       7        ...
-        R2R3    25      26      26.5     ...
-        ...     ...     ...     ...
+                ctrl_1  ctrl_2  ctrl_3  exp_1   exp_2   exp_3   ...
+        R1R2    5.5     6       7       8       8.5     8       ...
+        R2R3    25      26      26.5    27      27      27.5    ...
+        ...     ...     ...     ...     ...     ...     ...     ...
 
-        !!! Use the exact sample names !!!
+        !!! Use the exact sample names of the analysis !!!
 """
 import numpy as np
 import pandas as pd
@@ -152,142 +152,228 @@ SAMPLE_BINS = True
 BIN_PATH = pl.Path(r"E:\Code_folder\ALLSTATS\Analysis Data\cutpoints_ALLSTATS.csv")
 
 
-def get_cut_points(CUT_POINTS, samplepath):
-    cut_distances = []
-    for point in CUT_POINTS:
-        data = pd.read_csv(samplepath.joinpath("{}.csv".format(point)))
-        dist = data.NormDist.iat[0]
-        cut_distances.append(dist)
+class VectorLengths:
+    """Manage vector-related data."""
+
+    def __init__(self, samples, points):
+        # List of samples
+        sample_list = [s.stem for s in samples]
+
+        # Variables for holding data:
+        self.lengths = pd.DataFrame(columns=sample_list, index=points)
+        self.averages = pd.DataFrame(index=points)
+
+    def find_averages(self):
+        """Calculate average sub-vector lengths for each sample group."""
+        # Add group identifier to the samples
+        self.lengths.loc['Group', :] = [s.split('_')[0] for s in
+                                        self.lengths.columns]
+
+        # Group the data by their sample groups
+        grouped = self.lengths.T.groupby(by='Group', axis=0)
+
+        # Get average lengths of sub-vectors for each sample group
+        for group in grouped.groups:
+            self.averages = pd.concat(
+                [self.averages, grouped.get_group(group).mean()], axis=1)
+
+        # Rename columns to correspond to the groups
+        self.averages.columns = grouped.groups.keys()
+
+    def save_substrings(self, sample_name, sub_vectors):
+        """Store a sample's sub-vector lengths."""
+        # Loop sub-vectors
+        for i, sub in enumerate(sub_vectors):
+            # Store length to data matrix
+            self.lengths.loc[:, sample_name].iat[i] = sub.length
+
+
+def bins_to_dist(cut_points, samplepath, bins, total=TOTAL_BIN):
+    """Change given bins to normalized distances along vector."""
+
+    samplename = samplepath.name
+    cut_distances = []  # Holds distances
+
+    # Loop through the cut point names
+    for point in cut_points:
+        cbin = bins.at[point, samplename]  # Get bin number of the cutpoint
+        dist = cbin / total  # Get the bins fraction of the total
+        cut_distances.append(dist)  # Add distance to list
+    # Add final segment if wanted
     if CONT_END:
         cut_distances.append(1.0)
     return cut_distances
 
 
 def cut_data(data, cut_distances):
-    idx_cuts = []
+    """Cut data at defined distances."""
+
+    idx_cuts = []  # Holds data subsets
+
+    # Cut data at every distance in cut_distances
     for i, point in enumerate(cut_distances):
+        # First segment
         if i == 0:
             idx_before = data.loc[(data.NormDist <= point)].index
+        # Later segments
         else:
             idx_before = data.loc[(data.NormDist <= point) &
                                   (data.NormDist > cut_distances[i-1])].index
+
+        # Add cut segment to list
         idx_cuts.append(idx_before)
     return idx_cuts
 
 
-def read_vector(vector_path):
-    if vector_path.name == "Vector.csv":
-        vector_df = pd.read_csv(vector_path)
-    # If vector is user-generated with ImageJ line tools:
-    elif vector_path.name == "Vector.txt":
-        vector_df = pd.read_csv(vector_path, sep="\t", header=None)
-        vector_df.columns = ["X", "Y"]
-    Vect = list(zip(vector_df.loc[:, 'X'].astype('float'),
-                    vector_df.loc[:, 'Y'].astype('float')))
-    vector = gm.LineString(Vect)
-    
-    return vector
-
-
 def cut_vector(vector_path, cut_distances):
-    sub_vectors = []
+    """Cut vector at defined distances."""
+
+    sub_vectors = []  # Holds sub-vectors
+
+    # Read the full vector
     vector = read_vector(vector_path)
+
+    # Cut vector at every distance point in cut_distances
     for i, dist in enumerate(cut_distances):
+        # First segment
         if i == 0:
             sub_v = op.substring(vector, 0, dist, normalized=True)
+        # Later segments
         else:
             sub_v = op.substring(vector, cut_distances[i-1], dist,
                                  normalized=True)
+
+        # Add cut segment to list
         sub_vectors.append(sub_v)
     return sub_vectors
 
 
-def save_vector(vector_dir, sub_vector):
-    vector_df = pd.DataFrame(np.vstack(sub_vector.xy).T, columns=['X', 'Y'])
-    vector_df.to_csv(vector_dir.joinpath("Vector.csv"), index=False)
+def get_cut_points(CUT_POINTS, samplepath):
+    """Get cutpoints based on point projection distances along vector."""
 
+    cut_distances = []  # Distance holder
 
-def bins_to_dist(CUT_POINTS, samplepath, bins, total=TOTAL_BIN):
-    samplename = samplepath.name
-    cut_distances = []
+    # Loop all defined projections
     for point in CUT_POINTS:
-        cbin = bins.at[point, samplename]
-        dist = cbin / total
+        # Read the projection data
+        data = pd.read_csv(samplepath.joinpath(f"{point}.csv"))
+        # Get the distance from data
+        dist = data.NormDist.iat[0]
+        # Add distance to cutpoint list
         cut_distances.append(dist)
+
+    # If using data past final cut point, add final vector length to list
     if CONT_END:
         cut_distances.append(1.0)
     return cut_distances
 
 
-def get_sample_data(samplepath, POINTS, length_data, bins):
+def get_sample_data(samplepath, points, l_data, bins):
+    """Get and split a sample's vector and data."""
+
+    sample_name = samplepath.stem  # Name of sample
+
+    # DETERMINE CUTPOINTS IN DATA:
+    # Based on projected points
     if not SAMPLE_BINS:
         cut_distances = get_cut_points(CUT_POINTS, samplepath)
+    # Or change user-given bins to distances along sample
     else:
         cut_distances = bins_to_dist(CUT_POINTS, samplepath, bins)
+
+    # Find all data channel paths
     file_paths = samplepath.glob("*.csv")
+
+    # Get vector and cut it based on cut distances
     try:
         vector_path = next(samplepath.glob("Vector.*"))
         sub_vectors = cut_vector(vector_path, cut_distances)
     except StopIteration:
         sub_vectors = None
-    sample_name = path.stem
-    length_data.save_substrings(sample_name, sub_vectors)
-    # Cutting and saving of new data:
-    for datafile in file_paths:
-        if datafile.stem in CHANNELS:
-            data = pd.read_csv(datafile)
-            idx_cuts = cut_data(data, cut_distances)
-            for i, cut in enumerate(idx_cuts):
-                vector_dir = SAVEDIR.joinpath(POINTS[i], "Analysis Data",
-                                              "Samples", sample_name)
-                vector_dir.mkdir(parents=True, exist_ok=True)
-                name = "Position.csv".format()
-                chan_dir = '{}_{}_Stats'.format(sample_name, datafile.stem)
-                data_dir = SAVEDIR.joinpath(POINTS[i], sample_name, chan_dir)
-                data_dir.mkdir(parents=True, exist_ok=True)
-                data.loc[cut, :].to_csv(data_dir.joinpath(name), index=False)
-                save_vector(vector_dir, sub_vectors[i])
+
+    # Store cut vectors
+    l_data.save_substrings(sample_name, sub_vectors)
+
+    # CUTTING AND SAVING OF NEW DATA:
+    # Find files to cut
+    datafiles = [file for file in file_paths if file.stem in CHANNELS]
+
+    # Loop found files
+    for datafile in datafiles:
+        # Read the data and make an index cut based on distances
+        data = pd.read_csv(datafile)
+        idx_cuts = cut_data(data, cut_distances)
+
+        # Loop cut index-sets
+        for i, cut in enumerate(idx_cuts):
+
+            # Define and make channel data save-directory, then save
+            chan_dir = '{}_{}_Stats'.format(sample_name, datafile.stem)
+            data_dir = SAVEDIR.joinpath(points[i], sample_name, chan_dir)
+            data_dir.mkdir(parents=True, exist_ok=True)
+            name = "Position.csv".format()
+            data.loc[cut, :].to_csv(data_dir.joinpath(name), index=False)
+
+            # Define and make vector's save-directory, then save
+            vector_dir = SAVEDIR.joinpath(points[i], "Analysis Data",
+                                          "Samples", sample_name)
+            vector_dir.mkdir(parents=True, exist_ok=True)
+            save_vector(vector_dir, sub_vectors[i])
 
 
-class vector_lengths:
-    
-    def __init__(self, SAMPLES, POINTS):
-        sample_list = [s.stem for s in SAMPLES]
-        # group_list = set(sorted([s.split('_')[0] for s in sample_list]))
-        # Data variables:
-        self.lengths = pd.DataFrame(columns=sample_list, index=POINTS)
-        self.averages = pd.DataFrame(index=POINTS)
-    
-    def save_substrings(self, sample_name, sub_vectors):
-        for i, sub in enumerate(sub_vectors):
-            self.lengths.loc[:, sample_name].iat[i] = sub.length
-    
-    def find_averages(self):
-        self.lengths.loc['Group', :] = [s.split('_')[0] for s in
-                                        self.lengths.columns]
-        grouped = self.lengths.T.groupby(by='Group', axis=0)
-        for group in grouped.groups:
-            self.averages = pd.concat(
-                [self.averages, grouped.get_group(group).mean()], axis=1)
-        self.averages.columns = grouped.groups.keys()
+def read_vector(vector_path):
+    """Read vector and change to LineString"""
 
-    def find_bins(self):
-        pass
+    # Read depending on file type
+    if vector_path.name == "Vector.csv":
+        vector_df = pd.read_csv(vector_path)
+    elif vector_path.name == "Vector.txt":
+        vector_df = pd.read_csv(vector_path, sep="\t", header=None)
+        vector_df.columns = ["X", "Y"]
+
+    # Reformat data and change to LineString
+    Vect = list(zip(vector_df.loc[:, 'X'].astype('float'),
+                    vector_df.loc[:, 'Y'].astype('float')))
+    vector = gm.LineString(Vect)
+    return vector
+
+
+def save_vector(vector_dir, sub_vector):
+    """Transform sub-vector to DF and save"""
+    # Transform to FataFrame
+    vector_df = pd.DataFrame(np.vstack(sub_vector.xy).T, columns=['X', 'Y'])
+    # Save
+    vector_df.to_csv(vector_dir.joinpath("Vector.csv"), index=False)
 
 
 if __name__ == '__main__':
+    # Find samples in the dataset
     SAMPLES = [p for p in ROOT.joinpath("Analysis Data", "Samples").iterdir()
                if p.is_dir()]
+
+    # Make a copy of the cutpoint names
     POINTS = CUT_POINTS.copy()
+
+    # Placeholder
     BIN_FILE = None
+
+    # Add final segment of segment to cutpoints if wanted
     if CONT_END:
         POINTS.append("END")
-    length_data = vector_lengths(SAMPLES, POINTS)
+
+    # Create object to store vector data
+    length_data = VectorLengths(SAMPLES, POINTS)
+
+    # If using user-defined cutting points, read file
     if SAMPLE_BINS:
         BIN_FILE = pd.read_csv(BIN_PATH, index_col=0)
+
+    # Loop samples and get their data
     for path in SAMPLES:
         print(path.name)
         get_sample_data(path, POINTS, length_data, bins=BIN_FILE)
+
+
     print("Finding averages ...")
     length_data.find_averages()
     print(f"\n- Average lengths:\n {length_data.averages.round(decimals=2)}\n")

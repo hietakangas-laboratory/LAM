@@ -4,7 +4,7 @@ Run file for Longitudinal Analysis of Midgut.
 
 Created on Wed Mar  6 12:42:28 2019
 @author: Arto I. Viitanen
-@version: 0.2.3
+@version: 0.2.4
 
 Distributed under GNU General Public License v3.0
 -------------------------------------------------------------------------------
@@ -45,7 +45,6 @@ included.
            conda install --file <LAM-master\requirements.txt>
          (You may need to add conda-forge to conda channels:
            conda config --add channels conda-forge           )
- 
 
 USAGE:
 -----
@@ -85,6 +84,7 @@ separate directory that contains position.csv for a single coordinate, the MP.
 
 For more extensive description and instructions, see user manual.
 """
+
 # LAM module
 from settings import settings as Sett
 import ParseCmds as pc
@@ -103,6 +103,7 @@ def main(gui_root=None):
     from settings import store
 
     system_paths = system.start()
+
     # If sample processing set to True, create vectors, collect and project
     # data etc. Otherwise continue to plotting and group-wise operations.
     if Sett.process_samples:
@@ -116,45 +117,55 @@ def main(gui_root=None):
         if not Sett.process_samples:
             process.vector_test(system_paths.samplesdir)
         process.Project(system_paths)
+
     # If performing 'Count' without projection, only calculate counts:
     elif Sett.process_counts and not Sett.project:
         process.find_existing(system_paths)
         if Sett.measure_width:
             analysis.Get_Widths(system_paths.samplesdir, system_paths.datadir)
+
     # After all samples have been collected/created, find their respective MP
     # bins and normalize (anchor) cell count data.
     process.Get_Counts(system_paths)
+
     # Storing of descriptive data of analysis, i.e. channels/samples/groups
     system_paths.save_AnalysisInfo(store.samples, store.samplegroups,
                                    store.channels)
-    # After samples have been counted and normalized
+
+    # Create object to hold samplegroup info
     sample_groups = analysis.Samplegroups(system_paths)
+
     # Finding of nearest cells and distances
     if Sett.Find_Distances and Sett.process_dists:
         sample_groups.Get_DistanceMean()
+
     # Finding clustered cells
     if Sett.Find_Clusters and Sett.process_dists:
         sample_groups.Get_Clusters()
+
     # Computing total values from each sample's each bin
     if (Sett.statistics and Sett.stat_total) or Sett.process_counts:
         sample_groups.Get_Totals()
+
     # Find border regions
     if Sett.border_detection:
-        conf = bd.test_channel(sample_groups._samplePaths, Sett.border_vars,
-                               Sett.scoring_vars, Sett.border_channel)
+        conf = bd.test_channel(sample_groups._samplePaths, Sett.border_channel)
         if conf:
             bd.detect_borders(system_paths, sample_groups._samplePaths,
                               sample_groups._grpPalette, store.center,
                               Sett.border_vars, Sett.scoring_vars,
                               Sett.peak_thresh, Sett.border_channel)
+
     # Get and select border data if needed:
     if Sett.Create_Plots and Sett.add_peaks:
         bd.peak_selection(system_paths.datadir, gui_root)
+
     # Calculation of MWW-statistics for cell counts and other data
     if Sett.statistics:
         conf = analysis.test_control()
         if conf:
             sample_groups.Get_Statistics()
+
     # Creation of plots from various data (excluding statistical plots)
     if Sett.Create_Plots:
         sample_groups.create_plots()
@@ -163,24 +174,29 @@ def main(gui_root=None):
 def main_catch_exit(LAM_logger=None, gui_root=None):
     """Run main() while catching exc eptions for logging."""
     import logger as lg
+
     if LAM_logger is None:  # If no logger given, get one
         LAM_logger = lg.setup_logger(__name__, new=True)
         lg.print_settings()  # print settings of analysis to log
         LAM_logger = lg.get_logger(__name__)
+
     try:
         print("START ANALYSIS")
         main(gui_root=gui_root)  # run analysis
         lg.logprint(LAM_logger, 'Completed', 'i')
         lg.Close()
         print('\nCOMPLETED\n')
+
     # Catch and log possible exits from the analysis
     except KeyboardInterrupt:
         lg.logprint(LAM_logger, 'STOPPED: keyboard interrupt', 'e')
         print("STOPPED: Keyboard interrupt by user.\n")
+
     except SystemExit:
         lg.logprint(LAM_logger, 'EXIT\n\n', 'ex')
         print("STOPPED\n")
         lg.log_Shutdown()
+
     except AssertionError:
         msg = 'STOPPED: No vectors found for samples.'
         print(msg + '\n')
@@ -189,15 +205,21 @@ def main_catch_exit(LAM_logger=None, gui_root=None):
 
 
 if __name__ == '__main__':
+
+    # If arguments given from commandline, parse them
     if len(sys.argv) > 1:
         parser = pc.make_parser()
         pc.change_settings(parser)
-    if Sett.GUI:  # Create GUI if using it
+
+    # Create GUI if needed
+    if Sett.GUI:
         import tkinter as tk
         import interface
         ROOT = tk.Tk()
         GUI = interface.base_GUI(ROOT)
         ROOT.mainloop()
-    else:  # Otherwise make workdir into usable path and start the analysis
+
+    # Otherwise make workdir into usable path and start the analysis
+    else:
         Sett.workdir = pl.Path(Sett.workdir)
         main_catch_exit()

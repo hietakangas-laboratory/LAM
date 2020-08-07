@@ -21,7 +21,7 @@ class base_GUI(tk.Toplevel):
     """Container for the most important settings of the GUI."""
 
     def __init__(self, master=None):
-        master.title("LAM-0.2.3")
+        master.title("LAM-0.2.4")
         self.master = master
         self.master.grab_set()
         self.master.bind('<Escape>', self.func_destroy)
@@ -128,9 +128,9 @@ class base_GUI(tk.Toplevel):
                                      command=self.width_check)
         self.pWidth.grid(row=2, column=0, columnspan=1, padx=(2, 2))
         self.pBorder = tk.Checkbutton(self.midf, text="Borders",
-                                     variable=self.borders, relief='groove',
-                                     bd=3, font=('Arial', 8),
-                                     command=self.border_check)
+                                      variable=self.borders, relief='groove',
+                                      bd=3, font=('Arial', 8),
+                                      command=self.border_check)
         self.pBorder.grid(row=2, column=1, columnspan=1, padx=(2, 2))
         self.lblMP = tk.Label(self.midf, text='MP label:', bd=1,
                               font=('Arial', 8))
@@ -227,7 +227,7 @@ class base_GUI(tk.Toplevel):
         self.addVSC = tk.Checkbutton(self.rightf, text="Add. VS. Add.",
                                      variable=PVSadd)
         self.borderC = tk.Checkbutton(self.rightf, text="Borders",
-                                     variable=Pborders)
+                                      variable=Pborders)
         self.widthC = tk.Checkbutton(self.rightf, text="Widths",
                                      variable=Pwidths)
         self.chanC.grid(row=1, column=0, sticky='w', pady=(2, 0))
@@ -587,7 +587,6 @@ class base_GUI(tk.Toplevel):
         else:
             global Pborders
             Pborders.set(False)
-        
 
     def RUN_button(self, event=None):
         """Relevant changes when Run-button is pressed + run initialization."""
@@ -616,7 +615,6 @@ class base_GUI(tk.Toplevel):
         Sett.Create_Statistics_Plots = Pstats.get()
         Sett.Create_Cluster_Plots = Pclusts.get()
         Sett.Create_Border_Plots = Pborders.get()
-        
         Sett.plot_width = Pwidths.get()
         Sett.Create_ChanVSAdd_Plots = PVSchan.get()
         Sett.Create_AddVSAdd_Plots = PVSadd.get()

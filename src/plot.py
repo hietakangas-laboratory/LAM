@@ -5,19 +5,23 @@ LAM-module for plot creation.
 Created on Tue Mar 10 11:45:48 2020
 @author: Arto I. Viitanen
 """
-# LAM modules
-from settings import settings as Sett, store
-import logger as lg
-import system
-import plotfuncs as pfunc
+
 # Standard libraries
 import warnings
 from itertools import combinations, chain
+
 # Packages
 import matplotlib.pyplot as plt
 import numpy as np
 import seaborn as sns
 import pandas as pd
+
+# LAM modules
+from settings import settings as Sett, store
+import logger as lg
+import system
+import plotfuncs as pfunc
+
 try:
     LAM_logger = lg.get_logger(__name__)
 except AttributeError:
@@ -87,9 +91,12 @@ class MakePlot:
             self.stats(**kws)
         if 'total_stats' in args:  # Add total stat significances
             self.stats_total(**kws)
-        if ('peaks' in args and Sett.add_peaks and
-            store.border_peaks is not None):  # Add detected peaks
+
+        # Add detected peaks to plots:
+        peaks = store.border_peaks
+        if 'peaks' in args and Sett.add_peaks and peaks is not None:
             self.plot_peaks(**kws)
+
         # Make labels visible even when sharing axes
         if (kws.get('sharey') == 'row' or kws.get('sharex') == 'col'):
             self.visible_labels()
@@ -120,7 +127,6 @@ class MakePlot:
                 ax.set_xlabel(label)
             ax.set_title(' | '.join(label_strs))
 
-
     def get_facet(self, **kws):
         """Create a FacetGrid for plotting."""
         g = sns.FacetGrid(self.data, row=kws.get('row'),
@@ -147,7 +153,9 @@ class MakePlot:
         # Select only peaks that belong into groups being plotted
         if 'Sample Group' in self.data.columns:
             groups = self.data.loc[:, 'Sample Group'].unique()
-            peaks = store.border_peaks[store.border_peaks.group.isin(groups)]
+            if isinstance(store.border_peaks, pd.DataFrame):
+                peaks = store.border_peaks[store.border_peaks.group.isin(
+                    groups)]
         else:
             peaks = store.border_peaks
         # Add peaks to each plot in figure
@@ -161,7 +169,7 @@ class MakePlot:
                 color = self.handle.palette[grp]
                 # peak location line with prominence
                 ax.vlines(x=loc, ymin=vmin, ymax=vmax, color=color, alpha=0.5,
-                           linewidth=1.5, zorder=0, linestyle='dashed',)
+                          linewidth=1.5, zorder=0, linestyle='dashed',)
 
     def plot_significance(self, ix, row, ax, yaxis, yheight, fill=Sett.fill,
                           stars=Sett.stars):
@@ -171,13 +179,13 @@ class MakePlot:
             return
         xaxis = [ix-0.43, ix+0.43]
         if row[3] is True:  # ctrl is greater
-            pStr, color = significance_marker(row[1], MakePlot.LScolors)
+            p_str, color = significance_marker(row[1], MakePlot.LScolors)
         elif row[6] is True:  # ctrl is lesser
-            pStr, color = significance_marker(row[4], MakePlot.GRcolors)
+            p_str, color = significance_marker(row[4], MakePlot.GRcolors)
         if fill:
             ax.fill_between(xaxis, yaxis, color=color, alpha=0.35, zorder=0)
         if stars:
-            ax.annotate(pStr, (ix, yheight), fontsize=8, ha='center')
+            ax.annotate(p_str, (ix, yheight), fontsize=8, ha='center')
 
     def set_title(self, **kws):
         """Set plot title."""
@@ -185,7 +193,7 @@ class MakePlot:
 
     def stats(self, **kws):
         """Modify plot to include statistics."""
-        stats = self.sec_data.statData
+        stats = self.sec_data.stat_data
         __, ytop = plt.ylim()
         tytop = ytop*1.35
         ax = plt.gca()
@@ -257,9 +265,9 @@ class MakePlot:
                     ax.hlines(y=y, xmin=line[0], xmax=line[1], color='dimgrey')
                     # Locate P-value and get significance stars
                     Pvalue = row.loc[(grp, 'P Two-sided')]
-                    pStr, _ = significance_marker(Pvalue, vert=True)
+                    p_str, _ = significance_marker(Pvalue, vert=True)
                     # Define plot location for stars and plot
-                    ax.annotate(pStr, (line[0]+.5, y), ha='center')
+                    ax.annotate(p_str, (line[0]+.5, y), ha='center')
 
     def save_plot(self):
         """Save created plot."""
@@ -470,8 +478,8 @@ class plotting:
             smpl_paths = [p for p in chan_paths if p.parent.name == sample]
             handle = system.DataHandler(self.sgroups, smpl_paths, savepath)
             all_data = handle.get_sample_data(cols, 'no_var')
-            if ('ClusterID' not in all_data.columns or
-                all_data.loc[:, 'ClusterID'].isna().all()):
+            test = all_data.loc[:, 'ClusterID'].isna().all()
+            if 'ClusterID' not in all_data.columns or test:
                 print(f"  -> No clusters on {sample}")
                 continue  # If sample does not contain clusters, continue
             all_data.index = pd.RangeIndex(stop=all_data.shape[0])
@@ -606,9 +614,9 @@ class plotting:
     def stat_totals(self, total_stats, path):
         """Plot variable totals with statistics."""
         plot_data = total_stats.data
-        ctrlN = int(len(total_stats.groups) / 2)
-        order = total_stats.tstGroups
-        order.insert(ctrlN, Sett.cntrlGroup)
+        ctrl_n = int(len(total_stats.groups) / 2)
+        order = total_stats.test_grps
+        order.insert(ctrl_n, Sett.cntrlGroup)
 
         # Melt data to long form and drop missing observation points
         plot_data = pd.melt(plot_data, id_vars=['Sample Group', 'Variable'],
@@ -621,12 +629,12 @@ class plotting:
         plot_data['Ord'] = plot_data.loc[:, 'Sample Group'].apply(order.index)
         plot_data.sort_values(by=['Ord', 'Variable'], axis=0, inplace=True)
         # Find group order number for control group for plotting significances
-        # total_stats.statData.sort_index(inplace=True)
+        total_stats.stat_data.sort_index(inplace=True)
         # Create plot:
-        savepath = total_stats.plotDir
+        savepath = total_stats.plot_dir
         handle = system.DataHandler(self.sgroups, path, savepath)
         plotter = MakePlot(plot_data, handle, total_stats.filename,
-                           sec_data=total_stats.statData)
+                           sec_data=total_stats.stat_data)
         p_kws = {'row': None, 'col': 'Variable', 'x_order': order,
                  'height': 3, 'aspect': 1, 'title_y': 1,
                  'ylabel': 'collect', 'xlabel': 'Sample Group',
@@ -637,21 +645,21 @@ class plotting:
     def stat_versus(self, Stats, path):
         """Plot statistics of group versus group for all variables."""
         # Restructure data to be plottable:
-        ctrlData = Stats.ctrlData
-        tstData = Stats.tstData
+        ctrl_data = Stats.ctrl_data
+        test_data = Stats.test_data
         if Sett.Drop_Outliers:  # Drop outliers
-            ctrlData = system.drop_outliers(ctrlData.T, raw=True)
-            tstData = system.drop_outliers(tstData.T, raw=True)
+            ctrl_data = system.drop_outliers(ctrl_data.T, raw=True)
+            test_data = system.drop_outliers(test_data.T, raw=True)
         # Add identifier
-        ctrlData.loc[:, 'Sample Group'] = Stats.ctrlGroup
-        tstData.loc[:, 'Sample Group'] = Stats.tstGroup
+        ctrl_data.loc[:, 'Sample Group'] = Stats.ctrl_grp
+        test_data.loc[:, 'Sample Group'] = Stats.test_grp
         # Combine data in to one frame and melt it to long format
-        plot_data = pd.concat([ctrlData, tstData], ignore_index=True)
+        plot_data = pd.concat([ctrl_data, test_data], ignore_index=True)
         plot_data = plot_data.melt(id_vars=['Sample Group'],
                                    var_name='Linear Position',
                                    value_name='Value')
         # Initialize plotting:
-        savepath = Stats.plotDir
+        savepath = Stats.plot_dir
         handle = system.DataHandler(self.sgroups, path, savepath)
         # Give title
         data_name = str(path.stem).split('_')[1:]
@@ -774,22 +782,22 @@ def remove_from_kws(kws, *args):
 def significance_marker(value, colors=MakePlot.GRcolors, vert=False):
     """Find strings for significance stars."""
     if value <= 0.001:
-        pStr = ["*", "*", "*"]
+        p_str = ["*", "*", "*"]
         color = colors[3]
     elif value <= 0.01:
-        pStr = ["*", "*"]
+        p_str = ["*", "*"]
         color = colors[2]
     elif value <= Sett.alpha:
         if value <= 0.05:
-            pStr = ["*"]
+            p_str = ["*"]
         else:
-            pStr = [""]
+            p_str = [""]
         color = colors[1]
     else:
-        pStr = [" "]
+        p_str = [" "]
         color = colors[0]
     if vert:
-        ret_str = ' '.join(pStr)
+        ret_str = ' '.join(p_str)
     else:
-        ret_str = '\n'.join(pStr)
+        ret_str = '\n'.join(p_str)
     return ret_str, color

@@ -32,8 +32,10 @@ def setup_logger(name=None, new=True):
     global logFile, ctime, log_created
     ctime = time.strftime("%d%b%y_%H%M%S")  # Start time for the run
     from settings import settings as Sett
+
     # filepath:
     logFile = str(Sett.workdir.joinpath("log_{}.txt".format(ctime)))
+
     if new is True:  # If setting up new logger
         logger = get_logger(name)  # Call for logger-object creation
         log_created = True  # Create variable to indicate log has been created
@@ -56,8 +58,9 @@ def get_logger(name):
 def _get_handler():
     """Create message handler in conjunction with get_logger()."""
     # Create format for log messages
-    Formatter = logging.Formatter(
-            "%(asctime)s — %(name)s — %(levelname)s — %(message)s")
+    formatting = "%(asctime)s — %(name)s — %(levelname)s — %(message)s"
+    Formatter = logging.Formatter(formatting)
+
     # create handler and assign logfile's path
     file_handler = logging.FileHandler(logFile)
     file_handler.setFormatter(Formatter)  # Set format of log messages
@@ -132,7 +135,7 @@ def print_settings():
                 MPmsg = "Using MP with label {}.\n".format(Sett.MPname)
             else:
                 MPmsg = "Not using MP.\n"
-                
+
         if Sett.border_detection or Sett.measure_width:
             sn = ['Widths', 'Borders']
             ss = [Sett.measure_width, Sett.border_detection]
@@ -140,6 +143,7 @@ def print_settings():
             if Sett.border_detection:
                 msg = msg + f', Border channel = {Sett.border_channel}'
             file.write("Secondary: {}\n".format(msg))
+
         # If creating vectors, get and print related settings
         if Sett.process_samples:
             file.write("--- Process Settings ---\n")
@@ -158,15 +162,17 @@ def print_settings():
             file.write(', '.join(["{}: {}".format(key, vectordict.get(key))
                                   for key in keys]))
             file.write("\n")
+
         if Sett.process_counts:  # Count settings
             file.write("--- Count Settings ---\n")
             file.write(MPmsg)
             file.write("Number of bins: {}\n".format(Sett.projBins))
             file.write("-Additional data-\n")
             addD = Sett.AddData
-            addtypes = ', '.join(["{}".format(key)for key in sorted(list(
-                                                            addD.keys()))])
+            addtypes = ', '.join(["{}".format(key) for key in
+                                  sorted(list(addD.keys()))])
             file.write("Types: {}\n".format(addtypes))
+
         if Sett.process_dists:  # Distance settings
             file.write("--- Distance Settings ---\n")
             if Sett.Find_Distances:
@@ -187,6 +193,7 @@ def print_settings():
                 file.write(', '.join(["{}: {}".format(key, distD.get(key))
                                       for key in keys]))
                 file.write("\n")
+
             if Sett.Find_Clusters:  # Cluster settings
                 file.write("-Clusters-\n")
                 clustD = {'Channels': Sett.Cluster_Channels,
@@ -195,24 +202,23 @@ def print_settings():
                           'Maximum cluster': Sett.Cl_max}
                 if Sett.inclusion > 0:
                     if not Sett.Cl_incl_type:
-                        inclmsg = 'Smaller than {}'.format(
-                                                    Sett.Cl_inclusion)
+                        inclmsg = f'Smaller than {Sett.Cl_inclusion}'
                     else:
-                        inclmsg = 'Greater than {}'.format(
-                                                    Sett.Cl_inclusion)
+                        inclmsg = f'Greater than {Sett.Cl_inclusion}'
                     clustD.update({'Cell inclusion': inclmsg})
                 keys = sorted(list(clustD.keys()))
                 file.write(', '.join(["{}: {}".format(key, clustD.get(key))
                                       for key in keys]))
                 file.write("\n")
+
         if Sett.statistics:  # Statistics settings
             file.write("--- Statistics Settings ---\n")
-            file.write("Control group: {}\n".format(Sett.cntrlGroup))
-            file.write("Types: versus={}; total={}\n".format(
-                                        Sett.stat_versus, Sett.stat_total))
+            file.write(f"Control group: {Sett.cntrlGroup}\n")
+            txt = f"Type: versus={Sett.stat_versus}; total={Sett.stat_total}\n"
+            file.write(txt)
             if Sett.windowed:
-                file.write("windowed: trail={}; lead={}\n".format(
-                                        Sett.trail, Sett.lead))
+                file.write("windowed: trail={Sett.trail}; lead={Sett.lead}\n")
+
         if Sett.Create_Plots:  # Plotting settings
             file.write("--- Plot Settings ---\n")
             plotnames = ['Channels', 'Additional', 'Pair', 'Heatmap',
@@ -228,6 +234,7 @@ def print_settings():
                                  if s is True])
             file.write("Plot types: {}\n".format(plotmsg))
             file.write("Drop outliers: {}\n".format(Sett.Drop_Outliers))
+
         # Create header for the messages sent during the analysis
         file.write("="*75 + "\n")
         msg = ' ' * 8 + "-Time-" + ' ' * 12 + "-Module-" + ' ' * 4 + "-Level-"\
