@@ -165,7 +165,7 @@ class settings:
     windowed = True
     trail = 1
     lead = 1
-    ylim = 25               # negative log2 y-limit
+    ylim = 35               # negative log2 y-limit
     alpha = 0.05            # for rejection of H_0, applies to statistics files
     # Plots
     stars = False  # Make P-value stars (*:<0.05 **:<0.01 ***:<0.001)

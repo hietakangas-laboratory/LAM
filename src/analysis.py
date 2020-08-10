@@ -262,7 +262,8 @@ class Samplegroups:
                 # through each.
                 for path in chain(self.paths.datadir.glob('Norm_*'),
                                   self.paths.datadir.glob('Avg_*'),
-                                  self.paths.datadir.glob('ClNorm_*')):
+                                  self.paths.datadir.glob('ClNorm_*'),
+                                  self.paths.datadir.glob('Sample_widths_n*')):  # !!!
                     stats = stats.MWW_test(path)
 
                     if stats.error:

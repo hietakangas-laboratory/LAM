@@ -209,8 +209,8 @@ class MakePlot:
         # create a prettier plot
         botAdd = 2.75*-Sett.ylim
         ax2.set_ylim(bottom=botAdd, top=Sett.ylim)
-        ax2.set_yticks(np.arange(0, Sett.ylim, 5))
-        ax2.set_yticklabels(np.arange(0, Sett.ylim, 5))
+        ax2.set_yticks(np.arange(0, Sett.ylim, 10))
+        ax2.set_yticklabels(np.arange(0, Sett.ylim, 10))
         ax2.yaxis.set_label_coords(1.04, 0.85)
 
         # Creation of -log2 P-value axis and line plot
@@ -282,8 +282,12 @@ class MakePlot:
 
     def xticks(self):
         """Set plot xticks & tick labels to be shown every 5 ticks."""
+        if "widths-norm" in self.title:
+            tick_mp = 2
+        else:
+            tick_mp = 1
         xticks = np.arange(0, self.handle.total_length, 5)
-        plt.setp(self.g.axes, xticks=xticks, xticklabels=xticks)
+        plt.setp(self.g.axes, xticks=xticks * tick_mp, xticklabels=xticks)
 
 
 class plotting:
