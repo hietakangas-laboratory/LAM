@@ -93,8 +93,7 @@ class MakePlot:
             self.stats_total(**kws)
 
         # Add detected peaks to plots:
-        peaks = store.border_peaks
-        if 'peaks' in args and Sett.add_peaks and peaks is not None:
+        if 'peaks' in args and Sett.add_peaks and store.border_peaks:
             self.plot_peaks(**kws)
 
         # Make labels visible even when sharing axes
