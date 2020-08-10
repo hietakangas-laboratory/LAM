@@ -102,10 +102,14 @@ class MakePlot:
 
     def centerline(self):
         """Plot centerline, i.e. the anchoring point of samples."""
+        if "widths-norm" in self.title:
+            line = self.handle.center * 2
+        else:
+            line = self.handle.center
+
         for ax in self.g.axes.flat:
             __, ytop = ax.get_ylim()
-            ax.vlines(self.handle.center, 0, ytop, 'dimgrey', zorder=0,
-                      linestyles='dashed')
+            ax.vlines(line, 0, ytop, 'dimgrey', zorder=0, linestyles='dashed')
 
     def collect_labels(self, xlabel, ylabel):
         """Collect plot labels from plot title."""
