@@ -217,7 +217,7 @@ def print_settings():
             txt = f"Type: versus={Sett.stat_versus}; total={Sett.stat_total}\n"
             file.write(txt)
             if Sett.windowed:
-                file.write("windowed: trail={Sett.trail}; lead={Sett.lead}\n")
+                file.write(f"windowed: trail={Sett.trail}; lead={Sett.lead}\n")
 
         if Sett.Create_Plots:  # Plotting settings
             file.write("--- Plot Settings ---\n")

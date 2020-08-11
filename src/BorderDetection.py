@@ -12,6 +12,7 @@ Created on Fri May  8 19:03:36 2020
 
 # Other packages
 import numpy as np
+from numpy.polynomial import Chebyshev
 import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
@@ -178,22 +179,22 @@ class FullBorders:
         left, right = plt.xlim()
         locs, _ = plt.xticks()
         lbls = [int(n/2) for n in locs]
-        for ax in (ax1, ax2):
-            ybot, ytop = ax.get_ylim()
+        for axis in (ax1, ax2):
+            ybot, ytop = axis.get_ylim()
             # Add line to indicate anchoring bin
-            ax.vlines(self.anchor, ybot, ytop, 'firebrick', zorder=0,
+            axis.vlines(self.anchor, ybot, ytop, 'firebrick', zorder=0,
                       linestyles='dashed')
             # Add peak detection threshold line
-            ax.hlines(Sett.peak_thresh, xmin=left, xmax=right, linewidth=1,
+            axis.hlines(Sett.peak_thresh, xmin=left, xmax=right, linewidth=1,
                       zorder=0, linestyles='dashed', color='dimgrey')
             # Define labels and ticks
-            ax.set_xticks(locs)
-            ax.set_xticklabels(labels=lbls)
-            ax.set_xlabel('')
-            ax.set_ylabel('Score')
+            axis.set_xticks(locs)
+            axis.set_xticklabels(labels=lbls)
+            axis.set_xlabel('')
+            axis.set_ylabel('Score')
 
         # Change titles and legend location
-        ax1.set_title('Smoothed mean score')
+        ax1.set_title('Scaled mean score')
         ax2.set_title('Raw group score')
         ax2.legend(loc='center left', bbox_to_anchor=(1.01, 0.5), ncol=1)
         ax2.set_xlabel('Linear Position')
@@ -624,11 +625,18 @@ def get_fit(data, name='c', id_var=None):
     x_data = data.variable.values
     y_data = data.value.values
 
-    # Fit x and y data
-    z = np.polyfit(x_data.astype(np.float), y_data.astype(np.float), 4)
-    f = np.poly1d(z)
+    # Fit x and y data with 4th degree polynomial
+    # z = np.polyfit(x_data.astype(np.float), y_data.astype(np.float), 4)
+    # f = np.poly1d(z)
+    # x_curve = data.variable.unique()
+    # y_curve = f(x_curve)
+    
+    # !!!! Chebyshev polynomial
+    c_fit = Chebyshev.fit(x_data.astype(np.float), y_data.astype(np.float), 5,
+                          window=[0, 1])
     x_curve = data.variable.unique()
-    y_curve = f(x_curve)
+    y_curve = c_fit(x_curve)
+    # !!!! End Chebyshev fit
 
     # Create DF from obtained fit
     curve = pd.DataFrame(index=[name], columns=x_curve.astype(int),
