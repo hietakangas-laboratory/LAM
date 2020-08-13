@@ -145,7 +145,7 @@ def main(gui_root=None):
 
     # Computing total values from each sample's each bin
     if (Sett.statistics and Sett.stat_total) or Sett.process_counts:
-        sample_groups.Get_Totals()
+        sample_groups.get_totals()
 
     # Find border regions
     if Sett.border_detection:

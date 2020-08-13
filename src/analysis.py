@@ -307,7 +307,7 @@ class Samplegroups:
             lg.logprint(LAM_logger, '--> Totals done', 'i')
         lg.logprint(LAM_logger, 'All statistics done', 'i')
 
-    def Get_Totals(self):
+    def get_totals(self):
         """Count sample & channel -specific cell totals."""
 
         def _read_and_sum():
@@ -354,6 +354,9 @@ class Samplegroups:
                 # Concatenate new data to full set
                 full_df = pd.concat([full_df, chan_data], ignore_index=False,
                                     sort=False)
+
+            if full_df.empty:
+                continue
 
             # Adjust column order so that identifiers are first
             ordered = ['Sample Group', 'Variable']
@@ -532,9 +535,9 @@ class Sample(Group):
 
             # Change the generator into list of lists and drop clusters of size
             # under/over limits
-            Clusters = [list(y) for x in cl_gen for y in x if y and len(y) >=
-                        Sett.Cl_min and len(y) <= Sett.Cl_max]
-            return Clusters
+            all_cl = [list(y) for x in cl_gen for y in x if y and
+                      Sett.Cl_min <= len(y) <= Sett.Cl_max]
+            return all_cl
 
         def _find_nearest():
             """Iterate passed data to determine nearby cells."""
@@ -615,15 +618,15 @@ class Sample(Group):
             system.saveToFile(means_insert, self.paths.datadir, filename)
 
         else:  # Finding clusters
-            Clusters = _find_clusters()
+            all_cl = _find_clusters()
             # Create dataframe for storing the obtained data
             cl_data = pd.DataFrame(index=data.index,
                                    columns=['ID', 'ClusterID'])
             cl_data = cl_data.assign(ID=data.ID)  # Copy ID column
             # Give name from a continuous range to each of the found clusters
             # and add it to cell-specific data (for each belonging cell).
-            if Clusters:
-                for i, vals in enumerate(Clusters):
+            if all_cl:
+                for i, vals in enumerate(all_cl):
                     vals = [int(v) for v in vals]
                     cl_data.loc[cl_data.ID.isin(vals), 'ClusterID'] = i + 1
             else:

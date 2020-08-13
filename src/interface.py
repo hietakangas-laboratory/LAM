@@ -312,10 +312,17 @@ class base_GUI(tk.Toplevel):
                                      variable=self.FdistV,
                                      command=self.Dist_check,
                                      bd=1, relief='raised')
-        self.USubC = tk.Checkbutton(self.distf, text="Filter Size   ",
+        self.USubC = tk.Checkbutton(self.distf, text="Filter",
                                     variable=self.UseSubV,
                                     command=self.Filter_check,
                                     bd=1, relief='raised')
+        # Add distance calculation column name setting:
+        self.set_incl_col = tk.StringVar(value=Sett.incl_col)
+        self.colIn = tk.Entry(self.distf, text=self.set_incl_col.get(),
+                              bg='white', textvariable=self.set_incl_col, bd=1,
+                              relief='sunken')
+        self.colIn.grid(row=1, column=6, columnspan=2, sticky='n', pady=(2, 0))
+        
         self.clustC.grid(row=1, column=0, columnspan=2, sticky='n')
         self.FdistC.grid(row=1, column=2, columnspan=2, sticky='n')
         self.USubC.grid(row=1, column=4, columnspan=2, sticky='n')
@@ -460,18 +467,23 @@ class base_GUI(tk.Toplevel):
     def Filter_check(self):
         """Relevant changes when filtering by size is checked."""
         if not self.UseSubV.get():
+            global setClSiz, setDSiz 
+            Sett.Cl_inclusion = 0
+            Sett.inclusion = 0
+            setClSiz.set(0)
+            setDSiz.set(0)
             for widget in [self.DSizlbl, self.DSizIn, self.VDbut1, self.VDbut2,
                            self.ClSizlbl, self.ClSizIn, self.VClbut1,
-                           self.VClbut2]:
+                           self.VClbut2, self.colIn]:
                 widget.configure(state='disable')
         else:
             if self.FdistV.get():
                 for widget in [self.DSizlbl, self.DSizIn, self.VDbut1,
-                               self.VDbut2]:
+                               self.VDbut2, self.colIn]:
                     widget.configure(state='normal')
             if self.clustV.get():
                 for widget in [self.ClSizlbl, self.ClSizIn, self.VClbut1,
-                               self.VClbut2]:
+                               self.VClbut2, self.colIn]:
                     widget.configure(state='normal')
 
     def MP_check(self):
@@ -986,16 +998,6 @@ class Additional_data(tk.Toplevel):
             self.fIDIn.grid(row=row, column=0, columnspan=3)
             self.cIDIn.grid(row=row, column=3, columnspan=3)
         self.replace_check()
-
-        # Add distance calculation column name setting:
-        self.set_incl_col = tk.StringVar(value=Sett.incl_col)
-        self.lbl4 = tk.Label(self.Dframe, text='Distances incl. column:', bd=1,
-                             font=('Arial', 9))
-        self.lbl4.grid(row=row+1, column=0, columnspan=2, pady=(20, 0))
-        self.colIn = tk.Entry(self.Dframe, text=self.set_incl_col.get(),
-                              bg='white', textvariable=self.set_incl_col, bd=2,
-                              relief='sunken')
-        self.colIn.grid(row=row+1, column=2, columnspan=3, pady=(20, 0))
 
     def replace_check(self):
         """Change relevant settings when replaceID is checked."""

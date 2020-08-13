@@ -625,7 +625,7 @@ def get_fit(data, name='c', id_var=None):
     x_data = data.variable.values.astype(np.float)
     y_data = data.value.values.astype(np.float)
 
-    # Fit x and y data with 4th degree polynomial
+    #  #Fit x and y data with 4th degree polynomial
     # z = np.polyfit(x_data.astype(np.float), y_data.astype(np.float), 4)
     # f = np.poly1d(z)
     # x_curve = data.variable.unique()
@@ -635,7 +635,7 @@ def get_fit(data, name='c', id_var=None):
     c_fit = Chebyshev.fit(x_data, y_data, 5, domain=[0, 1])
     x_curve = data.variable.unique()
     y_curve = c_fit(x_curve)
-    # !!!! End Chebyshev fit
+    # !!!! End
 
     # Create DF from obtained fit
     curve = pd.DataFrame(index=[name], columns=x_curve.astype(int),
