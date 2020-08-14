@@ -585,11 +585,11 @@ class Sample(Group):
             return new_data, means, filename
 
         if vol_incl > 0:  # Subsetting of data based on cell volume
-            data_ind = subset_data(data, compare, vol_incl)
+            data_ind = subset_data(data, compare, vol_incl, self.name)
             if 'test_data' in kws.keys():  # Obtain target channel if used
                 test_data = kws.pop('test_data')
                 test_data.name = data.name
-                test_ind = subset_data(test_data, compare, vol_incl)
+                test_ind = subset_data(test_data, compare, vol_incl, self.name)
         elif 'test_data' in kws.keys():
             test_data = kws.pop('test_data')
             test_ind = test_data.index
@@ -696,7 +696,7 @@ def DropOutlier(data):
     return data
 
 
-def subset_data(data, compare, vol_incl):
+def subset_data(data, compare, vol_incl, sample):
     """Get indexes of cells based on values in a column."""
 
     if not isinstance(data, pd.DataFrame):
@@ -705,20 +705,26 @@ def subset_data(data, compare, vol_incl):
         print(msg)
         return None
 
-    error_msg = "Column {} not found for {}".format(Sett.incl_col, data.name)
+    # Search for the filtering column:
     match_str = re.compile(Sett.incl_col, re.I)
     cols = data.columns.str.match(match_str)
 
-    if compare.lower() == 'greater':
-        try:  # Get only cells that are of greater volume
+    # If no columns or multiple found:
+    if not cols.any():
+        e_msg = f"Column '{Sett.incl_col}' not found for {sample} {data.name}."
+        print(f"ERROR: {e_msg}\n")
+        lg.logprint(LAM_logger, e_msg, 'e')
+        sub_ind = None
+    elif sum(cols) > 1:
+        id_str = f"{sample} {data.name}"
+        msg = f"Multiple columns with '{Sett.incl_col}' found for " + id_str
+        print(f"WARNING: {msg}. Give specific name for filtering column.\n")
+
+    # Find indices of data to retain:
+    if compare.lower() == 'greater': # Get only cells that are of greater value
             sub_ind = data.loc[(data.loc[:, cols].values >= vol_incl), :].index
-        except KeyError:
-            print(error_msg)
-    else:
-        try:  # Get only cells that are of lesser volume
+    else:  # Get only cells that are of lesser value
             sub_ind = data.loc[(data.loc[:, cols].values <= vol_incl), :].index
-        except KeyError:
-            print(error_msg)
     return sub_ind
 
 

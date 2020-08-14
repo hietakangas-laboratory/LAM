@@ -316,13 +316,13 @@ class base_GUI(tk.Toplevel):
                                     variable=self.UseSubV,
                                     command=self.Filter_check,
                                     bd=1, relief='raised')
-        # Add distance calculation column name setting:
+        # Add distance calculation's filter column name variable:
         self.set_incl_col = tk.StringVar(value=Sett.incl_col)
         self.colIn = tk.Entry(self.distf, text=self.set_incl_col.get(),
                               bg='white', textvariable=self.set_incl_col, bd=1,
                               relief='sunken')
+        # Create grid placement:
         self.colIn.grid(row=1, column=6, columnspan=2, sticky='n', pady=(2, 0))
-        
         self.clustC.grid(row=1, column=0, columnspan=2, sticky='n')
         self.FdistC.grid(row=1, column=2, columnspan=2, sticky='n')
         self.USubC.grid(row=1, column=4, columnspan=2, sticky='n')
@@ -646,6 +646,8 @@ class base_GUI(tk.Toplevel):
         # Distance calculations
         Sett.Find_Distances = self.FdistV.get()
         Sett.Find_Clusters = self.clustV.get()
+        if self.UseSubV:
+            Sett.incl_col = self.set_incl_col.get()
         if Sett.Find_Distances:
             ChStr = setDCh.get().split(',')
             for i, channel in enumerate(ChStr):
@@ -1053,7 +1055,6 @@ class Additional_data(tk.Toplevel):
         """Save settings when exiting Other-window."""
         Sett.AddData = self.addDict
         Sett.replaceID = self.repID.get()
-        Sett.incl_col = self.set_incl_col.get()
         if Sett.replaceID:
             fileIDs = []
             changeIDs = []
