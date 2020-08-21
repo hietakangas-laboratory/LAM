@@ -433,13 +433,15 @@ class GetSample:
         system.saveToFile(data, self.sampledir, ChString, append=False)
         return data
 
-    def find_counts(self, channelName, datadir):
+    def find_counts(self, channel_name, datadir):
         """Gather projected features and find bin counts."""
         counts = np.bincount(self.data['DistBin'],
                              minlength=Sett.projBins)
         counts = pd.Series(np.nan_to_num(counts), name=self.name)
-        ChString = 'All_{}.csv'.format(channelName)
+        ChString = 'All_{}.csv'.format(channel_name)
         system.saveToFile(counts, datadir, ChString)
+        if channel_name == Sett.vectChannel:
+            test_count_projection(counts)
 
     def test_projection(self, name):
         if self.data["DistBin"].isna().any():
@@ -479,7 +481,7 @@ class GetChannel:
         """Read relevant additional data of channel."""
 
         def _testVariance(data):
-            """Test if additional data column contains any variance."""
+            """Test if additional data column contains variance."""
             for col in data.columns.difference(['ID']):
                 test = data.loc[:, col].dropna()
                 if test.nunique() <= 2:
@@ -807,6 +809,7 @@ def Get_Counts(PATHS):
     store.center = MPmax
     # Find the size of needed dataframe, i.e. so that all anchored samples fit
     MPdiff = MPmax - MPmin
+
     if not any([Sett.process_counts, Sett.process_samples]):
         # Find all sample groups in the analysis from the found MPs.
         FSamples = [p for p in PATHS.samplesdir.iterdir() if p.is_dir()]
@@ -949,3 +952,8 @@ def vector_test(path):
         print("-> {}".format(smpl))
     lg.logprint(LAM_logger, msg, 'c')
     raise AssertionError
+
+
+def test_count_projection(counts):
+    if (counts == 0).sum() > counts.size / 4:
+        print('   WARNING: Uneven projection <- vector may be faulty!')

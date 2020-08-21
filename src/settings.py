@@ -138,8 +138,8 @@ class settings:
     Cl_incl_type = ""       # Same as above in feature-to-feature distances
     Cl_min = 3
     Cl_max = 50
-    
-    
+
+
     # ---BORDER DETECTION--- #
     
     # Name of channel from which scoring variables are collected from

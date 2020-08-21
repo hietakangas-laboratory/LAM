@@ -363,7 +363,7 @@ class Samplegroups:
             cols = ordered + (full_df.columns.drop(ordered).tolist())
             full_df = full_df[cols]
 
-            # Drop samples that have nonvariant data
+            # Drop samples that have invariant data
             full_df = full_df[full_df.iloc[:, :-3].nunique(axis=1,
                                                            dropna=True) > 1]
 
@@ -618,11 +618,24 @@ class Sample(Group):
             system.saveToFile(means_insert, self.paths.datadir, filename)
 
         else:  # Finding clusters
+
+            # DBSCAN TEST
+            # from sklearn.cluster import DBSCAN
+            # model = DBSCAN(eps=Sett.Cl_maxDist, min_samples=Sett.Cl_min)
+            # clusters = model.fit(xy_pos.loc[:, ['x', 'y', 'z']].values)
+            # cl_labels = pd.Series(clusters.labels_).replace(-1, np.nan)
+            # DBSCAN END TEST
+
             all_cl = _find_clusters()
             # Create dataframe for storing the obtained data
-            cl_data = pd.DataFrame(index=data.index,
-                                   columns=['ID', 'ClusterID'])
+            cl_data = pd.DataFrame(index=data.index, columns=['ID',
+                                                              'ClusterID'])
             cl_data = cl_data.assign(ID=data.ID)  # Copy ID column
+
+            # DBSCAN
+            # cl_data.loc[cl_data.ID == xy_pos.ID, 'ClusterID'] = cl_labels
+            # DBSCAN END
+
             # Give name from a continuous range to each of the found clusters
             # and add it to cell-specific data (for each belonging cell).
             if all_cl:
