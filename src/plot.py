@@ -656,11 +656,11 @@ class plotting:
     def stat_versus(self, Stats, path):
         """Plot statistics of group versus group for all variables."""
         # Restructure data to be plottable:
-        ctrl_data = Stats.ctrl_data
-        test_data = Stats.test_data
+        ctrl_data = Stats.ctrl_data.T
+        test_data = Stats.test_data.T
         if Sett.Drop_Outliers:  # Drop outliers
-            ctrl_data = system.drop_outliers(ctrl_data.T, raw=True)
-            test_data = system.drop_outliers(test_data.T, raw=True)
+            ctrl_data = system.drop_outliers(ctrl_data, raw=True)
+            test_data = system.drop_outliers(test_data, raw=True)
         # Add identifier
         ctrl_data.loc[:, 'Sample Group'] = Stats.ctrl_grp
         test_data.loc[:, 'Sample Group'] = Stats.test_grp

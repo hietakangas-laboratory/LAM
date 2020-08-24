@@ -141,7 +141,7 @@ class settings:
 
 
     # ---BORDER DETECTION--- #
-    
+
     # Name of channel from which scoring variables are collected from
     border_channel = vectChannel  # Default is vector creation channel
     peak_thresh = 0.5  # Border score threshold for peak detection
@@ -165,16 +165,19 @@ class settings:
     windowed = True
     trail = 1
     lead = 1
-    ylim = 35               # negative log2 y-limit
-    alpha = 0.05            # for rejection of H_0, applies to statistics files
+    # for rejection of H_0, applies to statistics files
+    alpha = 0.05
+
     # Plots
     stars = False  # Make P-value stars (*:<0.05 **:<0.01 ***:<0.001)
     fill = True  # fill significant bins with marker color
     negLog2 = True  # Forces stars to be False
-    observations = True  # Plot individual observations. DEPRECATED!
+    ylim = 35  # negative log2 y-limit
+
     # The name of the control group that the statistics are run against.
     cntrlGroup = "starv"
 
+    observations = True  # Plot individual observations. DEPRECATED!
 
 
     # ---PLOTTING OPTIONS--- #
