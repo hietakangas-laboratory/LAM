@@ -252,8 +252,12 @@ class MakePlot:
         for ind, ax in enumerate(self.g.axes.flat):
             # Find rejected H0 for current axis
             row = self.sec_data.iloc[ind, :]
-            rejects = row.iloc[row.index.get_level_values(1).str.contains(
-                'Reject')].where(row).dropna()
+            try:
+                rejects = row.iloc[row.index.get_level_values(1).str.contains(
+                    'Reject')].where(row).dropna()
+            except ValueError:
+                print(f" --> {row.name}: Missing statistics")
+                continue
             rejectN = np.count_nonzero(rejects.to_numpy())
             ax.set_ylim(bottom=0)
             if rejectN > 0:  # If any rejected H0
