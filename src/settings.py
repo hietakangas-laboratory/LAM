@@ -13,6 +13,8 @@ class settings:
     # ####################### PRIMARY SETTINGS #######################
     GUI = True  # Use graphical user interface (True / False)
     force_dialog = False  # Force no user input (True for no dialog)
+    vector_loop = True  # Loop vector creation until ready
+
     # Detect border regions
     border_detection = True
     # Determine width of gut based on vector channel projection distances
@@ -22,6 +24,7 @@ class settings:
     # DEFINE PATH TO ANALYSIS FOLDER:
     # (Use input r'PATH' where PATH is your path)
     workdir = r'C:'
+
     # Whether to gather raw data and create vectors. If False, expects to find
     # pre-created datafiles in the Analysis Data directory, i.e. a previous
     # full run has been made, and there has been no edits to the data files.

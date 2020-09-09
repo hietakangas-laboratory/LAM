@@ -803,7 +803,7 @@ def Get_Widths(samplesdir, datadir):
     """Find widths of samples along their vectors."""
     msg = "Necessary files for width approximation not found for "
 
-    for path in samplesdir.iterdir():
+    for path in [p for p in samplesdir.iterdir() if p.is_dir()]:
         # Find necessary data files:
         files = [p for p in path.iterdir() if p.is_file()]
 

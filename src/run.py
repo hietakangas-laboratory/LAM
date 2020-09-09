@@ -87,7 +87,7 @@ For more extensive description and instructions, see user manual.
 
 # LAM module
 from settings import settings as Sett
-import ParseCmds as pc
+import parse_cmds as pc
 
 # Standard libs
 import sys
@@ -99,7 +99,7 @@ def main(gui_root=None):
     import system
     import analysis
     import process
-    import BorderDetection as bd
+    import border_detection as bd
     from settings import store
 
     system_paths = system.start()

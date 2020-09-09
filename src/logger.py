@@ -12,7 +12,7 @@ import logging
 import time
 # A list of logger names used by the modules. Used for clearing of handlers.
 loggers = ['run', 'process', 'analysis', 'interface', 'plot', 'system',
-           'pfunc', 'BorderDetection']
+           'pfunc', 'border_detection']
 # Needed variables
 logFile = ""
 ctime = time.strftime("%d%b%y_%H%M%S")

@@ -183,10 +183,10 @@ class FullBorders:
             ybot, ytop = axis.get_ylim()
             # Add line to indicate anchoring bin
             axis.vlines(self.anchor, ybot, ytop, 'firebrick', zorder=0,
-                      linestyles='dashed')
+                        linestyles='dashed')
             # Add peak detection threshold line
             axis.hlines(Sett.peak_thresh, xmin=left, xmax=right, linewidth=1,
-                      zorder=0, linestyles='dashed', color='dimgrey')
+                        zorder=0, linestyles='dashed', color='dimgrey')
             # Define labels and ticks
             axis.set_xticks(locs)
             axis.set_xticklabels(labels=lbls)
@@ -223,8 +223,8 @@ class GetSampleBorders:
             self.data = data.loc[:, id_cols + self.var_cols]
             self.error = False
         except KeyError:  # If all required columns are not found
-            print(f'All variables not found in data for {self.name}.')
-            print('Check data and/or border_vars-setting.')
+            cols = [v for v in self.var_cols if v not in data.columns]
+            print(f'{self.name}: Variables not found - {", ".join(cols)}')
             self.error = True
         except FileNotFoundError:
             print(f'ERROR: {filepath.name} not found for {self.name}.')
@@ -470,7 +470,7 @@ def append_binning(sample_starts, peaks):
     # Reindex DF to have all samples
     peaks = peaks.reindex(columns=peaks.columns.append(sample_starts.index))
     # Define index location of each group's peaks on each sample
-    peaks = peaks.apply(lambda x: _define_sample_bin(x), axis=1)
+    peaks = peaks.apply(_define_sample_bin, axis=1)
     return peaks
 
 
@@ -495,7 +495,7 @@ def detect_peaks(score_arr, x_dist=6, thresh=0.15, width=1):
 
         # POSITIVE peaks
         peaks, _ = find_peaks(total, distance=x_dist, height=thresh,
-                              width=width)  #, threshold=thresh)
+                              width=width)  # , threshold=thresh)
         # Find prominence of found peaks
         prom = peak_prominences(total, peaks)[0]
         peaks = total.index[peaks].get_level_values(1).values
@@ -630,7 +630,7 @@ def get_fit(data, name='c', id_var=None):
     # f = np.poly1d(z)
     # x_curve = data.variable.unique()
     # y_curve = f(x_curve)
-    
+
     # !!!! Chebyshev polynomial
     c_fit = Chebyshev.fit(x_data, y_data, 5, domain=[0, 1])
     x_curve = data.variable.unique()
