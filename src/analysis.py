@@ -734,10 +734,10 @@ def subset_data(data, compare, vol_incl, sample):
         print(f"WARNING: {msg}. Give specific name for filtering column.\n")
 
     # Find indices of data to retain:
-    if compare.lower() == 'greater': # Get only cells that are of greater value
-            sub_ind = data.loc[(data.loc[:, cols].values >= vol_incl), :].index
+    if compare.lower() == 'greater':  # Get only cells that are greater value
+        sub_ind = data.loc[(data.loc[:, cols].values >= vol_incl), :].index
     else:  # Get only cells that are of lesser value
-            sub_ind = data.loc[(data.loc[:, cols].values <= vol_incl), :].index
+        sub_ind = data.loc[(data.loc[:, cols].values <= vol_incl), :].index
     return sub_ind
 
 

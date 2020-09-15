@@ -595,6 +595,8 @@ class plotting:
             handle = system.DataHandler(self.sgroups, ch_paths)
             all_data = handle.get_sample_data(Sett.AddData.keys(),
                                               'drop_outlier', **new_kws)
+            if all_data.empty:
+                continue
             # Make plot:
             p_title = 'Distributions - Additional {} Data'.format(channel)
             plotter = MakePlot(all_data, handle, p_title)

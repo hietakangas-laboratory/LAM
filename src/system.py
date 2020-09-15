@@ -166,6 +166,7 @@ class DataHandler:
     def get_sample_data(self, col_ids, *args, **kws):
         """Collect data from channel-specific sample files."""
         melt = False
+        error = False
 
         all_data = pd.DataFrame()  # Holds full data
         for path in self.paths:
@@ -188,18 +189,23 @@ class DataHandler:
                                                   ).split('_')[0]
 
             if 'melt' in kws.keys():
-                m_kws = kws.get('melt')
-                sub_data = sub_data.melt(id_vars=m_kws.get('id_vars'),
-                                         value_vars=m_kws.get('value_vars'),
-                                         var_name=m_kws.get('var_name'),
-                                         value_name=m_kws.get('value_name'))
+                mkws = kws.get('melt')
+                try:
+                    sub_data = sub_data.melt(id_vars=mkws.get('id_vars'),
+                                             value_vars=mkws.get('value_vars'),
+                                             var_name=mkws.get('var_name'),
+                                             value_name=mkws.get('value_name'))
+                except KeyError:
+                    error = True
                 melt = True
 
             # Concatenate new data to full set
-            all_data = pd.concat([all_data, sub_data], sort=True)
+            if not error:
+                all_data = pd.concat([all_data, sub_data], sort=True)
 
         # Drop outliers if needed
-        if 'drop_outlier' in args and Sett.Drop_Outliers:
+        if 'drop_outlier' in args and (Sett.Drop_Outliers and
+                                       not all_data.empty):
             all_data = drop_outliers(all_data, melt, **kws)
 
         # Infer datatype of columns

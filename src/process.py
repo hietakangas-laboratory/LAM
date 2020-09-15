@@ -452,7 +452,7 @@ class GetSample:
 class GetChannel:
     """Find and read channel data plus additional data."""
 
-    def __init__(self, path, sample, dataKeys, datadir):
+    def __init__(self, path, sample, data_keys, datadir):
         self.sample = sample
         self.datafail = []
         self.datadir = datadir
@@ -460,7 +460,7 @@ class GetChannel:
         self.path = path
         self.pospath = next(self.path.glob("*Position.csv"))
         self.data = self.read_channel(self.pospath)
-        self.read_additional(dataKeys)
+        self.read_additional(data_keys)
         if 'ClusterID' in self.data.columns:
             store.clusterPaths.append(self.path)
 
