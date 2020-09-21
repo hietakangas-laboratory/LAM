@@ -1,9 +1,8 @@
 # -*- coding: utf-8 -*-
 """
-Created on Mon Mar 16 16:34:33 2020
-
 Individual plot functions for LAM.
 
+Created on Mon Mar 16 16:34:33 2020
 @author: Arto I. Viitanen
 """
 # LAM modules

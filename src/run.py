@@ -84,23 +84,22 @@ separate directory that contains position.csv for a single coordinate, the MP.
 
 For more extensive description and instructions, see user manual.
 """
+# Standard libs
+import sys
+import pathlib as pl
 
 # LAM module
-from settings import settings as Sett
+from settings import store, settings as Sett
 import parse_cmds as pc
 import system
 import analysis
 import process
 import border_detection as bd
-from settings import store
 import plot
-import plotfuncs as pfunc
-
-# Standard libs
-import sys
-import pathlib as pl
+import plotfuncs
 
 LAM_logger = None
+
 
 def main(gui_root=None):
     """Perform LAM-analysis based on settings.py."""

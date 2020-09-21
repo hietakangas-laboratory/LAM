@@ -1,38 +1,44 @@
 # -*- coding: utf-8 -*-
 """
+Create window for creating vectors for all samples in loops with different
+settings.
+
 Created on Tue Sep 15 11:35:28 2020
-
-@author: arska
+@author: Arto I. Viitanen
 """
-from settings import settings as Sett
-import system
-import process
-import plotfuncs as pfunc
-
 import pathlib as pl
 import tkinter as tk
 import tkinter.ttk as ttk
 import tkinter.font as tkFont
 
+# LAM imports
+from settings import settings as Sett
+import system
+import process
+import plotfuncs as pfunc
+
 
 class VectorWin:
+    """Open window for vector creation in loops."""
     keys = ['workdir', 'vectChannel', 'project', 'projBins', 'SkeletonVector',
             'SkeletonResize', 'find_dist', 'BDiter', 'SigmaGauss',
             'simplifyTol', 'medianBins', 'process_samples']
     head = ('sample', 'group', 'path')
 
     def __init__(self, master, handle):
+        # The tkinter selection coloring is broken, these fix it:
         ttk.Style().map("Treeview", foreground=fixed_map("foreground"),
                         background=fixed_map("background"))
         ttk.Style().map('Treeview', background=[('selected', 'lightgreen')],
                         foreground=[('selected', 'darkgreen')])
-        self.master = master
+
         # Create window
-        self.window = tk.Toplevel(self.master)
+        self.window = tk.Toplevel(master)
         self.window.lift()
         self.window.title("Vector Creation")
         self.window.protocol("WM_DELETE_WINDOW", self.func_destroy)
         self.window.bind('<Return>', self.keep_vectors)
+
         # Assign variables
         self.handle = handle
         self.variables = handle.vars.loc[VectorWin.keys, :]
@@ -42,11 +48,13 @@ class VectorWin:
         self.sample_vars = [(p.name, str(p.name).split('_')[0], str(p))
                             for p in self.samples]
         self.tree = None
+
         # Create widgets
         self._setup()
         self._build()
 
     def _setup(self):
+        """Create window elements."""
         # CREATE TREEVIEW
         self.tree = ttk.Treeview(self.window, columns=VectorWin.head,
                                  show="headings")
@@ -75,7 +83,7 @@ class VectorWin:
         quit_b.configure(height=1, width=5, fg="red")
         quit_b.grid(row=29, column=3, sticky='ne')
         # Keep
-        keep_b = tk.Button(self.window, text="Keep\n<Enter>",  font=style,
+        keep_b = tk.Button(self.window, text="Keep\n<Enter>", font=style,
                            command=self.keep_vectors)
         keep_b.configure(height=2, width=7, fg="green")
         keep_b.grid(row=29, column=2, sticky='nw')
@@ -86,6 +94,7 @@ class VectorWin:
         help_b.grid(row=29, column=0, columnspan=1, sticky='nw')
 
     def _build(self):
+        """Assign sample information in to treeview."""
         headers = VectorWin.head
         for col in headers:
             self.tree.heading(col, text=col.title())
@@ -101,21 +110,29 @@ class VectorWin:
                     self.tree.column(headers[ind], width=col_w)
 
     def _done(self):
+        """Exit window and set vector creation-setting off."""
         self.variables.at['process_samples', 'ref'].set(False)
         self.window.destroy()
 
     def func_destroy(self):
+        """Exit window."""
         self.window.destroy()
 
     def creation_loop(self):
+        """Get settings from main window and perform vector creation."""
+        # Translate tkinter variables of main window
         options = self.handle.translate()
         options['workdir'] = pl.Path(options['workdir'])
+        # Adjust settings with the translated variables
         self.handle.change_settings(options)
+        # Get necessary paths for vector creation
         PATHS = system.start(test_vectors=False)
-        process.check_resize_step(Sett.SkeletonResize)
-        print_settings()
+        process.check_resize_step(Sett.SkeletonResize)  # Test resize setting
+        print_settings()  # Print used creation settings
+        # Loop all samples that don't have a valid vector
         for sample in self.sample_vars:
-            path = Sett.workdir.joinpath(sample[0])
+            path = Sett.workdir.joinpath(sample[0])  # Sample's data path
+            # Collect sample data:
             sample = process.GetSample(path, PATHS)
             print("{}  ...".format(sample.name))
             sample.vect_data = sample.get_vect_data(Sett.vectChannel)
@@ -125,23 +142,28 @@ class VectorWin:
             else:
                 sample.create_median()
         print("Creation loop done. Select samples to keep.\n")
+        # Creation of vector plot of all samples
         sample_dirs = [p for p in PATHS.samplesdir.iterdir() if p.is_dir()]
         pfunc.create_vector_plots(PATHS.samplesdir, sample_dirs)
 
     def keep_vectors(self):
+        """Remove selected samples from creation loop and refresh table."""
+        # Find selected samples
         valids = self.tree.selection()
         valid_vars = [tuple(self.tree.item(s, 'values')) for s in valids]
+        # Remove selected items
         for item in valid_vars:
             self.sample_vars.remove(item)
+        # Refresh table
         self._setup()
         self._build()
 
     def open_help(self):
+        """Open help window."""
         self.help = tk.Toplevel(self.window)
         self.help.lift()
         self.help.title("Vector Creation Help")
-        text = (
-"""
+        text = ("""
 Creation of vectors for samples in loops with different creation settings.
 
 USAGE:
@@ -165,6 +187,7 @@ USAGE:
 
 
 def fixed_map(option):
+    """Repair broken tkinter coloring."""
     # Returns the style map for 'option' with any styles starting with
     # ("!disabled", "!selected", ...) filtered out
 
@@ -175,6 +198,7 @@ def fixed_map(option):
 
 
 def print_settings():
+    """Print settings of creation loop."""
     if Sett.SkeletonVector:
         sett_dict = {'Type': 'Skeleton', 'Simplif.': Sett.simplifyTol,
                      'Resize': Sett.SkeletonResize, 'Distance': Sett.find_dist,
@@ -182,7 +206,4 @@ def print_settings():
     else:
         sett_dict = {'Type': 'Median', 'Simplif.': Sett.simplifyTol,
                      'Bins': Sett.medianBins}
-
-    sett_string = '  |  '.join(["{} = {}".format(k, v) for k, v in
-                                sett_dict.items()])
     print(f'Settings: {sett_dict}')
