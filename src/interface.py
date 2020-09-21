@@ -8,6 +8,7 @@ Created on Wed Mar  6 12:42:28 2019
 """
 # Standard libraries
 import tkinter as tk
+from tkinter import filedialog
 from copy import deepcopy
 from itertools import chain
 # Other packages
@@ -16,7 +17,9 @@ import pandas as pd
 # LAM modules
 from run import main_catch_exit
 from settings import settings as Sett
-from tkinter import filedialog
+import vector_loop
+
+LAM_logger = None
 
 
 class base_GUI(tk.Toplevel):
@@ -144,20 +147,26 @@ class base_GUI(tk.Toplevel):
                                 command=lambda x=wins[1]: self.open_win(x))
         self.stats_b = tk.Button(self.bottomf, font=style, text="Stats",
                                  command=lambda x=wins[2]: self.open_win(x))
+        self.vector_b = tk.Button(self.bottomf, font=style,
+                                  text="Create\nvectors",
+                                  command=self.vector_creation)
         # Style
         self.run_b.configure(height=2, width=7, bg='lightgreen', fg="black")
         quit_b.configure(height=1, width=5, fg="red")
         add_b.configure(height=2, width=7)
         self.plot_b.configure(height=2, width=7)
         self.stats_b.configure(height=2, width=7)
+        self.vector_b.configure(height=2, width=6, bg='#ffe9ba', fg="black")
         # Grid
-        self.run_b.grid(row=1, column=4, columnspan=1, padx=(55, 15),
+        self.run_b.grid(row=1, column=4, columnspan=1, padx=(5, 15),
                         sticky='ne')
         quit_b.grid(row=1, column=5, sticky='nes')
         add_b.grid(row=1, column=0, columnspan=1, padx=(0, 5), sticky='nw')
         self.plot_b.grid(row=1, column=1, columnspan=1, padx=(0, 5),
                          sticky='nw')
         self.stats_b.grid(row=1, column=2, columnspan=1, sticky='nw')
+        self.vector_b.grid(row=1, column=3, columnspan=1, padx=(55, 0),
+                           sticky='ne')
 
         # RIGHT FRAME / PLOTTING
         # header
@@ -354,7 +363,7 @@ class base_GUI(tk.Toplevel):
                                  col_in],
                      'fltr_dist': [d_sizelbl, d_size_in, d_but1, d_but2,
                                    col_in],
-                     'mp': [lmp, mpin], 'process': [bin_in, lbl5, ch_in, lbl4]}
+                     'process': [bin_in, lbl5, ch_in, lbl4], 'mp': [lmp, mpin]}
 
         # Disable / enable widgets
         self.process_check()
@@ -461,9 +470,11 @@ class base_GUI(tk.Toplevel):
         widgets = (wdg for wdg in self.leftf.winfo_children() if wdg not in
                    self.wdgs['process'])
         if not self.handle('process_samples').get():
+            self.vector_b.configure(state='disable', bg='#d9cfbd')
             configure('disable', widgets)
             hidev = 'disable'
         else:
+            self.vector_b.configure(state='normal', bg='#e3bf78')
             configure('normal', widgets)
             self.switch_pages()
             hidev = 'normal'
@@ -508,6 +519,7 @@ class base_GUI(tk.Toplevel):
         # Get modified options
         options = self.handle.translate()
         options['workdir'] = pl.Path(options['workdir'])  # Transform workdir
+        self.detect_chans()
         # If needed, change settings that have high risk of interfering
         if not options['process_counts']:
             ops = ('measure_width', 'useMP', 'project')
@@ -604,6 +616,11 @@ class base_GUI(tk.Toplevel):
         store.channels = [c for c in det_chans if
                           c.lower() != self.handle('MPname').get().lower()]
 
+    def vector_creation(self):
+        win = vector_loop.VectorWin(self.master, self.handle)
+        win.window.wait_window()
+        self.process_check()
+
     def vector_frame(self):
         """Create frame for vector creation settings."""
         for F in (SkelSettings, MedianSettings):
@@ -679,7 +696,7 @@ class MedianSettings(tk.Frame):
                  ).grid(row=2, column=1, pady=(0, 63))
 
 
-class OtherWin():
+class OtherWin:
     """Container for Other-window settings."""
 
     def __init__(self, master, check, ref):
@@ -837,7 +854,7 @@ class OtherWin():
         self.handle.vars.loc[:, 'check'] = False
 
 
-class PlotWin():
+class PlotWin:
     """Container for Other-window settings."""
 
     def __init__(self, master, check, ref):

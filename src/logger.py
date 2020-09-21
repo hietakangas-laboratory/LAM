@@ -10,9 +10,10 @@ Created on Wed Mar  6 12:42:28 2019
 # Standard libraries
 import logging
 import time
+import sys
 # A list of logger names used by the modules. Used for clearing of handlers.
 loggers = ['run', 'process', 'analysis', 'interface', 'plot', 'system',
-           'pfunc', 'border_detection']
+           'plotfuncs', 'border_detection']
 # Needed variables
 logFile = ""
 ctime = time.strftime("%d%b%y_%H%M%S")
@@ -68,6 +69,14 @@ def _get_handler():
     return file_handler
 
 
+def create_loggers():
+    for module in loggers:
+        mod = sys.modules.get(module)
+        if mod.LAM_logger is not None:
+            continue
+        setattr(mod, 'LAM_logger', get_logger(module))
+
+
 def Close():
     """Close all created loggers."""
     for lgr in loggers:
@@ -75,6 +84,8 @@ def Close():
         for handler in logger.handlers:
             handler.close()
         logger.handlers = []
+        mod = sys.modules.get(lgr)
+        setattr(mod, 'LAM_logger', None)
 
 
 def Update():

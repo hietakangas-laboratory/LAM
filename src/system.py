@@ -23,10 +23,7 @@ import logger as lg
 import plot
 from settings import store, settings as Sett
 
-try:
-    LAM_logger = lg.get_logger(__name__)
-except AttributeError:
-    print('Cannot get logger')
+LAM_logger = None
 
 
 class paths:
@@ -56,8 +53,8 @@ class paths:
 
         except KeyboardInterrupt:
             raise KeyboardInterrupt
-
-        lg.logprint(LAM_logger, 'Directories successfully created.', 'i')
+        if LAM_logger is not None:
+            lg.logprint(LAM_logger, 'Directories successfully created.', 'i')
 
     def clear_analysis(self):
         """Clear existing analysis data files."""
@@ -286,7 +283,7 @@ def saveToFile(data, directory, filename, append=True, w_index=False):
             data.to_frame().to_csv(str(path), index=w_index)
 
 
-def start():
+def start(test_vectors=True):
     """Check that everything is OK when starting a run."""
     # If workdir variable isn't pathlib.Path, make it so
     if not isinstance(Sett.workdir, pl.Path):
@@ -301,6 +298,9 @@ def start():
 
     # Otherwise create paths and directories
     PATHS = paths(Sett.workdir)
+
+    if not test_vectors:
+        return PATHS
 
     # Check that vector channel data are found
     if Sett.process_samples or (Sett.measure_width and Sett.process_counts):

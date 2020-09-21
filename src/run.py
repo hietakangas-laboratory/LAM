@@ -88,27 +88,29 @@ For more extensive description and instructions, see user manual.
 # LAM module
 from settings import settings as Sett
 import parse_cmds as pc
+import system
+import analysis
+import process
+import border_detection as bd
+from settings import store
+import plot
+import plotfuncs as pfunc
 
 # Standard libs
 import sys
 import pathlib as pl
 
+LAM_logger = None
 
 def main(gui_root=None):
     """Perform LAM-analysis based on settings.py."""
-    import system
-    import analysis
-    import process
-    import border_detection as bd
-    from settings import store
-
     system_paths = system.start()
 
     # If sample processing set to True, create vectors, collect and project
     # data etc. Otherwise continue to plotting and group-wise operations.
     if Sett.process_samples:
         system.test_vector_ext(system_paths.samplesdir)
-        process.Create_Samples(system_paths)
+        process.create_samples(system_paths)
         # If only creating vectors, return from main()
         if not any([Sett.process_counts, Sett.process_dists,
                     Sett.Create_Plots, Sett.statistics]):
@@ -178,7 +180,7 @@ def main_catch_exit(LAM_logger=None, gui_root=None):
     if LAM_logger is None:  # If no logger given, get one
         LAM_logger = lg.setup_logger(__name__, new=True)
         lg.print_settings()  # print settings of analysis to log
-        LAM_logger = lg.get_logger(__name__)
+        lg.create_loggers()
 
     try:
         print("START ANALYSIS")

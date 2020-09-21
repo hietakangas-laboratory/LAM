@@ -18,10 +18,7 @@ import numpy as np
 import seaborn as sns
 import pandas as pd
 
-try:
-    LAM_logger = lg.get_logger(__name__)
-except AttributeError:
-    print('Cannot get logger')
+LAM_logger = None
 
 
 def bivariate_kde(plotter, **in_kws):
@@ -180,53 +177,58 @@ def lines(plotter, **kws):
     return g
 
 
-def vector_plots(savepath, samplename, vectordata, X, Y, binaryArray=None,
-                 skeleton=None):
-    """Plot sample-specific vectors and skeleton plots."""
-    ext = ".{}".format(Sett.saveformat)
-    # Get vector creation settings and create string
-    if Sett.SkeletonVector:
-        sett_dict = {'Type': 'Skeleton', 'Simplif.': Sett.simplifyTol,
-                     'Resize': Sett.SkeletonResize, 'Distance': Sett.find_dist,
-                     'Dilation': Sett.BDiter, 'Smooth': Sett.SigmaGauss}
-    else:
-        sett_dict = {'Type': 'Median', 'Simplif.': Sett.simplifyTol,
-                     'Bins': Sett.medianBins}
+def skeleton_plot(savepath, samplename, binaryArray, skeleton):
+    sett_dict = {'Type': 'Skeleton', 'Simplif.': Sett.simplifyTol,
+                 'Resize': Sett.SkeletonResize, 'Distance': Sett.find_dist,
+                 'Dilation': Sett.BDiter, 'Smooth': Sett.SigmaGauss}
     sett_string = '  |  '.join(["{} = {}".format(k, v) for k, v in
                                 sett_dict.items()])
-
-    # Create skeleton plots if using skeleton vectors
-    if skeleton is not None and Sett.SkeletonVector:
-        figskel, axes = plt.subplots(nrows=1, ncols=2, figsize=(15, 6),
-                                     sharex=True, sharey=True)
-        ax = axes.ravel()
-        # Plot of binary array
-        ax[0].imshow(binaryArray)
-        ax[0].axis('off')
-        ax[0].set_title('modified', fontsize=14)
-        # Plot of skeletonized binary array
-        ax[1].imshow(skeleton)
-        ax[1].axis('off')
-        ax[1].set_title('skeleton', fontsize=14)
-        figskel.tight_layout()
-        # Add settings string to plot
-        plt.annotate(sett_string, (5, 5), xycoords='figure points')
-        # Save
-        name = str('Skeleton_' + samplename + ext)
-        figskel.savefig(str(savepath.joinpath(name)), format=Sett.saveformat)
-        plt.close()
-    # Create vector plot
-    fig, ax = plt.subplots(figsize=(12, 6))
-    ax = sns.scatterplot(x=X, y=Y, color='xkcd:tan', linewidth=0)
-    ax.plot(*vectordata.xy)
-    plt.axis('equal')
-    plt.title("Vector " + samplename)
+    figskel, axes = plt.subplots(nrows=1, ncols=2, figsize=(15, 6),
+                                 sharex=True, sharey=True)
+    ax = axes.ravel()
+    # Plot of binary array
+    ax[0].imshow(binaryArray)
+    ax[0].axis('off')
+    ax[0].set_title('modified', fontsize=14)
+    # Plot of skeletonized binary array
+    ax[1].imshow(skeleton)
+    ax[1].axis('off')
+    ax[1].set_title('skeleton', fontsize=14)
+    figskel.tight_layout()
     # Add settings string to plot
     plt.annotate(sett_string, (5, 5), xycoords='figure points')
-    # Save plot
-    name = str('Vector_' + samplename + ext)
-    fig.savefig(str(savepath.parent.joinpath(name)), format=Sett.saveformat)
+    # Save
+    name = str('Skeleton_' + samplename + f'.{Sett.saveformat}')
+    figskel.savefig(str(savepath.joinpath(name)), format=Sett.saveformat)
     plt.close()
+
+
+def create_vector_plots(savedir, sample_dirs):
+    full = pd.DataFrame()
+    vectors = pd.DataFrame()
+    cols = ['Position X', 'Position Y']
+    for path in sample_dirs:
+        data = pd.read_csv(path.joinpath(f'{Sett.vectChannel}.csv'))
+        data = data.loc[:, cols].assign(sample=path.name)
+        full = pd.concat([full, data])
+        vector = pd.read_csv(path.joinpath('Vector.csv'))
+        vector = vector.assign(sample=path.name)
+        vectors = pd.concat([vectors, vector])
+    grid = sns.FacetGrid(data=full, col='sample', col_wrap=4, sharex=False,
+                         sharey=False, height=2, aspect=3.5)
+    plt.subplots_adjust(hspace=1)
+    samples = pd.unique(full.loc[:, 'sample'])
+    for ind, ax in enumerate(grid.axes.flat):
+        data = full.loc[full.loc[:, 'sample'] == samples[ind], :]
+        sns.scatterplot(data=data, x='Position X', y='Position Y',
+                        color='xkcd:tan', linewidth=0, ax=ax)
+        vector_data = vectors.loc[vectors.loc[:, 'sample'] == samples[ind], :]
+        ax.plot(vector_data.X, vector_data.Y)
+        ax.set_xlabel('')
+        ax.set_ylabel('')
+        ax.set_title(samples[ind])
+    grid.savefig(str(savedir.joinpath('Vectors.png')))
+    plt.close('all')
 
 
 def violin(plotter, **kws):

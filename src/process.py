@@ -29,10 +29,8 @@ from settings import store, settings as Sett
 import plotfuncs as pfunc
 import logger as lg
 import system
-try:
-    LAM_logger = lg.get_logger(__name__)
-except AttributeError:
-    print('Cannot get logger')
+
+LAM_logger = None
 
 
 class GetSample:
@@ -117,30 +115,23 @@ class GetSample:
             vect_data = None
         return vect_data
 
-    def create_vector(self, creation_bins, datadir, skeleton, resize, BDiter,
-                      SigmaGauss):
-        """Handle data for vector creation."""
+    def create_skeleton(self):
         # Extract point coordinates of the vector:
         positions = self.vect_data
         x, y = positions.loc[:, 'Position X'], positions.loc[:, 'Position Y']
-        if skeleton:  # Create skeleton vector
-            vector, bin_array, skeleton, line_df = self.SkeletonVector(
-                x, y, resize, BDiter, SigmaGauss)
-            if vector is None:
-                return
-        else:  # Alternatively create median vector
-            vector, line_df = self.median_vector(x, y, creation_bins)
-            bin_array, skeleton = None, None
-        # Simplification of vector points
+        vector, bin_array, skeleton, line_df = self.SkeletonVector(x, y,
+                Sett.SkeletonResize, Sett.BDiter, Sett.SigmaGauss)
         vector = vector.simplify(Sett.simplifyTol)
-        # Save total length of vector
-        length = pd.Series(vector.length, name=self.name)
-        system.saveToFile(length, datadir, 'Length.csv')
-        # Save vector file
         system.saveToFile(line_df, self.sampledir, 'Vector.csv', append=False)
-        # Create plots of created vector
-        pfunc.vector_plots(self.sampledir, self.name, vector, x, y,
-                           bin_array, skeleton)
+        pfunc.skeleton_plot(self.sampledir, self.name, bin_array, skeleton)
+
+    def create_median(self):
+        # Extract point coordinates of the vector:
+        positions = self.vect_data
+        x, y = positions.loc[:, 'Position X'], positions.loc[:, 'Position Y']
+        vector, line_df = self.median_vector(x, y, Sett.medianBins)
+        vector = vector.simplify(Sett.simplifyTol)
+        system.saveToFile(line_df, self.sampledir, 'Vector.csv', append=False)
 
     def SkeletonVector(self, X, Y, resize, BDiter, SigmaGauss):
         """Create vector by skeletonization of image-transformed positions."""
@@ -719,32 +710,26 @@ class DefineWidths:
         system.saveToFile(res, datadir, filename)
 
 
-def Create_Samples(PATHS):
+def create_samples(PATHS):
     """Create vectors for the samples."""
     lg.logprint(LAM_logger, 'Begin vector creation.', 'i')
-    # Test that resize-setting is in step of 0.1:
-    resize = Sett.SkeletonResize
-    if Sett.SkeletonVector and Decimal(str(resize)) % Decimal(str(0.10))\
-            != Decimal('0.0'):
-        msg = 'Resizing not in step of 0.1'
-        print("WARNING: {}".format(msg))
-        # Round setting down to nearest 0.1.
-        Sett.SkeletonResize = math.floor(resize*10) / 10
-        msg2 = 'SkeletonResize changed to {}'.format(Sett.SkeletonResize)
-        print("-> {}".format(msg2))
-        lg.logprint(LAM_logger, msg, 'w')
-        lg.logprint(LAM_logger, msg2, 'i')
-    # Loop Through samples to create vectors
     print("---Processing samples---")
+    # Test that resize-setting is in step of 0.1:
+    if Sett.SkeletonVector:
+        check_resize_step(Sett.SkeletonResize)
+    # Loop Through samples to create vectors
     for path in [p for p in Sett.workdir.iterdir() if p.is_dir() and p.stem
                  != 'Analysis Data']:
         sample = GetSample(path, PATHS)
         print("{}  ...".format(sample.name))
         sample.vect_data = sample.get_vect_data(Sett.vectChannel)
         # Creation of vector for projection
-        sample.create_vector(Sett.medianBins, PATHS.datadir,
-                             Sett.SkeletonVector, Sett.SkeletonResize,
-                             Sett.BDiter, Sett.SigmaGauss)
+        if Sett.SkeletonVector:
+            sample.create_skeleton()
+        else:
+            sample.create_median()
+    sample_dirs = [p for p in PATHS.samplesdir.iterdir() if p.is_dir()]
+    pfunc.create_vector_plots(PATHS.samplesdir, sample_dirs)
     lg.logprint(LAM_logger, 'Vectors created.', 'i')
 
 
@@ -955,5 +940,19 @@ def vector_test(path):
 
 
 def test_count_projection(counts):
-    if (counts == 0).sum() > counts.size / 4:
+    if (counts == 0).sum() > counts.size / 3:
         print('   WARNING: Uneven projection <- vector may be faulty!')
+
+
+def check_resize_step(resize, log=True):
+    if Sett.SkeletonVector and Decimal(str(resize)) % Decimal(str(0.10))\
+            != Decimal('0.0'):
+        msg = 'Resizing not in step of 0.1'
+        print("WARNING: {}".format(msg))
+        # Round setting down to nearest 0.1.
+        Sett.SkeletonResize = math.floor(resize*10) / 10
+        msg2 = 'SkeletonResize changed to {}'.format(Sett.SkeletonResize)
+        print("-> {}".format(msg2))
+        if log:
+            lg.logprint(LAM_logger, msg, 'w')
+            lg.logprint(LAM_logger, msg2, 'i')

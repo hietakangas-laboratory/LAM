@@ -26,10 +26,7 @@ from statsMWW import statistics, TotalStats
 from plot import plotting
 import logger as lg
 
-try:
-    LAM_logger = lg.get_logger(__name__)
-except AttributeError:
-    print('Cannot get logger')
+LAM_logger = None
 
 
 class Samplegroups:

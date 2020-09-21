@@ -27,11 +27,7 @@ from settings import settings as Sett, store
 import logger as lg
 import system
 
-
-try:
-    LAM_logger = lg.get_logger(__name__)
-except AttributeError:
-    print('Cannot get logger')
+LAM_logger = None
 
 
 def detect_borders(paths, all_samples, palette, anchor, variables, scoring,

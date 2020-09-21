@@ -22,10 +22,7 @@ import logger as lg
 import system
 import plotfuncs as pfunc
 
-try:
-    LAM_logger = lg.get_logger(__name__)
-except AttributeError:
-    print('Cannot get logger')
+LAM_logger = None
 
 
 class MakePlot:
