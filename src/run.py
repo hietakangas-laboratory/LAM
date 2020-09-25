@@ -95,8 +95,9 @@ import system
 import analysis
 import process
 import border_detection as bd
-import plot
-import plotfuncs
+import logger as lg
+# import plot
+# import plotfuncs
 
 LAM_logger = None
 
@@ -173,9 +174,7 @@ def main(gui_root=None):
 
 
 def main_catch_exit(LAM_logger=None, gui_root=None):
-    """Run main() while catching exc eptions for logging."""
-    import logger as lg
-
+    """Run main() while catching exceptions for logging."""
     if LAM_logger is None:  # If no logger given, get one
         LAM_logger = lg.setup_logger(__name__, new=True)
         lg.print_settings()  # print settings of analysis to log
@@ -192,6 +191,7 @@ def main_catch_exit(LAM_logger=None, gui_root=None):
     except KeyboardInterrupt:
         lg.logprint(LAM_logger, 'STOPPED: keyboard interrupt', 'e')
         print("STOPPED: Keyboard interrupt by user.\n")
+        lg.Close()
 
     except SystemExit:
         lg.logprint(LAM_logger, 'EXIT\n\n', 'ex')

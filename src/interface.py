@@ -1090,6 +1090,9 @@ class SettingHandler:
 
     def change_settings(self, options):
         """Change run-settings based on given dict variables."""
+        if Sett.border_channel is Sett.vectChannel and (options['vectChannel']
+                                                        != Sett.vectChannel):
+            rename_scoring_vars(options)
         for (key, value) in options.items():
             setattr(Sett, key, value)
 
@@ -1153,3 +1156,10 @@ def configure(state, widgets):
     """Set state for all widgets in list."""
     for widget in widgets:
         widget.configure(state=state)
+
+def rename_scoring_vars(options):
+    keys = [k for k in options['scoring_vars'].keys() if Sett.border_channel
+            in k]
+    for key in keys:
+        nkey = key.replace(Sett.border_channel, options['vectChannel'])
+        options['scoring_vars'][nkey] = options['scoring_vars'].pop(key)

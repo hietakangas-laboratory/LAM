@@ -29,7 +29,7 @@ LAM_logger = None
 class paths:
     """Handle required system paths."""
 
-    def __init__(self, workdir):
+    def __init__(self, workdir, only_vectors=False):
         """Creation of output folders."""
         try:
             # Create path-variables necessary for the analysis
@@ -42,7 +42,8 @@ class paths:
             # If samples are to be processed and output data directory exists,
             # the directory will be removed with all files as not to interfere
             # with analysis.
-            self.clear_analysis()
+            if not only_vectors:
+                self.clear_analysis()
 
             # Create output directories
             pl.Path.mkdir(self.outputdir, exist_ok=True)
@@ -297,7 +298,7 @@ def start(test_vectors=True):
         raise SystemExit
 
     # Otherwise create paths and directories
-    PATHS = paths(Sett.workdir)
+    PATHS = paths(Sett.workdir, only_vectors=True)
 
     if not test_vectors:
         return PATHS
