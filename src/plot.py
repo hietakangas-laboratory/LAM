@@ -8,7 +8,7 @@ Created on Tue Mar 10 11:45:48 2020
 
 # Standard libraries
 import warnings
-from itertools import combinations, chain
+from itertools import combinations
 
 # Packages
 import matplotlib.pyplot as plt
@@ -121,7 +121,7 @@ class MakePlot:
             # Take apart info in seaborn generated title
             title = ax.get_title()
             var_strs = title.split(' | ')
-            label_strs = [l.split(' = ')[1] for l in var_strs]
+            label_strs = [lbl.split(' = ')[1] for lbl in var_strs]
             # Collect and set needed labels
             if ylabel == 'collect':
                 label = get_unit(label_strs[0])
@@ -343,9 +343,8 @@ class plotting:
         grouped = all_add_data.groupby('Channel')
 
         # Make plot:
-        combined_grps = combinations(grouped.groups, 2)
-        against_self = iter(zip(grouped.groups, grouped.groups))
-        for grps in chain(combined_grps, against_self):
+        combined_grps = set(combinations(grouped.groups, 2))
+        for grps in combined_grps:
             grp, grp2 = grps
             data = grouped.get_group(grp)
             data2 = grouped.get_group(grp2)
