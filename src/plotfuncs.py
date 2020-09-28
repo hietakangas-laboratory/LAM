@@ -210,16 +210,24 @@ def skeleton_plot(savepath, samplename, binaryArray, skeleton):
     plt.close()
 
 
-def create_vector_plots(savedir, sample_dirs):
+def create_vector_plots(workdir, savedir, sample_dirs):
     full = pd.DataFrame()
     vectors = pd.DataFrame()
     cols = ['Position X', 'Position Y']
     for path in sample_dirs:
-        data = pd.read_csv(path.joinpath(f'{Sett.vectChannel}.csv'))
-        data = data.loc[:, cols].assign(sample=path.name)
+        cpath = workdir.joinpath(path.name).glob(f'*_{Sett.vectChannel}_*')
+        try:
+            dpath = next(cpath).glob('*Position.csv')
+            data = pd.read_csv(next(dpath), header=Sett.header_row)
+            data = data.loc[:, cols].assign(sample=path.name)
+        except StopIteration:
+            data = pd.DataFrame(data=[np.nan, np.nan], columns=cols)
+        try:
+            vector = pd.read_csv(next(path.glob('Vector.*')))
+            vector = vector.assign(sample=path.name)
+        except (FileNotFoundError, StopIteration):
+            vector = pd.DataFrame(data=[np.nan, np.nan], columns=['X', 'Y'])
         full = pd.concat([full, data])
-        vector = pd.read_csv(path.joinpath('Vector.csv'))
-        vector = vector.assign(sample=path.name)
         vectors = pd.concat([vectors, vector])
     grid = sns.FacetGrid(data=full, col='sample', col_wrap=4, sharex=False,
                          sharey=False, height=2, aspect=3.5)

@@ -103,14 +103,14 @@ class GetSample:
             namer = str("_{}_".format(channel))
             namerreg = re.compile(namer, re.I)
             # Search found paths with string
-            dir_path = [self.channelpaths[i] for i, s in
-                        enumerate(self.channelpaths)
+            dir_path = [self.channelpaths[i] for i, s in enumerate(self.channelpaths)
                         if namerreg.search(str(s))][0]
             vect_path = next(dir_path.glob('*Position.csv'))
             vect_data = system.read_data(vect_path)  # Read data
-        except FileNotFoundError:  # If data file not found
-            msg = 'No valid file for vector creation.'
-            lg.logprint(LAM_logger, msg, 'w')
+        except (FileNotFoundError, IndexError):  # If data file not found
+            msg = 'No valid datafile for vector creation.'
+            if LAM_logger is not None:
+                lg.logprint(LAM_logger, msg, 'w')
             print('-> {}'.format(msg))
             vect_data = None
         return vect_data
@@ -729,7 +729,7 @@ def create_samples(PATHS):
         else:
             sample.create_median()
     sample_dirs = [p for p in PATHS.samplesdir.iterdir() if p.is_dir()]
-    pfunc.create_vector_plots(PATHS.samplesdir, sample_dirs)
+    pfunc.create_vector_plots(Sett.workdir, PATHS.samplesdir, sample_dirs)
     lg.logprint(LAM_logger, 'Vectors created.', 'i')
 
 

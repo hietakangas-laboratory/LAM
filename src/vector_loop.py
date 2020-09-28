@@ -136,6 +136,8 @@ class VectorWin:
             sample = process.GetSample(path, PATHS)
             print("{}  ...".format(sample.name))
             sample.vect_data = sample.get_vect_data(Sett.vectChannel)
+            if sample.vect_data is None:
+                continue
             # Creation of vector for projection
             if Sett.SkeletonVector:
                 sample.create_skeleton()
@@ -144,7 +146,7 @@ class VectorWin:
         print("Creation loop done. Select samples to keep.\n")
         # Creation of vector plot of all samples
         sample_dirs = [p for p in PATHS.samplesdir.iterdir() if p.is_dir()]
-        pfunc.create_vector_plots(PATHS.samplesdir, sample_dirs)
+        pfunc.create_vector_plots(Sett.workdir, PATHS.samplesdir, sample_dirs)
 
     def keep_vectors(self):
         """Remove selected samples from creation loop and refresh table."""

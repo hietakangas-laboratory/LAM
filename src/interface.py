@@ -26,7 +26,7 @@ class base_GUI(tk.Toplevel):
     """Container for the most important settings of the GUI."""
 
     def __init__(self, master=None):
-        master.title("LAM-0.3.0")
+        master.title("LAM-0.3.1")
         self.master = master
         self.master.grab_set()
         self.master.bind('<Escape>', self.func_destroy)
@@ -617,9 +617,11 @@ class base_GUI(tk.Toplevel):
                           c.lower() != self.handle('MPname').get().lower()]
 
     def vector_creation(self):
+        self.run_b.configure(state='disable')
         win = vector_loop.VectorWin(self.master, self.handle)
         win.window.wait_window()
         self.process_check()
+        self.run_b.configure(state='normal')
 
     def vector_frame(self):
         """Create frame for vector creation settings."""
