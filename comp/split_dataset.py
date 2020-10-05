@@ -42,7 +42,7 @@ USAGE:
     Perform LAM 'Count' with border detection amd get border location indices
     of samples from "Borders_peaks.csv" (see variables SAMPLE_BINS and
     BIN_PATH below). Alternatively, just run 'Count' and provide self-defined
-    bins to the file that is pointed to by BIN_PATH. Set
+    bins to the file that is pointed to by BIN_PATH.
     -------------------------
 
     By default, N+1 directoriesare created, where N is the number of defined

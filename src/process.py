@@ -67,14 +67,23 @@ class GetSample:
 
     def find_sample_vector(self, path):  # path = data directory
         """Find sample's vector data."""
-        try:  # Find sample's vector file and read it
-            vectorp = next(self.sampledir.glob('Vector.*'))
-            if vectorp.name.lower() == "vector.csv":
-                temp_vect = pd.read_csv(vectorp)
-            # If vector is user-generated with ImageJ line tools:
-            elif vectorp.name.lower() == "vector.txt":
+        try:  # Find sample's vector file
+            paths = list(self.sampledir.glob('Vector.*'))
+            if len(paths) > 1:
+                try:
+                    vectorp = [p for p in paths if p.suffix=='.txt'][0]
+                except IndexError:
+                    vectorp = paths[0]
+            else:
+                vectorp = paths[0]
+            # Read file
+            if vectorp.suffix == ".txt":
+                # If vector is user-generated with ImageJ line tools:
                 temp_vect = pd.read_csv(vectorp, sep="\t", header=None)
                 temp_vect.columns = ["X", "Y"]
+            elif vectorp.suffix == ".csv":
+                temp_vect = pd.read_csv(vectorp)
+            # Create LineString-object from the vector data
             vector = list(zip(temp_vect.loc[:, 'X'].astype('float'),
                               temp_vect.loc[:, 'Y'].astype('float')))
             self.vector = gm.LineString(vector)
@@ -84,17 +93,17 @@ class GetSample:
 
         # If vector file not found
         except (FileNotFoundError, StopIteration):
-            msg = 'Vector-file NOT found for {}'.format(self.name)
+            msg = f'Vector-file NOT found for {self.name}'
             lg.logprint(LAM_logger, msg, 'e')
-            print('ERROR: {}'.format(msg))
+            print(f'ERROR: {msg}')
         except AttributeError:  # If vector file is faulty
-            msg = 'Faulty vector for {}'.format(self.name)
+            msg = f'Faulty vector for {self.name}'
             lg.logprint(LAM_logger, msg, 'w')
-            print('ERROR: Faulty vector for {}'.format(msg))
+            print(f'ERROR: Faulty vector for {msg}')
         except ValueError:
-            msg = 'Vector data file in wrong format: {}'.format(self.name)
+            msg = f'Vector data file in wrong format: {self.name}'
             lg.logprint(LAM_logger, msg, 'ex')
-            print('CRITICAL: {}'.format(msg))
+            print(f'CRITICAL: {msg}')
 
     def get_vect_data(self, channel):
         """Get channel data that is used for vector creation."""
