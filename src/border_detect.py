@@ -23,15 +23,14 @@ import tkinter as tk
 import tkinter.simpledialog as tks
 
 # LAM modules
-from settings import settings as Sett, store
-import logger as lg
-import system
+from src.settings import settings as Sett, store
+import src.logger as lg
+import src.system as system
 
 LAM_logger = None
 
 
-def detect_borders(paths, all_samples, palette, anchor, variables, scoring,
-                   threshold=0.5, channel='DAPI'):
+def detect_borders(paths, all_samples, palette, anchor, variables, scoring, threshold=0.5, channel='DAPI'):
     """
     Midgut border detection by weighted scoring of binned variables.
 
@@ -81,8 +80,7 @@ def detect_borders(paths, all_samples, palette, anchor, variables, scoring,
 
     # Save data
     flat.T.to_csv(paths.datadir.joinpath('Borders_scores.csv'), index=False)
-    binned_peaks.to_csv(paths.datadir.joinpath('Borders_peaks.csv'),
-                        index=False)
+    binned_peaks.to_csv(paths.datadir.joinpath('Borders_peaks.csv'), index=False)
     lg.logprint(LAM_logger, 'Border detection done.', 'i')
 
 
@@ -95,8 +93,7 @@ class FullBorders:
         self.anchor = anchor * 2
         self.sample_starts = pd.Series()
         self.palette = palette
-        self.scores = pd.DataFrame(columns=[p.name for p in samples],
-                                   index=widths.index)
+        self.scores = pd.DataFrame(columns=[p.name for p in samples], index=widths.index)
 
     def __call__(self, dirpath, threshold):
         # Fit a curve to sample data and get divergence of values
@@ -104,9 +101,7 @@ class FullBorders:
 
         # Compute total scores of sample groups
         s_sums = get_group_total(flattened)
-        s_sums.value = s_sums.groupby(s_sums.group
-                                      ).apply(lambda x: x.assign(
-                                          value=norm_func(x.value)))
+        s_sums.value = s_sums.groupby(s_sums.group).apply(lambda x: x.assign(value=norm_func(x.value)))
 
         # Find group peaks
         peaks = get_peak_data(s_sums, threshold)
@@ -136,22 +131,18 @@ class FullBorders:
         # re-index
         curves = curves.droplevel(1)
         # Subtract curve from each sample
-        devs = vals.apply(lambda x, c=curves:
-                          x[:-1].subtract(c.loc[x.group, :]), axis=1)
+        devs = vals.apply(lambda x, c=curves: x[:-1].subtract(c.loc[x.group, :]), axis=1)
         return devs
 
     def group_plots(self, scores, s_sums, peaks, dirpath):
         """Create plots of sample group border scores."""
         # Create canvas
-        _, (ax1, ax2) = plt.subplots(2, 1, figsize=(10, 5),
-                                     gridspec_kw={'height_ratios': [5, 5]})
-        plt.subplots_adjust(hspace=0.75, top=0.85, bottom=0.1, left=0.1,
-                            right=0.85)
+        _, (ax1, ax2) = plt.subplots(2, 1, figsize=(10, 5), gridspec_kw={'height_ratios': [5, 5]})
+        plt.subplots_adjust(hspace=0.75, top=0.85, bottom=0.1, left=0.1, right=0.85)
 
         # Plot smoothed summed scores
-        sns.lineplot(data=s_sums.infer_objects(), x='variable', y='value',
-                     hue='group', palette=self.palette,
-                     alpha=0.7, legend=False, ax=ax1)
+        sns.lineplot(data=s_sums.infer_objects(), x='variable', y='value', hue='group', palette=self.palette, alpha=0.7,
+                     legend=False, ax=ax1)
 
         # Add peaks to sum score plot
         for peak in peaks.iterrows():
@@ -161,15 +152,12 @@ class FullBorders:
             c_val = s_sums.loc[(grp, loc)].value
             color = self.palette[grp]
             # add peak location lines with prominence
-            ax1.vlines(x=loc, ymin=c_val-prom, ymax=c_val, color=color,
-                       linewidth=1, zorder=2)
+            ax1.vlines(x=loc, ymin=c_val-prom, ymax=c_val, color=color, linewidth=1, zorder=2)
             # Add peak location annotation
-            ax1.annotate(int(loc/2), (loc + 0.03, c_val * 1.03), color=color,
-                         alpha=0.7)
+            ax1.annotate(int(loc/2), (loc + 0.03, c_val * 1.03), color=color, alpha=0.7)
 
         # Plot raw group scores
-        sns.lineplot(data=scores, x='variable', y='value', hue='group',
-                     palette=self.palette, alpha=0.7, ax=ax2)
+        sns.lineplot(data=scores, x='variable', y='value', hue='group', palette=self.palette, alpha=0.7, ax=ax2)
 
         # Readjust all plots' x-axis labels to original binning
         left, right = plt.xlim()
@@ -178,11 +166,10 @@ class FullBorders:
         for axis in (ax1, ax2):
             ybot, ytop = axis.get_ylim()
             # Add line to indicate anchoring bin
-            axis.vlines(self.anchor, ybot, ytop, 'firebrick', zorder=0,
-                        linestyles='dashed')
+            axis.vlines(self.anchor, ybot, ytop, 'firebrick', zorder=0, linestyles='dashed')
             # Add peak detection threshold line
-            axis.hlines(Sett.peak_thresh, xmin=left, xmax=right, linewidth=1,
-                        zorder=0, linestyles='dashed', color='dimgrey')
+            axis.hlines(Sett.peak_thresh, xmin=left, xmax=right, linewidth=1, zorder=0, linestyles='dashed',
+                        color='dimgrey')
             # Define labels and ticks
             axis.set_xticks(locs)
             axis.set_xticklabels(labels=lbls)
@@ -213,17 +200,17 @@ class GetSampleBorders:
         self.var_cols = variables
 
         # Find data of border detection channel
+        filepath = samplepath.joinpath(f'{channel}.csv')
         try:
-            filepath = samplepath.joinpath(f'{channel}.csv')
             data = pd.read_csv(filepath, index_col=False)
             self.data = data.loc[:, id_cols + self.var_cols]
             self.error = False
+        except FileNotFoundError:
+            print(f'ERROR: {filepath.name} not found for {self.name}.')
+            self.error = True
         except KeyError:  # If all required columns are not found
             cols = [v for v in self.var_cols if v not in data.columns]
             print(f'{self.name}: Variables not found - {", ".join(cols)}')
-            self.error = True
-        except FileNotFoundError:
-            print(f'ERROR: {filepath.name} not found for {self.name}.')
             self.error = True
 
         # Create series with the scoring weights
@@ -289,9 +276,7 @@ class GetSampleBorders:
         norm = norm.melt(id_vars=['var_name', 'stype'])
 
         # Create canvas
-        _, (ax1, ax2, ax3) = plt.subplots(3, 1, figsize=(10, 5),
-                                          gridspec_kw={
-                                              'height_ratios': [3.5, 5, 5]})
+        _, (ax1, ax2, ax3) = plt.subplots(3, 1, figsize=(10, 5), gridspec_kw={'height_ratios': [3.5, 5, 5]})
 
         # Plot final score of sample
         sum_score = sum_score.dropna()  # Drop missing values > plot cont. line
@@ -299,19 +284,18 @@ class GetSampleBorders:
 
         # Plot peak detection threshold line
         left, right = ax1.get_xlim()
-        ax1.hlines(Sett.peak_thresh, xmin=left, xmax=right, linewidth=1,
-                   zorder=0, linestyles='dashed', color='firebrick')
+        ax1.hlines(Sett.peak_thresh, xmin=left, xmax=right, linewidth=1, zorder=0, linestyles='dashed',
+                   color='firebrick')
 
         # Plot raw scores of sample
-        sns.lineplot(data=score.infer_objects(), x='variable', y='value',
-                     hue='var_name', alpha=0.7, ax=ax2)
+        sns.lineplot(data=score.infer_objects(), x='variable', y='value', hue='var_name', alpha=0.7, ax=ax2)
 
         # Adjust legend location
         ax2.legend(loc='center left', bbox_to_anchor=(1.01, 0.5), ncol=1)
 
         # Variable values plot
-        sns.lineplot(data=norm.infer_objects(), x='variable', y='value',
-                     hue='var_name', alpha=0.7, legend=False, ax=ax3)
+        sns.lineplot(data=norm.infer_objects(), x='variable', y='value', hue='var_name', alpha=0.7, legend=False,
+                     ax=ax3)
         ax3.plot(curve.columns, curve.values.ravel(), 'r--')
 
         # Set titles and other labels
@@ -327,8 +311,7 @@ class GetSampleBorders:
         for ax in [ax1, ax2, ax3]:
             locs = [int(n/2) for n in ax.get_xticks()]
             ybot, ytop = ax.get_ylim()
-            ax.vlines(self.anchor, ybot, ytop, 'firebrick', zorder=0,
-                      linestyles='dashed')
+            ax.vlines(self.anchor, ybot, ytop, 'firebrick', zorder=0, linestyles='dashed')
             ax.set_xticklabels(labels=locs)
 
         # Adjust plot space, add title, and save
@@ -341,17 +324,14 @@ class GetSampleBorders:
         """Collect needed variables and calculate required characteristics."""
         # Get sample's width
         width = self.get_width(Borders.width_data)
-        self.var_data = self.var_data.assign(width=width,
-                                             width_diff=self.get_diff(width))
+        self.var_data = self.var_data.assign(width=width, width_diff=self.get_diff(width))
 
-        # Get sample's start index in the full dataset (for determining border
-        # locations in the sample's own indexing).
+        # Get sample's start index in the full dataset (for determining border locations in the sample's own indexing).
         self.ind_start = self.var_data.index[0]
 
         # Recalculate binning for bin averages etc
         bins = np.linspace(0, 1, width.index.size + 1)
-        self.data = self.data.assign(binning=pd.cut(self.data["NormDist"],
-                                                    bins=bins))
+        self.data = self.data.assign(binning=pd.cut(self.data["NormDist"], bins=bins))
 
         # get counts and and related:
         if 'Count' in self.scoring.keys():
@@ -490,13 +470,11 @@ def detect_peaks(score_arr, x_dist=6, thresh=0.15, width=1):
         total = data.value.dropna()
 
         # POSITIVE peaks
-        peaks, _ = find_peaks(total, distance=x_dist, height=thresh,
-                              width=width)  # , threshold=thresh)
+        peaks, _ = find_peaks(total, distance=x_dist, height=thresh, width=width)  # , threshold=thresh)
         # Find prominence of found peaks
         prom = peak_prominences(total, peaks)[0]
         peaks = total.index[peaks].get_level_values(1).values
-        peak_dict = {'group': grp, 'peak': peaks, 'prominence': prom,
-                     'sign': 'pos'}
+        peak_dict = {'group': grp, 'peak': peaks, 'prominence': prom, 'sign': 'pos'}
 
         # NEGATIVE peaks
         # neg_total = total * -1
@@ -508,8 +486,7 @@ def detect_peaks(score_arr, x_dist=6, thresh=0.15, width=1):
         #               'sign': 'neg'}
 
         # Add groups data to full peak data
-        all_peaks = all_peaks.append(pd.DataFrame(peak_dict),
-                                     ignore_index=True)
+        all_peaks = all_peaks.append(pd.DataFrame(peak_dict), ignore_index=True)
         # all_peaks = all_peaks.append(pd.DataFrame(npeak_dict),
         #                              ignore_index=True)
     return all_peaks
@@ -520,17 +497,14 @@ def get_group_total(data):
     # smoothed = smooth_data(data.T, win=7, tau=10).T
     trimmed = prepare_data(data)
     # Get mean score for each bin
-    s_sums = trimmed.groupby(['group', 'variable']
-                             ).apply(lambda x: x.value.mean())
+    s_sums = trimmed.groupby(['group', 'variable']).apply(lambda x: x.value.mean())
 
     # Transform to dataframe and assign necessary identifier columns
     s_sums = s_sums.to_frame(name='value')
-    s_sums = s_sums.groupby('group').apply(lambda x: x.assign(
-        value=smooth_data(x.value, win=5, tau=10)))
+    s_sums = s_sums.groupby('group').apply(lambda x: x.assign(value=smooth_data(x.value, win=5, tau=10)))
 
     # Add identifier columns, i.e. groups and bins
-    s_sums = s_sums.assign(group=s_sums.index.get_level_values(0),
-                           variable=s_sums.index.get_level_values(1))
+    s_sums = s_sums.assign(group=s_sums.index.get_level_values(0), variable=s_sums.index.get_level_values(1))
     return s_sums
 
 
@@ -587,8 +561,7 @@ def read_widths(datadir):
 
 def smooth_data(data, win=3, tau=10):
     """Perform rolling smoothing to data."""
-    smoothed_data = data.rolling(win, center=True, win_type='exponential'
-                                 ).mean(tau=tau)
+    smoothed_data = data.rolling(win, center=True, win_type='exponential').mean(tau=tau)
     return smoothed_data
 
 
@@ -634,8 +607,7 @@ def get_fit(data, name='c', id_var=None):
     # !!!! End
 
     # Create DF from obtained fit
-    curve = pd.DataFrame(index=[name], columns=x_curve.astype(int),
-                         data=np.reshape(y_curve, (-1, len(y_curve))))
+    curve = pd.DataFrame(index=[name], columns=x_curve.astype(int), data=np.reshape(y_curve, (-1, len(y_curve))))
     return curve
 
 
@@ -731,8 +703,7 @@ def ask_new_channel(border_channel):
             new_channel = system.ask_user(dlg)  # Ask channel name
             change_keys(border_channel, new_channel)  # Change variables
             Sett.border_channel = new_channel
-            msg = ('Border detection channel changed from ' +
-                   f'{border_channel} to {new_channel}.')
+            msg = ('Border detection channel changed from {border_channel} to {new_channel}.')
             print('\n' + msg)
             lg.logprint(LAM_logger, msg, 'i')
             return True

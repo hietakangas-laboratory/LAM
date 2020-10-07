@@ -17,10 +17,10 @@ import seaborn as sns
 import pandas as pd
 
 # LAM modules
-from settings import settings as Sett, store
-import logger as lg
-import system
-import plotfuncs as pfunc
+from src.settings import settings as Sett, store
+import src.logger as lg
+import src.system as system
+import src.plotfuncs as pfunc
 
 LAM_logger = None
 
@@ -29,9 +29,8 @@ class MakePlot:
     """Create decorated plots."""
 
     # Base keywords utilized in plots.
-    base_kws = {'hue': 'Sample Group', 'row': 'Channel', 'col': 'Sample Group',
-                'height': 3, 'aspect': 3, 'flier_size': 2, 'title_y': 0.95,
-                'sharex': False, 'sharey': False, 'gridspec': {'hspace': 0.45},
+    base_kws = {'hue': 'Sample Group', 'row': 'Channel', 'col': 'Sample Group', 'height': 3, 'aspect': 3,
+                'flier_size': 2, 'title_y': 0.95, 'sharex': False, 'sharey': False, 'gridspec': {'hspace': 0.45},
                 'xlabel': 'Linear Position', 'ylabel': 'Feature Count'}
     # Colors for fills
     LScolors = sns.color_palette('Reds', n_colors=4)
@@ -44,8 +43,7 @@ class MakePlot:
         self.handle = handle
         self.title = title
         self.g = None
-        self.filepath = handle.savepath.joinpath(self.title +
-                                                 ".{}".format(Sett.saveformat))
+        self.filepath = handle.savepath.joinpath(f"{self.title}.{Sett.saveformat}")
 
     def __call__(self, func, *args, **kws):
         plot_kws = merge_kws(MakePlot.base_kws, kws)
@@ -63,8 +61,7 @@ class MakePlot:
             return
         # Adjust plot sizes so that everything fits properly
         if 'adjust' in kws.keys():
-            plt.subplots_adjust(top=kws['adjust'].get('top'),
-                                bottom=kws['adjust'].get('bottom'))
+            plt.subplots_adjust(top=kws['adjust'].get('top'), bottom=kws['adjust'].get('bottom'))
         else:
             plt.subplots_adjust(top=0.85, bottom=0.2, hspace=0.75)
         self.add_elements(*args, **plot_kws)
@@ -78,8 +75,7 @@ class MakePlot:
             self.xticks()
         if 'labels' in args:  # Change plot axis labels
             self.collect_labels(kws.get('xlabel'), kws.get('ylabel'))
-            self.labels(kws.get('xlabel'), kws.get('ylabel'),
-                        kws.get('label_first_only'))
+            self.labels(kws.get('xlabel'), kws.get('ylabel'), kws.get('label_first_only'))
         if 'legend' in args:  # Add legend to plot
             self.g.add_legend()
         if 'title' in args:  # Add title
@@ -133,12 +129,9 @@ class MakePlot:
 
     def get_facet(self, **kws):
         """Create a FacetGrid for plotting."""
-        g = sns.FacetGrid(self.data, row=kws.get('row'),
-                          col=kws.get('col'), hue=kws.get('hue'),
-                          sharex=kws.get('sharex'), sharey=kws.get('sharey'),
-                          gridspec_kws=kws.get('gridspec'),
-                          height=kws.get('height'), aspect=kws.get('aspect'),
-                          legend_out=True, dropna=False,
+        g = sns.FacetGrid(self.data, row=kws.get('row'), col=kws.get('col'), hue=kws.get('hue'),
+                          sharex=kws.get('sharex'), sharey=kws.get('sharey'), gridspec_kws=kws.get('gridspec'),
+                          height=kws.get('height'), aspect=kws.get('aspect'), legend_out=True, dropna=False,
                           palette=self.handle.palette)
         return g
 
@@ -158,8 +151,7 @@ class MakePlot:
         if 'Sample Group' in self.data.columns:
             groups = self.data.loc[:, 'Sample Group'].unique()
             if isinstance(store.border_peaks, pd.DataFrame):
-                peaks = store.border_peaks[store.border_peaks.group.isin(
-                    groups)]
+                peaks = store.border_peaks[store.border_peaks.group.isin(groups)]
         else:
             peaks = store.border_peaks
         # Add peaks to each plot in figure
@@ -172,11 +164,10 @@ class MakePlot:
                 grp = peak[1]['group']
                 color = self.handle.palette[grp]
                 # peak location line with prominence
-                ax.vlines(x=loc, ymin=vmin, ymax=vmax, color=color, alpha=0.5,
-                          linewidth=1.5, zorder=0, linestyle='dashed',)
+                ax.vlines(x=loc, ymin=vmin, ymax=vmax, color=color, alpha=0.5, linewidth=1.5, zorder=0,
+                          linestyle='dashed',)
 
-    def plot_significance(self, ix, row, ax, yaxis, yheight, fill=Sett.fill,
-                          stars=Sett.stars):
+    def plot_significance(self, ix, row, ax, yaxis, yheight, fill=Sett.fill, stars=Sett.stars):
         """Add significance stars or color fills to plots."""
         # If both hypothesis rejections have same value, continue
         if row[3] == row[6]:
@@ -208,8 +199,7 @@ class MakePlot:
         ax2 = plt.twinx()
         lkws = {'alpha': 0.85}
         xmin, xtop = stats.index.min(), stats.index.max()
-        ax2.plot((xmin, xtop), (0, 0), linestyle='dashed', color='grey',
-                 linewidth=0.85, **lkws)
+        ax2.plot((xmin, xtop), (0, 0), linestyle='dashed', color='grey', linewidth=0.85, **lkws)
         # Find top of original y-axis and create a buffer for twin to
         # create a prettier plot
         botAdd = 2.75*-Sett.ylim
@@ -230,8 +220,7 @@ class MakePlot:
                 warnings.simplefilter('ignore', category=RuntimeWarning)
                 logvals.loc[ind] = np.log2(Y[ind].astype(np.float64))
             # Create twin axis with -log2 P-values
-            ax2.plot(X, np.negative(logvals), color='dimgrey', linewidth=1.5,
-                     **lkws)
+            ax2.plot(X, np.negative(logvals), color='dimgrey', linewidth=1.5, **lkws)
             ax2.set_ylabel('P value\n(-log2)')
         # Create significance stars and color fills
         for index, row in stats.iterrows():
@@ -250,8 +239,7 @@ class MakePlot:
             # Find rejected H0 for current axis
             row = self.sec_data.iloc[ind, :]
             try:
-                rejects = row.iloc[row.index.get_level_values(1).str.contains(
-                    'Reject')].where(row).dropna()
+                rejects = row.iloc[row.index.get_level_values(1).str.contains('Reject')].where(row).dropna()
             except ValueError:
                 print(f" --> {row.name}: Missing statistics")
                 continue
@@ -316,13 +304,9 @@ class plotting:
     def add_bivariate(self):
         """Create additional data bivariate plots."""
         data_vars = ['Channel', 'Sample Group', 'Sample', 'Type']
-        m_kws = {'IDs': data_vars, 'ylabel': 'collect',
-                 'xlabel': 'collect', 'title_y': 1,
-                 'melt': {'id_vars': data_vars,
-                          'value_name': 'Value',
-                          'var_name': 'Linear Position'},
-                 'plot_kws': {'col': 'Type_X', 'row': 'Type_Y'},
-                 'drop_grouper': ['Sample Group', 'Channel', 'Type'],
+        m_kws = {'IDs': data_vars, 'ylabel': 'collect', 'xlabel': 'collect', 'title_y': 1,
+                 'melt': {'id_vars': data_vars, 'value_name': 'Value', 'var_name': 'Linear Position'},
+                 'plot_kws': {'col': 'Type_X', 'row': 'Type_Y'}, 'drop_grouper': ['Sample Group', 'Channel', 'Type'],
                  'gridpec': {'hspace': 0.75}}
         new_kws = merge_kws(self.kws, m_kws)
         # If required data hasn't been yet collected
@@ -332,8 +316,7 @@ class plotting:
         # Get Add data
         all_add_data = pd.DataFrame()
         for channel in Sett.vs_channels:
-            paths = [p for p in add_paths if channel == str(p.name)
-                     .split('_')[1]]
+            paths = [p for p in add_paths if channel == str(p.name).split('_')[1]]
             if not paths:
                 print("-> No data found for {}".format(channel))
                 continue
@@ -351,28 +334,22 @@ class plotting:
             print("    {} vs. {}  ...".format(grp, grp2))
             f_tit = 'Versus_Add {} Data - Add {} Data Matrix'.format(grp, grp2)
             # Take only data types present in both channels:
-            diff = set(data.Type.unique()).symmetric_difference(set(
-                data2.Type.unique()))
+            diff = set(data.Type.unique()).symmetric_difference(set(data2.Type.unique()))
             p_d = data[~data.Type.isin(diff)].index
             p_d2 = data2[~data2.Type.isin(diff)].index
             # Define identifier columns that are in plottable format
             data = data.assign(Type_Y=data['Channel'] + '-' + data['Type'])
             data2 = data2.assign(Type_X=data2['Channel'] + '-' + data2['Type'])
             # Make plot
-            plotter = MakePlot(data.loc[p_d, :], handle, f_tit,
-                               sec_data=data2.loc[p_d2, :])
-            plotter(pfunc.bivariate_kde, 'title', 'legend', 'no_grid',
-                    'labels', **new_kws)
+            plotter = MakePlot(data.loc[p_d, :], handle, f_tit, sec_data=data2.loc[p_d2, :])
+            plotter(pfunc.bivariate_kde, 'title', 'legend', 'no_grid', 'labels', **new_kws)
 
     def add_data(self):
         """Plot additional data line plots."""
         # Collect data:
         data_vars = ['Channel', 'Sample Group', 'Type']
-        m_kws = {'IDs': data_vars, 'row': 'Type', 'col': None,
-                 'melt': {'id_vars': data_vars,
-                          'value_name': 'Value',
-                          'var_name': 'Linear Position'},
-                 'ylabel': 'collect', 'sharey': 'row'}
+        m_kws = {'IDs': data_vars, 'row': 'Type', 'col': None, 'ylabel': 'collect', 'sharey': 'row',
+                 'melt': {'id_vars': data_vars, 'value_name': 'Value', 'var_name': 'Linear Position'}}
         new_kws = merge_kws(self.kws, m_kws)
         handle = system.DataHandler(self.sgroups, self.sgroups._addData)
         all_data = handle.get_data('drop_outlier', 'peaks', **new_kws)
@@ -380,10 +357,8 @@ class plotting:
 
         # Make plot:
         for grp, data in grouped_data:
-            plotter = MakePlot(data, handle,
-                               'Additional Data - {}'.format(grp))
-            plotter(pfunc.lines, 'centerline', 'ticks', 'title', 'legend',
-                    'labels', 'peaks', **new_kws)
+            plotter = MakePlot(data, handle, f'Additional Data - {grp}')
+            plotter(pfunc.lines, 'centerline', 'ticks', 'title', 'legend', 'labels', 'peaks', **new_kws)
 
     def chan_bivariate(self):
         """Create channel versus additional data bivariate plots."""
@@ -401,21 +376,16 @@ class plotting:
                 continue
             handle = system.DataHandler(self.sgroups, paths, savepath)
             data_vars = ['Channel', 'Sample Group', 'Sample', 'Type']
-            m_kws = {'IDs': data_vars, 'ylabel': 'collect',
-                     'xlabel': 'collect', 'title_y': 1,
-                     'melt': {'id_vars': data_vars,
-                              'var_name': 'Linear Position',
-                              'value_name': 'Value'},
-                     'plot_kws': {'col': 'Channel', 'row': 'Type'},
-                     'drop_grouper': ['Channel', 'Sample Group', 'Type']}
+            m_kws = {'IDs': data_vars, 'ylabel': 'collect', 'xlabel': 'collect', 'title_y': 1,
+                     'melt': {'id_vars': data_vars, 'var_name': 'Linear Position', 'value_name': 'Value'},
+                     'plot_kws': {'col': 'Channel', 'row': 'Type'}, 'drop_grouper': ['Channel', 'Sample Group', 'Type']}
             new_kws = merge_kws(self.kws, m_kws)
             add_data = handle.get_data('drop_outlier', **new_kws)
             all_add_data = pd.concat([all_add_data, add_data])
 
         # Get Channel data
         data_vars = ['Channel', 'Sample Group', 'Sample']
-        new_kws.update({'IDs': data_vars,
-                        'drop_grouper': ['Channel', 'Sample Group']})
+        new_kws.update({'IDs': data_vars, 'drop_grouper': ['Channel', 'Sample Group']})
         new_kws['melt'].update({'id_vars': data_vars})
         ch_handle = system.DataHandler(self.sgroups, paths2)
         all_chan_data = ch_handle.get_data('drop_outlier', **new_kws)
@@ -424,10 +394,9 @@ class plotting:
         grouped = all_add_data.groupby('Channel')
         for grp, data in grouped:
             print("    {}  ...".format(grp))
-            f_title = 'Versus_Channels - Add {} Data Matrix'.format(grp)
+            f_title = f'Versus_Channels - Add {grp} Data Matrix'
             plotter = MakePlot(data, handle, f_title, sec_data=all_chan_data)
-            plotter(pfunc.bivariate_kde, 'title', 'legend', 'no_grid',
-                    'labels', **new_kws)
+            plotter(pfunc.bivariate_kde, 'title', 'legend', 'no_grid', 'labels', **new_kws)
 
     def channels(self):
         """Plot channel line plots."""
@@ -439,21 +408,16 @@ class plotting:
 
         # Make plot:
         plotter = MakePlot(all_data, handle, 'Channels - All')
-        plotter(pfunc.lines, 'centerline', 'ticks', 'title', 'legend',
-                'labels', 'peaks', **new_kws)
+        plotter(pfunc.lines, 'centerline', 'ticks', 'title', 'legend', 'labels', 'peaks', **new_kws)
 
     def channel_matrix(self):
         """Create matrix plot containing channels on both axes."""
         # Collect data:
         paths = self.sgroups.paths.datadir.glob('ChanAvg_*')
         handle = system.DataHandler(self.sgroups, paths)
-        m_kws = {'id_sep': 1, 'IDs': ['Sample Group'], 'kind': 'reg',
-                 'diag_kind': 'kde', 'title_y': 1,
-                 'xlabel': 'Feature Count',
-                 'melt': {'id_vars': ['Sample Group'],
-                          'var_name': 'Linear Position',
-                          'value_name': 'Value'},
-                 'merge_on': ['Sample Group', 'Linear Position']}
+        m_kws = {'id_sep': 1, 'IDs': ['Sample Group'], 'kind': 'reg', 'diag_kind': 'kde', 'title_y': 1,
+                 'xlabel': 'Feature Count', 'merge_on': ['Sample Group', 'Linear Position'],
+                 'melt': {'id_vars': ['Sample Group'], 'var_name': 'Linear Position', 'value_name': 'Value'}}
         new_kws = merge_kws(self.kws, m_kws)
         all_data = handle.get_data('path_id', 'merge', **new_kws)
 
@@ -481,8 +445,7 @@ class plotting:
         chan_paths = [c for p in self.sgroups._samplePaths for c in
                       p.glob('*.csv') if c.stem in cl_chans]
         cols = ['Position X', 'Position Y', 'ClusterID']
-        kws = {'ylabel': 'Y', 'xlabel': 'X', 'height': 5,
-               'adjust': {'top': 0.65, 'bottom': 0.2}}
+        kws = {'ylabel': 'Y', 'xlabel': 'X', 'height': 5, 'adjust': {'top': 0.65, 'bottom': 0.2}}
         new_kws = merge_kws(self.kws, kws)
         # Find all channel paths relevant to cluster channels
         for sample in store.samples:
@@ -510,9 +473,8 @@ class plotting:
             return
 
         new_kws = remove_from_kws(self.kws, 'melt')
-        new_kws.update({'IDs': ['Channel', 'Sample Group', 'Sample'],
-                        'col': None, 'hue': None, 'xlabel': 'Linear Position',
-                        'ylabel': 'Clustered Cells'})
+        new_kws.update({'IDs': ['Channel', 'Sample Group', 'Sample'], 'col': None, 'hue': None,
+                        'xlabel': 'Linear Position', 'ylabel': 'Clustered Cells'})
 
         # Get and plot heatmap with samples
         handle = system.DataHandler(self.sgroups, paths, savepath)
@@ -523,8 +485,7 @@ class plotting:
         smpl_data = all_data.drop(['Sample Group', 'Sample'], axis=1)
         plotter = MakePlot(smpl_data, handle, 'Cluster Heatmaps - Samples')
         p_kws = merge_kws(new_kws, {'Sample_plot': True})
-        plotter(pfunc.heatmap, 'centerline', 'ticks', 'title', 'labels',
-                **p_kws)
+        plotter(pfunc.heatmap, 'centerline', 'ticks', 'title', 'labels', **p_kws)
 
         # Plot sample group averages
         grouped = all_data.groupby(['Channel', 'Sample Group'])
@@ -536,33 +497,24 @@ class plotting:
             avg_data = avg_data.append(temp)
         # Create plot
         plotter = MakePlot(avg_data, handle, 'Cluster Heatmaps - Groups')
-        plotter(pfunc.heatmap, 'centerline', 'ticks', 'title', 'labels',
-                'peaks', **new_kws)
+        plotter(pfunc.heatmap, 'centerline', 'ticks', 'title', 'labels', 'peaks', **new_kws)
 
         # CLUSTER LINEPLOT
-        m_kws = {'ylabel': 'Clustered cells', 'titley': 1.01,
-                 'melt': {'id_vars': ['Channel', 'Sample Group'],
-                          'var_name': 'Linear Position',
-                          'value_name': 'Value'},
-                 'row': 'Channel', 'col': None}
+        m_kws = {'ylabel': 'Clustered cells', 'titley': 1.01, 'row': 'Channel', 'col': None,
+                 'melt': {'id_vars': ['Channel', 'Sample Group'], 'var_name': 'Linear Position', 'value_name': 'Value'}}
         m_data = all_data.drop('Sample', axis=1)
-        m_data = m_data.melt(id_vars=['Channel', 'Sample Group'],
-                             var_name='Linear Position',
-                             value_name='Value')
+        m_data = m_data.melt(id_vars=['Channel', 'Sample Group'], var_name='Linear Position', value_name='Value')
         plotter = MakePlot(m_data, handle, 'Cluster Lineplots')
-        plotter(pfunc.lines, 'centerline', 'ticks', 'title', 'legend',
-                'peaks', 'labels', **m_kws)
+        plotter(pfunc.lines, 'centerline', 'ticks', 'title', 'legend', 'peaks', 'labels', **m_kws)
 
     def distributions(self):
         """Create distributions of all variables."""
         # Channels:
-        m_kws = {'IDs': ['Sample Group', 'Channel'], 'title_y': 0.95,
-                 'ylabel': 'Probability density', 'xlabel': 'Feature Count',
-                 'melt': {'id_vars': ['Sample Group', 'Channel'],
-                          'var_name': 'Linear Position',
-                          'value_name': 'Value'},
-                 'row': 'Channel', 'col': None, 'aspect': 1.75,
-                 'drop_grouper': ['Sample Group', 'Channel']}
+        m_kws = {'IDs': ['Sample Group', 'Channel'], 'title_y': 0.97,
+                 'ylabel': 'Density', 'xlabel': 'Feature Count', 'row': 'Channel', 'col': None, 'aspect': 1.5,
+                 'melt': {'id_vars': ['Sample Group', 'Channel'], 'var_name': 'Linear Position', 'value_name': 'Value'},
+                 'drop_grouper': ['Sample Group', 'Channel'],
+                 'gridspec': {'top': 0.92, 'left': 0.15, 'right': 0.8, 'hspace': 0.6}}
         print('   Channels  ...')
         new_kws = merge_kws(self.kws, m_kws)
         # Collect data:
@@ -570,18 +522,14 @@ class plotting:
         all_data = handle.get_data('drop_outlier', **new_kws)
         # Make plot:
         plotter = MakePlot(all_data, handle, 'Distributions - Channels')
-        plotter(pfunc.distribution, 'title', 'legend', 'labels', **new_kws)
+        plotter(pfunc.distribution, 'title', 'legend', 'labels', 'no_grid', **new_kws)
 
         # Additional data
         print("   Additional Data  ...")
         # id_vars = ['Sample Group', 'Channel', 'Type']
-        new_kws.update({'drop_grouper': ['Sample Group', 'Type'],
-                        'row': 'Type', 'col': None,
-                        'melt': {'id_vars': ['Sample Group', 'Channel',
-                                             'DistBin'],
-                                 'var_name': 'Type', 'value_name': 'Value'},
-                        'gridspec': {'left': 0.15, 'right': 0.8,
-                                     'hspace': 0.45}})
+        new_kws.update({'drop_grouper': ['Sample Group', 'Type'], 'row': 'Type', 'col': None,
+                        'melt': {'id_vars': ['Sample Group', 'Channel', 'DistBin'], 'var_name': 'Type',
+                                 'value_name': 'Value'}})
         paths = [p for s in self.sgroups._samplePaths for p in s.glob('*.csv')
                  if p.stem not in ['Vector', 'MPs', 'MP', Sett.MPname]]
         # Collect and plot each channel separately:
@@ -589,14 +537,13 @@ class plotting:
             print("     {}  ...".format(channel))
             ch_paths = [p for p in paths if p.stem == channel]
             handle = system.DataHandler(self.sgroups, ch_paths)
-            all_data = handle.get_sample_data(Sett.AddData.keys(),
-                                              'drop_outlier', **new_kws)
+            all_data = handle.get_sample_data(Sett.AddData.keys(), 'drop_outlier', **new_kws)
             if all_data.empty:
                 continue
             # Make plot:
             p_title = 'Distributions - Additional {} Data'.format(channel)
             plotter = MakePlot(all_data, handle, p_title)
-            plotter(pfunc.distribution, 'title', 'legend', 'labels', **new_kws)
+            plotter(pfunc.distribution, 'title', 'legend', 'labels', 'no_grid', **new_kws)
 
     def heatmaps(self):
         """Create heatmaps of channel data."""
@@ -610,8 +557,7 @@ class plotting:
         all_data.drop('Sample Group', axis=1, inplace=True)
         plotter = MakePlot(all_data, handle, 'Heatmaps - Groups')
         p_kws = {'col': None, 'hue': None}
-        plotter(pfunc.heatmap, 'centerline', 'ticks', 'title', 'peaks',
-                **p_kws)
+        plotter(pfunc.heatmap, 'centerline', 'ticks', 'title', 'peaks', **p_kws)
 
         # Get and plot heatmap with _samples_
         HMpaths = self.sgroups.paths.datadir.glob("Norm_*")
@@ -632,8 +578,7 @@ class plotting:
         order.insert(ctrl_n, Sett.cntrlGroup)
 
         # Melt data to long form and drop missing observation points
-        plot_data = pd.melt(plot_data, id_vars=['Sample Group', 'Variable'],
-                            var_name='Linear Position',
+        plot_data = pd.melt(plot_data, id_vars=['Sample Group', 'Variable'], var_name='Linear Position',
                             value_name='Value')
         plot_data = plot_data.dropna(subset=['Value'])
         # Make sure that data is in float format
@@ -646,14 +591,10 @@ class plotting:
         # Create plot:
         savepath = total_stats.plot_dir
         handle = system.DataHandler(self.sgroups, path, savepath)
-        plotter = MakePlot(plot_data, handle, total_stats.filename,
-                           sec_data=total_stats.stat_data)
-        p_kws = {'row': None, 'col': 'Variable', 'x_order': order,
-                 'height': 3, 'aspect': 1, 'title_y': 1,
-                 'ylabel': 'collect', 'xlabel': 'Sample Group',
-                 'gridspec': {'wspace': 0.25}}
-        plotter(pfunc.violin, 'title', 'total_stats', 'labels', 'legend',
-                **p_kws)
+        plotter = MakePlot(plot_data, handle, total_stats.filename, sec_data=total_stats.stat_data)
+        p_kws = {'row': None, 'col': 'Variable', 'x_order': order, 'height': 3, 'aspect': 1, 'title_y': 1,
+                 'ylabel': 'collect', 'xlabel': 'Sample Group', 'gridspec': {'wspace': 0.25}}
+        plotter(pfunc.violin, 'title', 'total_stats', 'labels', 'legend', **p_kws)
 
     def stat_versus(self, Stats, path):
         """Plot statistics of group versus group for all variables."""
@@ -668,9 +609,7 @@ class plotting:
         test_data.loc[:, 'Sample Group'] = Stats.test_grp
         # Combine data in to one frame and melt it to long format
         plot_data = pd.concat([ctrl_data, test_data], ignore_index=True)
-        plot_data = plot_data.melt(id_vars=['Sample Group'],
-                                   var_name='Linear Position',
-                                   value_name='Value')
+        plot_data = plot_data.melt(id_vars=['Sample Group'], var_name='Linear Position', value_name='Value')
         # Initialize plotting:
         savepath = Stats.plot_dir
         handle = system.DataHandler(self.sgroups, path, savepath)
@@ -681,17 +620,12 @@ class plotting:
         # Plot variable
         plotter = MakePlot(plot_data, handle, f_title, sec_data=Stats)
         ylabel = get_unit(data_name[-1])
-        p_kws = {'col': None, 'row': None, 'ylabel': ylabel,
-                 'label_first_only': True,
-                 'melt': {'id_vars': ['Sample Group'],
-                          'var_name': 'Linear Position',
-                          'value_name': 'Value'},
-                 'gridspec': {'bottom': 0.2}}
+        p_kws = {'col': None, 'row': None, 'ylabel': ylabel, 'label_first_only': True, 'gridspec': {'bottom': 0.2},
+                 'melt': {'id_vars': ['Sample Group'], 'var_name': 'Linear Position', 'value_name': 'Value'}}
         if Sett.windowed:
             p_kws.update({'windowed': True})
 
-        plotter(pfunc.lines, 'centerline', 'ticks', 'title', 'stats', 'labels',
-                'legend', 'peaks', **p_kws)
+        plotter(pfunc.lines, 'centerline', 'ticks', 'title', 'stats', 'labels', 'legend', 'peaks', **p_kws)
 
     def width(self):
         """Create line plots of sample group widths."""
@@ -709,11 +643,9 @@ class plotting:
 
         # Make plot:
         plotter = MakePlot(all_data, handle, 'Widths - All')
-        p_kws = merge_kws(self.kws, {'row': None, 'col': None,
-                                     'ylabel': 'Units (coord system)',
+        p_kws = merge_kws(self.kws, {'row': None, 'col': None, 'ylabel': 'Units (coord system)',
                                      'gridspec': {'bottom': 0.2}})
-        plotter(pfunc.lines, 'centerline', 'ticks', 'title', 'legend',
-                'labels', 'peaks', **p_kws)
+        plotter(pfunc.lines, 'centerline', 'ticks', 'title', 'legend', 'labels', 'peaks', **p_kws)
 
 
 def select(paths, adds=True):
@@ -723,9 +655,8 @@ def select(paths, adds=True):
     ch_targets = Sett.vs_channels
     # If selecting additional data:
     if adds:
-        ret_paths = [p for p in paths if
-                     str(p.stem).split('_')[1] in ch_targets and
-                     str(p.stem).split('_')[2].split('-')[0] in add_targets]
+        ret_paths = [p for p in paths if str(p.stem).split('_')[1] in ch_targets
+                     and str(p.stem).split('_')[2].split('-')[0] in add_targets]
         return ret_paths
     # If selecting channel counts:
     ret_paths = [p for p in paths if str(p.stem).split('_')[1] in ch_targets]
@@ -737,8 +668,7 @@ def identifiers(data, path, ids):
     if 'Channel' in ids:
         data.loc['Channel', :] = path.stem.split('_')[1]
     if 'Sample Group' in ids:
-        data.loc['Sample Group', :] = [str(c).split('_')[0] for c in
-                                       data.columns]
+        data.loc['Sample Group', :] = [str(c).split('_')[0] for c in data.columns]
     if 'Sample' in ids:
         data.loc['Sample', :] = data.columns
     if 'Type' in ids:

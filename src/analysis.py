@@ -19,12 +19,12 @@ import seaborn as sns
 from sklearn.neighbors import KDTree
 
 # LAM imports
-import system
-import process
-from settings import store, settings as Sett
-from statsMWW import statistics, TotalStats
-from plot import plotting
-import logger as lg
+import src.system as system
+import src.process as process
+from src.settings import store, settings as Sett
+from src.statsMWW import statistics, TotalStats
+from src.plot import plotting
+import src.logger as lg
 
 LAM_logger = None
 
@@ -48,8 +48,7 @@ class Samplegroups:
         # on to child classes.
         Samplegroups._groups = sorted(store.samplegroups)
         Samplegroups._chanPaths = list(PATHS.datadir.glob('Norm_*'))
-        Samplegroups._samplePaths = [p for p in PATHS.samplesdir.iterdir()
-                                     if p.is_dir()]
+        Samplegroups._samplePaths = [p for p in PATHS.samplesdir.iterdir() if p.is_dir()]
         Samplegroups._addData = list(PATHS.datadir.glob('Avg_*'))
 
         # Data and other usable directories
@@ -77,11 +76,9 @@ class Samplegroups:
         """Handle data for the creation of most plots."""
 
         # If no plots handled by this method are True, return
-        plots = [Sett.Create_Channel_Plots, Sett.Create_AddData_Plots,
-                 Sett.Create_Channel_PairPlots, Sett.Create_Heatmaps,
-                 Sett.Create_Distribution_Plots, Sett.Create_Cluster_Plots,
-                 Sett.Create_ChanVSAdd_Plots, Sett.Create_AddVSAdd_Plots,
-                 Sett.plot_width]
+        plots = [Sett.Create_Channel_Plots, Sett.Create_AddData_Plots, Sett.Create_Channel_PairPlots,
+                 Sett.Create_Heatmaps, Sett.Create_Distribution_Plots, Sett.Create_Cluster_Plots,
+                 Sett.Create_ChanVSAdd_Plots, Sett.Create_AddVSAdd_Plots, Sett.plot_width]
         if not any(plots):
             return
 
@@ -257,10 +254,8 @@ class Samplegroups:
 
                 # Find stats of cell counts and additional data by looping
                 # through each.
-                for path in chain(self.paths.datadir.glob('Norm_*'),
-                                  self.paths.datadir.glob('Avg_*'),
-                                  self.paths.datadir.glob('ClNorm_*'),
-                                  self.paths.datadir.glob('Sample_widths_n*')):
+                for path in chain(self.paths.datadir.glob('Norm_*'), self.paths.datadir.glob('Avg_*'),
+                                  self.paths.datadir.glob('ClNorm_*'), self.paths.datadir.glob('Sample_widths_n*')):
                     stats = stats.MWW_test(path)
 
                     if stats.error:
@@ -281,9 +276,7 @@ class Samplegroups:
             # Find the data file, initialize class, and count stats
             datapaths = self.paths.datadir.glob('Total*.csv')
             for path in datapaths:
-                total_counts = TotalStats(path, self._groups,
-                                          self.paths.plotdir,
-                                          self.paths.statsdir)
+                total_counts = TotalStats(path, self._groups, self.paths.plotdir, self.paths.statsdir)
 
                 # If error in data, continue to next totals file
                 if total_counts.dataerror:
@@ -329,28 +322,23 @@ class Samplegroups:
             ch_sum = _read_and_sum()
             channel = path.stem.split('_')[1]  # Channel name
             ch_sum = ch_sum.assign(Variable=channel)
-            full_df = pd.concat([full_df, ch_sum], ignore_index=False,
-                                sort=False)
+            full_df = pd.concat([full_df, ch_sum], ignore_index=False, sort=False)
 
         # Save dataframe containing sums of each channel for each sample
-        system.saveToFile(full_df, datadir, 'Total Counts.csv', append=False,
-                          w_index=True)
+        system.saveToFile(full_df, datadir, 'Total Counts.csv', append=False, w_index=True)
 
         # Find totals of additional data
-        for channel in [c for c in store.channels if c not in ['MP', 'R45',
-                                                               Sett.MPname]]:
+        for channel in [c for c in store.channels if c not in ['MP', 'R45', Sett.MPname]]:
             full_df = pd.DataFrame()
 
             for path in datadir.glob('Avg_{}_*'.format(channel)):
-                chan_data, __, _ = self.read_channel(path, self._groups,
-                                                     drop=drpb)
+                chan_data, __, _ = self.read_channel(path, self._groups, drop=drpb)
                 # Assign channel identifier
                 add_name = path.stem.split('_')[2:]  # Channel name
                 chan_data = chan_data.assign(Variable='_'.join(add_name))
 
                 # Concatenate new data to full set
-                full_df = pd.concat([full_df, chan_data], ignore_index=False,
-                                    sort=False)
+                full_df = pd.concat([full_df, chan_data], ignore_index=False, sort=False)
 
             if full_df.empty:
                 continue
@@ -361,18 +349,15 @@ class Samplegroups:
             full_df = full_df[cols]
 
             # Drop samples that have invariant data
-            full_df = full_df[full_df.iloc[:, :-3].nunique(axis=1,
-                                                           dropna=True) > 1]
+            full_df = full_df[full_df.iloc[:, :-3].nunique(axis=1, dropna=True) > 1]
 
             # Save dataframe containing sums of each channel for each sample
             filename = 'Total {} AddData.csv'.format(channel)
-            system.saveToFile(full_df, datadir, filename, append=False,
-                              w_index=True)
+            system.saveToFile(full_df, datadir, filename, append=False, w_index=True)
 
         # Find totals of data obtained from distance calculations
         full_df = pd.DataFrame()
-        for path in chain(datadir.glob('Clusters-*.csv'),
-                          datadir.glob('*Distance Means.csv'),
+        for path in chain(datadir.glob('Clusters-*.csv'), datadir.glob('*Distance Means.csv'),
                           datadir.glob('Sample_widths_norm.csv')):
             if 'Clusters-' in path.name:
                 name = "{} Clusters".format(path.stem.split('-')[1])
@@ -384,8 +369,7 @@ class Samplegroups:
 
             # Assign data type identifier
             chan_data = chan_data.assign(Variable=name)
-            full_df = pd.concat([full_df, chan_data], ignore_index=False,
-                                sort=False)
+            full_df = pd.concat([full_df, chan_data], ignore_index=False, sort=False)
 
         if not full_df.empty:  # If data obtained
             # Adjust column order so that identifiers are first
@@ -395,8 +379,7 @@ class Samplegroups:
 
             # Save DF
             filename = 'Total Distance Data.csv'
-            system.saveToFile(full_df, datadir, filename, append=False,
-                              w_index=True)
+            system.saveToFile(full_df, datadir, filename, append=False, w_index=True)
 
         lg.logprint(LAM_logger, 'Total counts done', 'i')
 
@@ -414,8 +397,7 @@ class Group(Samplegroups):
         if not child:
             self.color = self._grpPalette.get(self.group)
             namerreg = re.compile("^{}".format(self.namer), re.I)
-            self.groupPaths = [p for p in self._samplePaths if namerreg.search(
-                                p.name)]
+            self.groupPaths = [p for p in self._samplePaths if namerreg.search(p.name)]
             inds = self._AllMPs.columns.str.contains(self.namer)
             self.MPs = self._AllMPs.loc[:, inds]
 
@@ -429,8 +411,8 @@ class Sample(Group):
         # Sample's name, path to its directory, and paths to data it has
         self.name = str(path.stem)
         self.path = path
-        self.channelPaths = [p for p in path.iterdir() if p.suffix == '.csv' if
-                             p.stem not in ['vector', 'MPs', Sett.MPname]]
+        self.channelPaths = [p for p in path.iterdir() if p.suffix == '.csv'
+                             if p.stem not in ['vector', 'MPs', Sett.MPname]]
         # Sample's group-specific color, and it's anchoring bin.
         self.color = grp.color
         self.MP = grp.MPs.loc[0, self.name]
@@ -440,8 +422,7 @@ class Sample(Group):
 
         # Find bins of the clustered cells to find counts per bin
         idx = data.loc[:, 'ClusterID'].notna().index
-        binned_data = data.loc[data.dropna(subset=['ClusterID']).index,
-                               'DistBin']
+        binned_data = data.loc[data.dropna(subset=['ClusterID']).index, 'DistBin']
 
         # Sort values and then get counts
         bins = binned_data.sort_values().to_numpy()
@@ -449,15 +430,13 @@ class Sample(Group):
         idx = np.arange(0, Sett.projBins)
 
         # Create series to store the cell count data
-        binned_counts = pd.Series(np.full(len(idx), 0), index=idx,
-                                  name=self.name)
+        binned_counts = pd.Series(np.full(len(idx), 0), index=idx, name=self.name)
         binned_counts.loc[unique] = counts
         filename = 'Clusters-{}.csv'.format(name)
         system.saveToFile(binned_counts, self.paths.datadir, filename)
 
         # Relate the counts to context, i.e. anchor them at the MP
-        insert, _ = process.relate_data(binned_counts, self.MP,
-                                        self._center, self._length)
+        insert, _ = process.relate_data(binned_counts, self.MP, self._center, self._length)
 
         # Save the data
         counts_series = pd.Series(data=insert, name=self.name)
@@ -469,8 +448,7 @@ class Sample(Group):
         kws = {'Dist': dist}  # Maximum distance for considering clustering
 
         # Listing of paths of channels on which clusters are to be found
-        cluster_chans = [p for p in self.channelPaths for t in
-                         Sett.Cluster_Channels if t.lower() == p.stem.lower()]
+        cluster_chans = [p for p in self.channelPaths for t in Sett.Cluster_Channels if t.lower() == p.stem.lower()]
         for path in cluster_chans:  # Loop paths, read file, and find clusters
             try:
                 data = system.read_data(path, header=0)
@@ -484,12 +462,9 @@ class Sample(Group):
             data.name = path.stem  # The name of the clustering channel
 
             # Find clusters
-            self.find_distances(data, vol_incl=Sett.Cl_inclusion,
-                                compare=Sett.Cl_incl_type, clusters=True,
-                                **kws)
+            self.find_distances(data, vol_incl=Sett.Cl_inclusion, compare=Sett.Cl_incl_type, clusters=True, **kws)
 
-    def find_distances(self, data, vol_incl=200, compare='smfull_dfer',
-                       clusters=False, **kws):
+    def find_distances(self, data, vol_incl=200, compare='smfull_dfer', clusters=False, **kws):
         """Calculate cell-to-cell distances or find clusters."""
 
         def _find_clusters():
@@ -532,8 +507,7 @@ class Sample(Group):
 
             # Change the generator into list of lists and drop clusters of size
             # under/over limits
-            all_cl = [list(y) for x in cl_gen for y in x if y and
-                      Sett.Cl_min <= len(y) <= Sett.Cl_max]
+            all_cl = [list(y) for x in cl_gen for y in x if y and Sett.Cl_min <= len(y) <= Sett.Cl_max]
             return all_cl
 
         def _find_nearest():
@@ -560,16 +534,14 @@ class Sample(Group):
             tree = KDTree(treedata)
             dist, ind = tree.query(xy_pos[['x', 'y', 'z']], k=2)
 
-            col_dict = {cols[0]: dist[:, 1],
-                        cols[1]: target.iloc[ind[:, 1]].ID.values}
+            col_dict = {cols[0]: dist[:, 1], cols[1]: target.iloc[ind[:, 1]].ID.values}
             new_data = new_data.assign(**col_dict)
 
             # Concatenate the obtained data with the read data.
             new_data = pd.concat([data, new_data], axis=1)
 
             # limit data based on maxDist
-            new_data[cols] = new_data[cols].where((new_data[cols[0]]
-                                                   <= max_dist))
+            new_data[cols] = new_data[cols].where((new_data[cols[0]] <= max_dist))
 
             # Get bin and distance to nearest cell for each cell, calculate
             # average distance within each bin.
@@ -577,8 +549,7 @@ class Sample(Group):
             distances = new_data.loc[:, cols[0]].astype('float64')
             with warnings.catch_warnings():
                 warnings.simplefilter('ignore', category=RuntimeWarning)
-                means = [np.nanmean(distances[binned_data.values == k]) for
-                         k in np.arange(0, Sett.projBins)]
+                means = [np.nanmean(distances[binned_data.values == k]) for k in np.arange(0, Sett.projBins)]
             return new_data, means, filename
 
         if vol_incl > 0:  # Subsetting of data based on cell volume
@@ -596,21 +567,18 @@ class Sample(Group):
 
         # Accessing the data for the analysis via the indexes taken before.
         # Cells for which the nearest cells will be found:
-        xy_pos = data.loc[data_ind, ['Position X', 'Position Y', 'Position Z',
-                                     'ID', 'DistBin']]
+        xy_pos = data.loc[data_ind, ['Position X', 'Position Y', 'Position Z', 'ID', 'DistBin']]
         renames = {'Position X': 'x', 'Position Y': 'y', 'Position Z': 'z'}
         xy_pos.rename(columns=renames, inplace=True)  # rename for dot notation
 
         if 'test_ind' in locals():  # Get data from target channel, if used
-            target_xy = test_data.loc[test_ind, ['Position X', 'Position Y',
-                                                 'Position Z', 'ID']]
+            target_xy = test_data.loc[test_ind, ['Position X', 'Position Y', 'Position Z', 'ID']]
             target_xy.rename(columns=renames, inplace=True)
 
         if not clusters:  # Finding nearest distances
             new_data, means, filename = _find_nearest()
             means_series = pd.Series(means, name=self.name)
-            insert, _ = process.relate_data(means_series, self.MP,
-                                            self._center, self._length)
+            insert, _ = process.relate_data(means_series, self.MP, self._center, self._length)
             means_insert = pd.Series(data=insert, name=self.name)
             system.saveToFile(means_insert, self.paths.datadir, filename)
 
@@ -625,8 +593,7 @@ class Sample(Group):
 
             all_cl = _find_clusters()
             # Create dataframe for storing the obtained data
-            cl_data = pd.DataFrame(index=data.index, columns=['ID',
-                                                              'ClusterID'])
+            cl_data = pd.DataFrame(index=data.index, columns=['ID', 'ClusterID'])
             cl_data = cl_data.assign(ID=data.ID)  # Copy ID column
 
             # DBSCAN
@@ -655,16 +622,14 @@ class Sample(Group):
         kws = {'Dist': dist}  # Maximum distance used to find cells
 
         # List paths of channels where distances are to be found
-        dist_chans = [p for p in self.channelPaths for t in
-                      Sett.Distance_Channels if t.lower() == p.stem.lower()]
+        dist_chans = [p for p in self.channelPaths for t in Sett.Distance_Channels if t.lower() == p.stem.lower()]
 
         if Sett.use_target:  # If distances are found against other channel:
             target = Sett.target_chan  # Get the name of the target channel
             try:  # Find target's data file, read, and update data to keywords
                 file = '{}.csv'.format(target)
                 test_namer = re.compile(file, re.I)
-                target_path = [p for p in self.channelPaths if
-                               test_namer.fullmatch(str(p.name))]
+                target_path = [p for p in self.channelPaths if test_namer.fullmatch(str(p.name))]
                 test_data = system.read_data(target_path[0], header=0)
                 kws.update({'test_data': test_data})
             except (FileNotFoundError, IndexError):
@@ -686,8 +651,7 @@ class Sample(Group):
             data = data.loc[:, ~data.columns.str.startswith('Nearest_')]
             # Find distances
             data.name = path.stem
-            self.find_distances(data, vol_incl=Sett.inclusion,
-                                compare=Sett.incl_type, **kws)
+            self.find_distances(data, vol_incl=Sett.inclusion, compare=Sett.incl_type, **kws)
 
 
 def DropOutlier(data):
@@ -698,11 +662,9 @@ def DropOutlier(data):
         std = np.nanstd(data.values)
         dropval = Sett.dropSTD * std
         if isinstance(data, pd.DataFrame):
-            data = data.applymap(lambda x, dropval=dropval: x if
-                                 np.abs(x - mean) <= dropval else np.nan)
+            data = data.applymap(lambda x, dropval=dropval: x if np.abs(x - mean) <= dropval else np.nan)
         elif isinstance(data, pd.Series):
-            data = data.apply(lambda x, dropval=dropval: x if np.abs(x - mean)
-                              <= dropval else np.nan)
+            data = data.apply(lambda x, dropval=dropval: x if np.abs(x - mean) <= dropval else np.nan)
     return data
 
 
@@ -724,7 +686,6 @@ def subset_data(data, compare, vol_incl, sample):
         e_msg = f"Column '{Sett.incl_col}' not found for {sample} {data.name}."
         print(f"ERROR: {e_msg}\n")
         lg.logprint(LAM_logger, e_msg, 'e')
-        sub_ind = None
     elif sum(cols) > 1:
         id_str = f"{sample} {data.name}"
         msg = f"Multiple columns with '{Sett.incl_col}' found for " + id_str

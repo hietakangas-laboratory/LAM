@@ -11,8 +11,7 @@ Distributed under GNU General Public License v3.0
 
 DEPENDENCIES:
 ------------
-matplotlib (3.1.3), numpy (1.18.1), pandas (1.0.1), pathlib2
-(2.3.5), scipy (1.4.1), seaborn (0.10.0), shapely (1.7.0),
+matplotlib (3.1.3), numpy (1.18.1), pandas (1.0.1), pathlib2(2.3.5), scipy (1.4.1), seaborn (0.10.0), shapely (1.7.0),
 scikit-image (0.16.2), statsmodels (0.11.0)
 
 INSTALLATION:
@@ -20,6 +19,8 @@ INSTALLATION:
 The master folder contains environment.yml that can be used to create Anaconda
 environment for LAM-use. For a Python environment, requirements.txt is
 included.
+
+Below, replace all text with <>
 
 - Anaconda env:
     conda env create -n <yourenvname> -f <path\to\environment.yml>
@@ -32,11 +33,6 @@ included.
         •	Windows:
             <yourenvname>\Scripts\activate.bat
     2.	pip install -r <path-to-requirements.txt>
-        • !!!  On Windows you need to install Shapely separately
-               https://pypi.org/project/Shapely/
-          You can either remove shapely from the requirements.txt or add ‘#’ in
-          front of the line to pass it, in order to install all other necessary
-          dependencies.
 
 - Anaconda3 base environment:
     1. install Anaconda3 distribution (https://www.anaconda.com/distribution/)
@@ -89,15 +85,13 @@ import sys
 import pathlib as pl
 
 # LAM module
-from settings import store, settings as Sett
-import parse_cmds as pc
-import system
-import analysis
-import process
-import border_detection as bd
-import logger as lg
-# import plot
-# import plotfuncs
+from src.settings import store, settings as Sett
+import src.parse_cmds as pc
+import src.system as system
+import src.analysis as analysis
+import src.process as process
+import src.border_detect as bd
+import src.logger as lg
 
 LAM_logger = None
 
@@ -112,8 +106,7 @@ def main(gui_root=None):
         system.test_vector_ext(system_paths.samplesdir)
         process.create_samples(system_paths)
         # If only creating vectors, return from main()
-        if not any([Sett.process_counts, Sett.process_dists,
-                    Sett.Create_Plots, Sett.statistics]):
+        if not any([Sett.process_counts, Sett.process_dists, Sett.Create_Plots, Sett.statistics]):
             return
     if Sett.process_counts and Sett.project:
         if not Sett.process_samples:
@@ -131,8 +124,7 @@ def main(gui_root=None):
     process.Get_Counts(system_paths)
 
     # Storing of descriptive data of analysis, i.e. channels/samples/groups
-    system_paths.save_AnalysisInfo(store.samples, store.samplegroups,
-                                   store.channels)
+    system_paths.save_AnalysisInfo(store.samples, store.samplegroups, store.channels)
 
     # Create object to hold samplegroup info
     sample_groups = analysis.Samplegroups(system_paths)
@@ -153,10 +145,8 @@ def main(gui_root=None):
     if Sett.border_detection:
         conf = bd.test_channel(sample_groups._samplePaths, Sett.border_channel)
         if conf:
-            bd.detect_borders(system_paths, sample_groups._samplePaths,
-                              sample_groups._grpPalette, store.center,
-                              Sett.border_vars, Sett.scoring_vars,
-                              Sett.peak_thresh, Sett.border_channel)
+            bd.detect_borders(system_paths, sample_groups._samplePaths, sample_groups._grpPalette, store.center,
+                              Sett.border_vars, Sett.scoring_vars, Sett.peak_thresh, Sett.border_channel)
 
     # Get and select border data if needed:
     if Sett.Create_Plots and Sett.add_peaks:
@@ -198,29 +188,32 @@ def main_catch_exit(LAM_logger=None, gui_root=None):
         print("STOPPED\n")
         lg.log_Shutdown()
 
-    except AssertionError:
-        msg = 'STOPPED: No vectors found for samples.'
-        print(msg + '\n')
-        lg.logprint(LAM_logger, msg, 'c')
+    except process.VectorError as e:
+        print(e.message + '\n')
+        print(f'Missing: {", ".join(e.samples)}')
+        lg.logprint(LAM_logger, e.message, 'c')
         lg.log_Shutdown()
 
 
-if __name__ == '__main__':
-
+def run(argv=[]):
     # If arguments given from commandline, parse them
-    if len(sys.argv) > 1:
+    if len(argv) > 1:
         parser = pc.make_parser()
         pc.change_settings(parser)
 
     # Create GUI if needed
     if Sett.GUI:
         import tkinter as tk
-        import interface
+        import src.interface as interface
         ROOT = tk.Tk()
-        GUI = interface.base_GUI(ROOT)
+        interface.base_GUI(ROOT)
         ROOT.mainloop()
 
     # Otherwise make workdir into usable path and start the analysis
     else:
         Sett.workdir = pl.Path(Sett.workdir)
         main_catch_exit()
+
+
+if __name__ == '__main__':
+    run(sys.argv)

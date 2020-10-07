@@ -25,10 +25,10 @@ from skimage.transform import resize as resize_arr
 from skimage.measure import find_contours
 
 # LAM modules
-from settings import store, settings as Sett
-import plotfuncs as pfunc
-import logger as lg
-import system
+from src.settings import store, settings as Sett
+import src.plotfuncs as pfunc
+import src.logger as lg
+import src.system as system
 
 LAM_logger = None
 
@@ -69,8 +69,8 @@ class GetSample:
         """Find sample's vector data."""
         try:  # Find sample's vector file
             paths = list(self.sampledir.glob('Vector.*'))
-            if len(paths) > 1:
-                try:
+            if len(paths) > 1:  # If multiple vector files found
+                try:  # Prioritize txt before csv
                     vectorp = [p for p in paths if p.suffix=='.txt'][0]
                 except IndexError:
                     vectorp = paths[0]
@@ -80,12 +80,17 @@ class GetSample:
             if vectorp.suffix == ".txt":
                 # If vector is user-generated with ImageJ line tools:
                 temp_vect = pd.read_csv(vectorp, sep="\t", header=None)
-                temp_vect.columns = ["X", "Y"]
+                # Test if data had column headers and handle it
+                if temp_vect.iat[0, 0] in ['X', 'Y']:
+                    # Remove the row with column names and put it in the columns
+                    row, temp_vect = temp_vect.iloc[0], temp_vect.iloc[1:]
+                    temp_vect.columns = row
+                else:
+                    temp_vect.columns = ["X", "Y"]
             elif vectorp.suffix == ".csv":
                 temp_vect = pd.read_csv(vectorp)
             # Create LineString-object from the vector data
-            vector = list(zip(temp_vect.loc[:, 'X'].astype('float'),
-                              temp_vect.loc[:, 'Y'].astype('float')))
+            vector = list(zip(temp_vect.loc[:, 'X'].astype('float'), temp_vect.loc[:, 'Y'].astype('float')))
             self.vector = gm.LineString(vector)
             self.vector_length = self.vector.length
             length_series = pd.Series(self.vector_length, name=self.name)
@@ -128,8 +133,8 @@ class GetSample:
         # Extract point coordinates of the vector:
         positions = self.vect_data
         x, y = positions.loc[:, 'Position X'], positions.loc[:, 'Position Y']
-        vector, bin_array, skeleton, line_df = self.SkeletonVector(x, y,
-                Sett.SkeletonResize, Sett.BDiter, Sett.SigmaGauss)
+        vector, bin_array, skeleton, line_df = self.SkeletonVector(x, y, Sett.SkeletonResize, Sett.BDiter,
+                                                                   Sett.SigmaGauss)
         vector = vector.simplify(Sett.simplifyTol)
         system.saveToFile(line_df, self.sampledir, 'Vector.csv', append=False)
         pfunc.skeleton_plot(self.sampledir, self.name, bin_array, skeleton)
@@ -165,17 +170,13 @@ class GetSample:
                 x_size = round(x_size * resize)
                 binary_arr = resize_arr(binary_arr, (y_size, x_size))
             # Create Series to store real coordinate labels
-            x_lbl = pd.Series(np.linspace(x_min, x_max, x_size),
-                              index=pd.RangeIndex(binary_arr.shape[1]))
-            y_lbl = pd.Series(np.linspace(y_min, y_max, y_size),
-                              index=pd.RangeIndex(binary_arr.shape[0]))
+            x_lbl = pd.Series(np.linspace(x_min, x_max, x_size), index=pd.RangeIndex(binary_arr.shape[1]))
+            y_lbl = pd.Series(np.linspace(y_min, y_max, y_size), index=pd.RangeIndex(binary_arr.shape[0]))
             # BINARY DILATION
             try:
                 struct = mp.generate_binary_structure(2, 2)
                 for _ in range(BDiter):
-                    binary_arr = mp.binary_dilation(binary_arr,
-                                                    iterations=BDiter,
-                                                    structure=struct)
+                    binary_arr = mp.binary_dilation(binary_arr, iterations=BDiter, structure=struct)
             except TypeError:
                 msg = 'BDiter in settings has to be an integer.'
                 lg.logprint(LAM_logger, msg, 'e')
@@ -189,8 +190,7 @@ class GetSample:
             pols = []
             for cont in contours:
                 pol = gm.Polygon(cont)
-                pol = pol.simplify(Sett.simplifyTol * resize,
-                                   preserve_topology=False)
+                pol = pol.simplify(Sett.simplifyTol * resize, preserve_topology=False)
                 pols.append(pol)
             pols = gm.MultiPolygon(pols)
             segm = _intersection(binary_arr.shape, pols)
@@ -218,10 +218,8 @@ class GetSample:
 
         def _score_nearest():
             # DataFrame for storing relevant info on pixel coordinates
-            distances = pd.DataFrame(np.zeros((nearest.size, 6)),
-                                     index=nearest,
-                                     columns=['rads', 'dist', 'distOG',
-                                              'penalty', 'X', 'Y'])
+            distances = pd.DataFrame(np.zeros((nearest.size, 6)), index=nearest, columns=['rads', 'dist', 'distOG',
+                                                                                          'penalty', 'X', 'Y'])
             # Create scores for each nearby pixel:
             for ind, __ in coord_df.loc[nearest, :].iterrows():
                 x_n, y_n = coord_df.X.at[ind], coord_df.Y.at[ind]
@@ -240,8 +238,7 @@ class GetSample:
         bin_array, bin_arr_ind, bin_arr_cols = _binarize(coords)
         # Make skeleton and get coordinates of skeleton pixels
         skeleton = skeletonize(bin_array)
-        skel_values = [(bin_arr_ind.iat[y], bin_arr_cols.iat[x]) for y, x in
-                       zip(*np.where(skeleton == 1))]
+        skel_values = [(bin_arr_ind.iat[y], bin_arr_cols.iat[x]) for y, x in zip(*np.where(skeleton == 1))]
         # Dataframe from skeleton coords
         coord_df = pd.DataFrame(skel_values, columns=['Y', 'X'])
 
@@ -265,8 +262,7 @@ class GetSample:
             else:
                 flag = True
         # Take mean coordinates of cells near the end to be the starting point
-        s_x, s_y = coord_df.loc[nearStart, 'X'].min(), coord_df.loc[
-            nearStart, 'Y'].mean()
+        s_x, s_y = coord_df.loc[nearStart, 'X'].min(), coord_df.loc[nearStart, 'Y'].mean()
         line.append((s_x, s_y))
         # Drop the used coordinates
         coord_df.drop(nearStart, inplace=True)
@@ -278,14 +274,12 @@ class GetSample:
             # Find pixels near to the current coordinate
             with warnings.catch_warnings():
                 warnings.simplefilter('ignore', category=UserWarning)
-                nearest = coord_df[(abs(coord_df.X - s_x) <= finder) &
-                                   (abs(coord_df.Y - s_y) <= finder)].index
+                nearest = coord_df[(abs(coord_df.X - s_x) <= finder) & (abs(coord_df.Y - s_y) <= finder)].index
             if nearest.size == 0:  # If none near, extend search distance once
                 with warnings.catch_warnings():
                     warnings.simplefilter('ignore', category=UserWarning)
                     nearest = coord_df[(abs(coord_df.X - s_x) <= finder * 2) &
-                                       (abs(coord_df.Y - s_y) <= finder * 2)
-                                       ].index
+                                       (abs(coord_df.Y - s_y) <= finder * 2)].index
             if nearest.size > 1:
                 # If pixels are found, establish the vector's direction:
                 try:
@@ -299,12 +293,10 @@ class GetSample:
                 # Calculate scoring of points
                 distances = _score_nearest()
                 # Drop the pixels that are behind current vector coord
-                forfeit = distances.loc[((distances.dist > distances.distOG) &
-                                         (abs(distances.rads) > 1.6))].index
+                forfeit = distances.loc[((distances.dist > distances.distOG) & (abs(distances.rads) > 1.6))].index
                 # Find the pixel with the smallest penalty and add to vector:
                 try:
-                    best = distances.loc[nearest.difference(forfeit)
-                                         ].penalty.idxmin()
+                    best = distances.loc[nearest.difference(forfeit) ].penalty.idxmin()
                     x_2, y_2 = coord_df.X.at[best], coord_df.Y.at[best]
                     line.append((x_2, y_2))
                     best = pd.Index([best], dtype='int64')
@@ -343,11 +335,9 @@ class GetSample:
             if cells.size == 0:  # If no cells at bin, copy previous Y-coord
                 Ymedian[b] = Ymedian[b - 1]
             else:
-                Ymedian[b] = Y[idx == b].min() + (Y[idx == b].max() -
-                                                  Y[idx == b].min()) / 2
+                Ymedian[b] = Y[idx == b].min() + (Y[idx == b].max() - Y[idx == b].min()) / 2
         # Change bins and their medians into XY-coordinates
-        XYmedian = [p for p in tuple(np.stack((bins, Ymedian), axis=1)) if
-                    ~np.isnan(p).any()]
+        XYmedian = [p for p in tuple(np.stack((bins, Ymedian), axis=1)) if ~np.isnan(p).any()]
         # Create LineString-object from finished vector
         vector = gm.LineString(XYmedian)
         linedf = pd.DataFrame(XYmedian, columns=['X', 'Y'])
@@ -357,15 +347,13 @@ class GetSample:
         """Collect MPs for sample anchoring."""
         if useMP:
             try:  # Get measurement point for anchoring
-                MPdirPath = next(self.channelpaths.pop(i) for i, s in
-                                 enumerate(self.channelpaths) if
+                MPdirPath = next(self.channelpaths.pop(i) for i, s in enumerate(self.channelpaths) if
                                  str('_' + MPname + '_') in str(s))
                 MPpath = next(MPdirPath.glob("*Position.csv"))
                 MPdata = system.read_data(MPpath)
                 MPdata = MPdata.loc[:, ['Position X', 'Position Y']]
                 if not MPdata.empty:
-                    MPbin = self.project_MPs(MPdata, self.vector, datadir,
-                                             filename="MPs.csv")
+                    MPbin = self.project_MPs(MPdata, self.vector, datadir, filename="MPs.csv")
                     MP = pd.DataFrame(data=[MPbin.values], columns=['MP'])
                     MP.to_csv(self.sampledir.joinpath("MPs.csv"), index=False)
             except (StopIteration, ValueError, UnboundLocalError):
@@ -389,19 +377,17 @@ class GetSample:
         positions["VectPoint"] = [vector.interpolate(
             vector.project(gm.Point(x))) for x in points]
         # Find normalized distance (0->1)
-        positions["NormDist"] = [vector.project(x, normalized=True) for x in
-                                 positions["VectPoint"]]
+        positions["NormDist"] = [vector.project(x, normalized=True) for x in positions["VectPoint"]]
         # Find the bins that the points fall into
         # Determine bins of each feature
         edges = np.linspace(0, 1, Sett.projBins+1)
         labels = np.arange(0, Sett.projBins)
-        positions["DistBin"] = pd.cut(positions["NormDist"], edges,
-                                      labels=labels)
+        positions["DistBin"] = pd.cut(positions["NormDist"], edges, labels=labels)
         MPbin = pd.Series(positions.loc[:, "DistBin"], name=self.name)
         self.data = positions
         self.test_projection(Sett.MPname)
         # Save the obtained data:
-        system.saveToFile(MPbin, datadir, filename)
+        system.saveToFile(MPbin.astype(int), datadir, filename)
         return MPbin
 
     def project_channel(self, channel):
@@ -421,8 +407,7 @@ class GetSample:
         # Determine bins of each feature
         edges = np.linspace(0, 1, Sett.projBins+1)
         labels = np.arange(0, Sett.projBins)
-        data["DistBin"] = pd.cut(data["NormDist"], labels=labels, bins=edges,
-                                 include_lowest=True).astype('int')
+        data["DistBin"] = pd.cut(data["NormDist"], labels=labels, bins=edges, include_lowest=True).astype('int')
 
         # Assign data to DF and save the dataframe:
         data["VectPoint"] = [(p.x, p.y) for p in proj_points]
@@ -435,8 +420,7 @@ class GetSample:
 
     def find_counts(self, channel_name, datadir):
         """Gather projected features and find bin counts."""
-        counts = np.bincount(self.data['DistBin'],
-                             minlength=Sett.projBins)
+        counts = np.bincount(self.data['DistBin'], minlength=Sett.projBins)
         counts = pd.Series(np.nan_to_num(counts), name=self.name)
         ChString = 'All_{}.csv'.format(channel_name)
         system.saveToFile(counts, datadir, ChString)
@@ -448,6 +432,13 @@ class GetSample:
             msg = "All features were not projected. Check vector and data."
             print(f"   -> {name}: {msg}")
 
+
+class VectorError(Exception):
+    """Exception when missing sample vectors."""
+    def __init__(self, samples, message='CRITICAL: vectors not found for all samples.'):
+        self.samples = samples
+        self.message = message
+        super().__init__(self.message)
 
 class GetChannel:
     """Find and read channel data plus additional data."""
@@ -469,8 +460,7 @@ class GetChannel:
         try:
             data = system.read_data(str(path), header=Sett.header_row)
             channel = self.name
-            if (channel.lower() not in [c.lower() for c in store.channels] and
-                    channel.lower() != Sett.MPname.lower()):
+            if (channel.lower() not in [c.lower() for c in store.channels] and channel.lower() != Sett.MPname.lower()):
                 store.channels.append(self.name)
             return data
         except ValueError:
@@ -516,13 +506,10 @@ class GetChannel:
                 if (paths[0] == self.pospath and
                         any(self.data.columns.str.contains(namer))):
                     continue
-                if (paths[0] == self.pospath and not any(
-                        self.data.columns.str.contains(namer))):
-                    print("'{}' not in AddData-file of {} on channel {}"
-                          .format(key, self.sample.name, self.name))
+                if paths[0] == self.pospath and not any(self.data.columns.str.contains(namer)):
+                    print(f"'{key}' not in AddData-file of {self.sample.name} on channel {self.name}")
                 tmpData = system.read_data(str(paths[0]))
-                cols = tmpData.columns.map(lambda x, namer=namer: bool(
-                    re.match(namer, x)) or x == 'ID')
+                cols = tmpData.columns.map(lambda x, namer=namer: bool(re.match(namer, x)) or x == 'ID')
                 tmpData = tmpData.loc[:, cols]
                 addData = pd.merge(addData, tmpData, on='ID')
             else:  # If multiple files, e.g. intensity, get all
@@ -564,8 +551,7 @@ class normalize:
         Avgs = pd.DataFrame(index=NormCounts.index, columns=cols)
         for grp in Groups:  # For each group found in data
             namer = "{}_".format(grp)
-            grpData = NormCounts.loc[:, NormCounts.columns.str.startswith(
-                namer)]
+            grpData = NormCounts.loc[:, NormCounts.columns.str.startswith(namer)]
             # Calculate group averages
             Avgs.loc[:, "{}_All".format(grp)] = grpData.mean(axis=1)
         # Save average data
@@ -580,8 +566,7 @@ class normalize:
             dataFile = sampleDir.glob(str(self.channel + '.csv'))
             data = system.read_data(next(dataFile), header=0)
             for dataType in dataNames.keys():
-                sampleData = data.loc[:, data.columns.str.contains(
-                    str(dataType))]
+                sampleData = data.loc[:, data.columns.str.contains(str(dataType))]
                 if sampleData.empty:
                     continue
                 binnedData = data.loc[:, 'DistBin']
@@ -589,10 +574,8 @@ class normalize:
                 for col in sampleData:
                     avgS = pd.Series(np.full(TotalLen, np.nan), name=sample)
                     with warnings.catch_warnings():
-                        warnings.simplefilter('ignore',
-                                              category=RuntimeWarning)
-                        insert = [np.nanmean(sampleData.loc[
-                            binnedData == i, col]) for i in bins]
+                        warnings.simplefilter('ignore', category=RuntimeWarning)
+                        insert = [np.nanmean(sampleData.loc[binnedData == i, col]) for i in bins]
                         insert = [0 if np.isnan(v) else v for v in insert]
                     strt = int(self.starts.at[sample])
                     end = int(strt + Sett.projBins)
@@ -637,8 +620,7 @@ class DefineWidths:
 
         # Make sure that data is a linestring-object
         if not isinstance(vector, gm.LineString):
-            vlist = list(zip(vector.loc[:, 'X'].astype('float'),
-                             vector.loc[:, 'Y'].astype('float')))
+            vlist = list(zip(vector.loc[:, 'X'].astype('float'), vector.loc[:, 'Y'].astype('float')))
             vector = gm.LineString(vlist)
         self.vector = vector
 
@@ -656,8 +638,7 @@ class DefineWidths:
         def _get_sign(arr, p1x, p1y, p2x, p2y):
             """Find which side of vector a feature is."""
             X, Y = arr[0], arr[1]
-            val = math.copysign(1, (p2x - p1x) * (Y - p1y) -
-                                (p2y - p1y) * (X - p1x))
+            val = math.copysign(1, (p2x - p1x) * (Y - p1y) - (p2y - p1y) * (X - p1x))
             return val
 
         # Define bin edges
@@ -668,13 +649,11 @@ class DefineWidths:
             point2 = edge_points[ind+1]
             p1x, p1y = point1.x, point1.y
             p2x, p2y = point2.x, point2.y
-            d_index = data.loc[(data.NormDist >= edges[ind]) &
-                               (data.NormDist < edges[ind+1])].index
+            d_index = data.loc[(data.NormDist >= edges[ind]) & (data.NormDist < edges[ind+1])].index
             points = data.loc[d_index, ['Position X', 'Position Y']]
             # Assign hand-side of features
-            data.loc[d_index, 'hand'] = points.apply(
-                _get_sign, args=(p1x, p1y, p2x, p2y), axis=1, raw=True
-                ).replace(np.nan, 0)
+            data.loc[d_index, 'hand'] = points.apply(_get_sign, args=(p1x, p1y, p2x, p2y), axis=1, raw=True
+                                                     ).replace(np.nan, 0)
         data = data.sort_index()
         # Save calculated data
         ChString = str('{}.csv'.format(Sett.vectChannel))
@@ -685,8 +664,7 @@ class DefineWidths:
         """Divide vector to segments."""
         edges = np.linspace(0, 1, Sett.projBins*multip)
         if points:
-            edge_points = [self.vector.interpolate(d, normalized=True) for d in
-                           edges]
+            edge_points = [self.vector.interpolate(d, normalized=True) for d in edges]
             return edges, edge_points
         return edges
 
@@ -699,8 +677,7 @@ class DefineWidths:
             for val in [-1, 1]:
                 distances = data.loc[(data.hand == val)].ProjDist
                 if not distances.empty:
-                    temp = distances.groupby(pd.qcut(distances, 10,
-                                                     duplicates='drop')).mean()
+                    temp = distances.groupby(pd.qcut(distances, 10, duplicates='drop')).mean()
                     if not temp.empty:
                         width += temp.tolist()[-1]
             return width
@@ -712,8 +689,7 @@ class DefineWidths:
         res = pd.Series(name=self.name, index=pd.RangeIndex(stop=len(edges)))
         # Loop segments and get widths:
         for ind, _ in enumerate(edges[:-1]):
-            d_index = data.loc[(data.NormDist >= edges[ind]) &
-                               (data.NormDist < edges[ind+1])].index
+            d_index = data.loc[(data.NormDist >= edges[ind]) & (data.NormDist < edges[ind+1])].index
             res.iat[ind] = _get_approx_width(data.loc[d_index, :])
         filename = 'Sample_widths.csv'
         system.saveToFile(res, datadir, filename)
@@ -727,8 +703,7 @@ def create_samples(PATHS):
     if Sett.SkeletonVector:
         check_resize_step(Sett.SkeletonResize)
     # Loop Through samples to create vectors
-    for path in [p for p in Sett.workdir.iterdir() if p.is_dir() and p.stem
-                 != 'Analysis Data']:
+    for path in [p for p in Sett.workdir.iterdir() if p.is_dir() and p.stem != 'Analysis Data']:
         sample = GetSample(path, PATHS)
         print("{}  ...".format(sample.name))
         sample.vect_data = sample.get_vect_data(Sett.vectChannel)
@@ -764,17 +739,16 @@ def find_existing(PATHS):
             MP = 0
         MPs.loc[0, smpl] = MP
         # FIND CHANNEL COUNTS
-        for path in [p for p in smplpath.iterdir() if p.suffix == '.csv' and
-                     p.stem not in ['Vector', 'MPs', Sett.MPname]]:
+        for path in [p for p in smplpath.iterdir() if p.suffix == '.csv' and p.stem not in ['Vector', 'MPs',
+                                                                                            Sett.MPname]]:
             data = pd.read_csv(path)
             try:
                 counts = np.bincount(data['DistBin'], minlength=Sett.projBins)
                 counts = pd.Series(np.nan_to_num(counts), name=smpl)
-                ChString = str('All_{}.csv'.format(path.stem))
+                ChString = str(f'All_{path.stem}.csv')
                 system.saveToFile(counts, PATHS.datadir, ChString)
             except ValueError:  # If channel has not been projected
-                print("Missing projection data: {} - {}".format(path.stem,
-                                                                smpl))
+                print(f"Missing projection data: {path.stem} - {smpl}")
                 print("-> Set project=True and perform Count")
                 continue
     MPs.to_csv(PATHS.datadir.joinpath('MPs.csv'))
@@ -786,8 +760,7 @@ def find_existing(PATHS):
 def Get_Counts(PATHS):
     """Handle data to anchor samples and find cell counts."""
     try:  # Test that MPs are found for the sample
-        MPs = system.read_data(next(PATHS.datadir.glob('MPs.csv')),
-                               header=0, test=False)
+        MPs = system.read_data(next(PATHS.datadir.glob('MPs.csv')), header=0, test=False)
     except (FileNotFoundError, StopIteration):
         msg = "MPs.csv NOT found!"
         print("ERROR: {}".format(msg))
@@ -814,8 +787,7 @@ def Get_Counts(PATHS):
             lg.logprint(LAM_logger, msg, 'w')
         Groups = set({s.casefold(): s.split('_')[0] for s in samples}.values())
         store.samplegroups = sorted(Groups)
-        store.channels = [c.stem.split('_')[1] for c in
-                          PATHS.datadir.glob("All_*.csv")]
+        store.channels = [c.stem.split('_')[1] for c in PATHS.datadir.glob("All_*.csv")]
         try:  # If required lengths of matrices haven't been defined because
             # Process and Count are both False, get the sizes from files.
             chan = Sett.vectChannel
@@ -826,8 +798,7 @@ def Get_Counts(PATHS):
             temp = system.read_data(path, test=False, header=0)
             Sett.projBins = temp.shape[0]
         except AttributeError:
-            msg = "Cannot determine length of sample matrix\n" +\
-                    "-> Must perform 'Count' before continuing."
+            msg = "Cannot determine length of sample matrix\n-> Must perform 'Count' before continuing."
             lg.logprint(LAM_logger, msg, 'c')
             print("ERROR: {}".format(msg))
         return
@@ -846,8 +817,7 @@ def Get_Counts(PATHS):
             print('  {}  ...'.format(name))
             # Anchor sample's data to the full data matrix
             ch_counts = normalize(path)
-            ch_counts.starts, norm_counts = ch_counts.normalize_samples(
-                MPs, store.totalLength, store.center)
+            ch_counts.starts, norm_counts = ch_counts.normalize_samples(MPs, store.totalLength, store.center)
             # Get average bin counts
             ch_counts.averages(norm_counts)
             # Get averages of additional data per bin
@@ -858,9 +828,8 @@ def Get_Counts(PATHS):
             print('  Width  ...')
             width_path = PATHS.datadir.joinpath('Sample_widths.csv')
             width_counts = normalize(width_path)
-            _, _ = width_counts.normalize_samples(
-                MPs * 2, store.totalLength * 2, store.center * 2,
-                name='Sample_widths_norm')
+            _, _ = width_counts.normalize_samples(MPs * 2, store.totalLength * 2, store.center * 2,
+                                                  name='Sample_widths_norm')
         lg.logprint(LAM_logger, 'Channels normalized.', 'i')
 
 
@@ -869,16 +838,14 @@ def Project(PATHS):
     lg.logprint(LAM_logger, 'Begin channel projection and counting.', 'i')
     print("\n---Projecting and counting channels---")
     # Loop through all directories in the root directory
-    for path in [p for p in Sett.workdir.iterdir() if p.is_dir() and p.stem
-                 != 'Analysis Data']:
+    for path in [p for p in Sett.workdir.iterdir() if p.is_dir() and p.stem != 'Analysis Data']:
         # Initialize sample variables
         sample = GetSample(path, PATHS, process=False, project=True)
         print(f"  {sample.name}  ...")
         # Find anchoring point of the sample
         sample.MP = sample.get_MPs(Sett.MPname, Sett.useMP, PATHS.datadir)
         # Collection of data for each channel of the sample
-        for path2 in [p for p in sample.channelpaths if Sett.MPname.lower()
-                      != str(p).split('_')[-2].lower()]:
+        for path2 in [p for p in sample.channelpaths if Sett.MPname.lower() != str(p).split('_')[-2].lower()]:
             channel = GetChannel(path2, sample, Sett.AddData, PATHS.datadir)
             # If no variance in found additional data, it is discarded.
             if channel.datafail:
@@ -889,8 +856,7 @@ def Project(PATHS):
             # Project features of channel onto vector
             sample.data = sample.project_channel(channel)
             if (channel.name == Sett.vectChannel and Sett.measure_width):
-                DefineWidths(sample.data, sample.vector, sample.sampledir,
-                             PATHS.datadir)
+                DefineWidths(sample.data, sample.vector, sample.sampledir, PATHS.datadir)
             # Count occurrences in each bin
             if channel.name not in ["MPs"]:
                 sample.find_counts(channel.name, PATHS.datadir)
@@ -917,8 +883,7 @@ def relate_data(data, MP=0, center=50, TotalLength=100):
     try:  # Insertion
         insert[insx:end] = data
     except ValueError:
-        msg = "relate_data() call from {} line {}".format(
-            inspect.stack()[1][1], inspect.stack()[1][2])
+        msg = "relate_data() call from {} line {}".format(inspect.stack()[1][1], inspect.stack()[1][2])
         print('ERROR: {}'.format(msg))
         lg.logprint(LAM_logger, f'Failed {msg}\n', 'ex')
         msg = "If not using MPs, remove MPs.csv from 'Data Files'."
@@ -938,14 +903,9 @@ def vector_test(path):
         except StopIteration:
             miss_vector.append(samplepath.name)
             continue
-    if len(miss_vector) == 0:
+    if not miss_vector:
         return
-    msg = "Missing vector-files."
-    print("CRITICAL: {}".format(msg))
-    for smpl in miss_vector:
-        print("-> {}".format(smpl))
-    lg.logprint(LAM_logger, msg, 'c')
-    raise AssertionError
+    raise VectorError(miss_vector)
 
 
 def test_count_projection(counts):
@@ -954,8 +914,7 @@ def test_count_projection(counts):
 
 
 def check_resize_step(resize, log=True):
-    if Sett.SkeletonVector and Decimal(str(resize)) % Decimal(str(0.10))\
-            != Decimal('0.0'):
+    if Sett.SkeletonVector and Decimal(str(resize)) % Decimal(str(0.10)) != Decimal('0.0'):
         msg = 'Resizing not in step of 0.1'
         print("WARNING: {}".format(msg))
         # Round setting down to nearest 0.1.

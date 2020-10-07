@@ -19,9 +19,9 @@ import pathlib as pl
 import numpy as np
 
 # LAM modules
-import logger as lg
-import plot
-from settings import store, settings as Sett
+import src.logger as lg
+import src.plot as plot
+from src.settings import store, settings as Sett
 
 LAM_logger = None
 
@@ -131,10 +131,8 @@ class DataHandler:
                         msg = 'Faulty list index. Incorrect file names?'
                         print('ERROR: {}'.format(msg))
                         lg.logprint(LAM_logger, msg, 'e')
-                data = data.T.melt(id_vars=m_kws.get('id_vars'),
-                                   value_vars=m_kws.get('value_vars'),
-                                   var_name=m_kws.get('var_name'),
-                                   value_name=m_kws.get('value_name'))
+                data = data.T.melt(id_vars=m_kws.get('id_vars'), value_vars=m_kws.get('value_vars'),
+                                   var_name=m_kws.get('var_name'), value_name=m_kws.get('value_name'))
                 data = data.dropna(subset=[m_kws.get('value_name')])
                 melt = True
             else:
@@ -143,8 +141,7 @@ class DataHandler:
                 if all_data.empty:
                     all_data = data
                 else:
-                    all_data = all_data.merge(data, how='outer', copy=False,
-                                              on=kws.get('merge_on'))
+                    all_data = all_data.merge(data, how='outer', copy=False, on=kws.get('merge_on'))
                 continue
 
             # If not merging, concatenate the data with others
@@ -189,10 +186,8 @@ class DataHandler:
             if 'melt' in kws.keys():
                 mkws = kws.get('melt')
                 try:
-                    sub_data = sub_data.melt(id_vars=mkws.get('id_vars'),
-                                             value_vars=mkws.get('value_vars'),
-                                             var_name=mkws.get('var_name'),
-                                             value_name=mkws.get('value_name'))
+                    sub_data = sub_data.melt(id_vars=mkws.get('id_vars'), value_vars=mkws.get('value_vars'),
+                                             var_name=mkws.get('var_name'), value_name=mkws.get('value_name'))
                 except KeyError:
                     error = True
                 melt = True
@@ -202,8 +197,7 @@ class DataHandler:
                 all_data = pd.concat([all_data, sub_data], sort=True)
 
         # Drop outliers if needed
-        if 'drop_outlier' in args and (Sett.Drop_Outliers and
-                                       not all_data.empty):
+        if 'drop_outlier' in args and Sett.Drop_Outliers and not all_data.empty:
             all_data = drop_outliers(all_data, melt, **kws)
 
         # Infer datatype of columns
@@ -222,21 +216,16 @@ def read_data(filepath, header=Sett.header_row, test=True, index_col=False):
             try:
                 data.loc[:, 'ID']
             except KeyError:
-                msg = 'Column label test failed: ID not present at {}'\
-                                                            .format(filepath)
+                msg = f'Column label test failed: ID not present at {filepath}'
                 lg.logprint(LAM_logger, msg, 'ex')
-                print('WARNING: read_data() call from {} line {}'.format(
-                                inspect.stack()[1][1], inspect.stack()[1][2]))
+                print(f'WARNING: read_data() call from {inspect.stack()[1][1]} line {inspect.stack()[1][2]}')
                 print("Key 'ID' not found. Verify header row setting.\n\n")
-                print("Path: {}\n"
-                      .format(filepath))
+                print(f"Path: {filepath}\n")
 
     except FileNotFoundError:
         lg.logprint(LAM_logger, 'File not found at {}'.format(filepath), 'e')
-        print('WARNING: read_data() call from {} line {}'.format(
-                                inspect.stack()[1][1], inspect.stack()[1][2]))
-        print('File {} not found at {}'.format(filepath.name,
-                                               str(filepath.parent)))
+        print(f'WARNING: read_data() call from {inspect.stack()[1][1]} line {inspect.stack()[1][2]}')
+        print(f'File {filepath.name} not found at {str(filepath.parent)}')
         return None
 
     except (AttributeError, pd.errors.EmptyDataError) as err:
@@ -245,14 +234,14 @@ def read_data(filepath, header=Sett.header_row, test=True, index_col=False):
             print("ERROR: {}".format(msg))
             lg.logprint(LAM_logger, msg, 'e')
             return None
-        msg = "Data or columns may be faulty in {}".format(filepath.name)
+        msg = f"Data or columns may be faulty in {filepath.name}"
         print("WARNING: {}".format(msg))
         lg.logprint(LAM_logger, msg, 'w')
         return data
 
     except pd.errors.ParserError:
-        msg = "{} cannot be read.".format(filepath)
-        print("ERROR: {}".format(msg))
+        msg = f"{filepath} cannot be read."
+        print(f"ERROR: {msg}")
         print("\nWrong header row?")
         lg.logprint(LAM_logger, msg, 'ex')
     return data
@@ -291,8 +280,7 @@ def start(test_vectors=True):
         Sett.workdir = pl.Path(Sett.workdir)
 
     # Check that at least one primary setting is True
-    if not any([Sett.process_samples, Sett.process_counts,
-                Sett.Create_Plots, Sett.process_dists, Sett.statistics]):
+    if not any([Sett.process_samples, Sett.process_counts, Sett.Create_Plots, Sett.process_dists, Sett.statistics]):
         lg.logprint(LAM_logger, 'All primary settings are False', 'e')
         print("\nAll primary settings are set to False.\n\nExiting ...")
         raise SystemExit
@@ -305,8 +293,7 @@ def start(test_vectors=True):
 
     # Check that vector channel data are found
     if Sett.process_samples or (Sett.measure_width and Sett.process_counts):
-        samples = [p for p in Sett.workdir.iterdir() if p.is_dir() and
-                   p.name != 'Analysis Data']
+        samples = [p for p in Sett.workdir.iterdir() if p.is_dir() and p.name != 'Analysis Data']
         failed = []
         for sample in samples:
             try:
@@ -338,8 +325,7 @@ def test_vector_ext(dir_path):
 
     # Loop samples and find any vector file:
     for smpl in samples:
-        test = any([re.match(re.compile(".*vector.*", re.I), str(p.name)) for p
-                    in smpl.glob('*')])
+        test = any([re.match(re.compile(".*vector.*", re.I), str(p.name)) for p in smpl.glob('*')])
         # If a vector file is found, ask permission to remove:
         if test:
             flag = 1
@@ -373,8 +359,7 @@ def drop_outliers(all_data, melted=False, raw=False, **kws):
             std = np.nanstd(values.astype('float'))
         drop_val = Sett.dropSTD * std
         if raw:  # If data is not melted, replace outliers with NaN
-            data.where(np.abs(values - mean) <= drop_val, other=np.nan,
-                       inplace=True)
+            data.where(np.abs(values - mean) <= drop_val, other=np.nan, inplace=True)
         else:  # If data is melted and sorted, find indexes until val < drop
             idx = []
             for ind, val in values.iteritems():

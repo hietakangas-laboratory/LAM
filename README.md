@@ -31,15 +31,15 @@ analysis; in ideal circumstances, it is recommended that each sample group
 should have >=10 samples. Refer to 'docs/UserManual.pdf' for additional
 information.
 
-### Authors
-
-    Arto I. Viitanen - [Hietakangas laboratory](https://www.helsinki.fi/en/researchgroups/nutrient-sensing)
-
 ### License
 
 This project is licensed under the MIT License - see the LICENSE.md file for details
 
+### Authors
+Arto I. Viitanen - [Hietakangas laboratory](https://www.helsinki.fi/en/researchgroups/nutrient-sensing)
+
 ### Acknowledgments
-    Ville Hietakangas - [Hietakangas laboratory](https://www.helsinki.fi/en/researchgroups/nutrient-sensing/)
-    Jaakko Mattila - [Mattila laboratory](https://www.helsinki.fi/en/researchgroups/metabolism-and-signaling/)
+Ville Hietakangas - [Hietakangas laboratory](https://www.helsinki.fi/en/researchgroups/nutrient-sensing/)
+
+Jaakko Mattila - [Mattila laboratory](https://www.helsinki.fi/en/researchgroups/metabolism-and-signaling/)
 

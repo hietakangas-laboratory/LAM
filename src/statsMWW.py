@@ -13,10 +13,10 @@ import numpy as np
 import pandas as pd
 import scipy.stats as ss
 import statsmodels.stats.multitest as multi
+
 # LAM modules
-from settings import settings as Sett
-# from plot import plotter
-import system
+from src.settings import settings as Sett
+import src.system as system
 
 
 class statistics:
@@ -60,9 +60,8 @@ class statistics:
         grp_data = valid_data.T.groupby(lambda x: str(x).split('_')[0])
         self.ctrl_data = grp_data.get_group(self.ctrl_grp).T
         self.test_data = grp_data.get_group(self.test_grp).T
-        stat_cols = ['U Score', 'Corr. Greater', 'P Greater', 'Reject Greater',
-                     'Corr. Lesser', 'P Lesser', 'Reject Lesser',
-                     'Corr. Two-sided', 'P Two-sided', 'Reject Two-sided']
+        stat_cols = ['U Score', 'Corr. Greater', 'P Greater', 'Reject Greater', 'Corr. Lesser', 'P Lesser',
+                     'Reject Lesser', 'Corr. Two-sided', 'P Two-sided', 'Reject Two-sided']
         stat_data = pd.DataFrame(index=data.index, columns=stat_cols)
 
         if Sett.windowed:  # If doing rolling window stats
@@ -140,44 +139,39 @@ class TotalStats:
 
         # Make indices for DataFrame
         cols = ['U Score', 'P Two-sided', 'Reject Two-sided']  # Needed columns
-        mcol = pd.MultiIndex.from_product([self.test_grps, cols],
-                                          names=['Sample Group', 'Statistics'])
+        mcol = pd.MultiIndex.from_product([self.test_grps, cols], names=['Sample Group', 'Statistics'])
         variables = self.data.Variable.unique()  # Index
 
         # Create the DataFrame
         total_stats = pd.DataFrame(index=variables, columns=mcol)
-        total_stats.sort_index(level=['Sample Group', 'Statistics'],
-                               inplace=True)
+        total_stats.sort_index(level=['Sample Group', 'Statistics'], inplace=True)
 
         # Test each group against the control:
         for grp in self.test_grps:
             test_data = grp_data.get_group(grp)
 
             # Loop all variables to test
-            for var in variables:
+            for variable in variables:
                 # Get data of both groups
-                c_vals = ctrl_data.loc[(ctrl_data.Variable == var),
-                                       ctrl_data.columns.difference(
-                                           ['Sample Group', 'Variable'])]
-                t_vals = test_data.loc[(test_data.Variable == var),
-                                       test_data.columns.difference(
-                                           ['Sample Group', 'Variable'])]
+                c_vals = ctrl_data.loc[(ctrl_data.Variable == variable),
+                                       ctrl_data.columns.difference(['Sample Group', 'Variable'])]
+                t_vals = test_data.loc[(test_data.Variable == variable),
+                                       test_data.columns.difference(['Sample Group', 'Variable'])]
 
                 # Perform test
-                test_values = self.total_MWW(grp, c_vals, t_vals, var)
+                test_values = self.total_MWW(grp, c_vals, t_vals, variable)
 
                 # Insert values to result DF
-                total_stats.loc[var, (grp, cols)] = test_values
+                total_stats.loc[variable, (grp, cols)] = test_values
 
         # Save statistics
         savename = self.filename + ' Stats.csv'
-        system.saveToFile(total_stats, self.stat_dir, savename,
-                          append=False, w_index=True)
+        system.saveToFile(total_stats, self.stat_dir, savename, append=False, w_index=True)
 
         # Store to object
         self.stat_data = total_stats
 
-    def total_MWW(self, grp, c_vals, t_vals, var):
+    def total_MWW(self, grp, c_vals, t_vals, variable):
         """Perform MWW-test for group totals of a variable."""
 
         # Flatten matrix and drop missing values
@@ -187,23 +181,21 @@ class TotalStats:
         t_vals = t_vals[~np.isnan(t_vals)]
 
         try:  # MWW test:
-            stat, pval = ss.mannwhitneyu(c_vals, t_vals,
-                                         alternative='two-sided')
+            stat, pval = ss.mannwhitneyu(c_vals, t_vals, alternative='two-sided')
             reject = bool(pval < Sett.alpha)
 
         except ValueError as err:
             if str(err) == 'All numbers are identical in mannwhitneyu':
-                msg = 'Identical {}-values between control and {}'\
-                    .format(var, grp)
+                msg = f'Identical {variable}-values between control and {grp}'
             else:
-                msg = 'ValueError for {}'.format(var)
+                msg = 'ValueError for {}'.format(variable)
 
             print('WARNING: {}'.format(msg))
 
             if grp not in self.error_vars.keys():
-                self.error_vars.update({grp: [var]})
+                self.error_vars.update({grp: [variable]})
             else:
-                self.error_vars[grp].append(var)
+                self.error_vars[grp].append(variable)
             return [0, 0, 0]
 
         return [stat, pval, reject]
@@ -214,8 +206,7 @@ def get_stats(row, row2, ind, stat_data):
     unqs = np.unique(np.hstack((row, row2))).size
 
     # If data rows are different, get stats
-    if ((row.any() or row2.any()) and not np.array_equal(
-            np.unique(row), np.unique(row2)) and unqs > 1):
+    if ((row.any() or row2.any()) and not np.array_equal(np.unique(row), np.unique(row2)) and unqs > 1):
 
         with warnings.catch_warnings():
             warnings.simplefilter('ignore', category=RuntimeWarning)
@@ -243,8 +234,7 @@ def correct(stat_data, p_vals, corr_ind, rej_ind):
 
     with warnings.catch_warnings():  # Correct
         warnings.simplefilter('ignore', category=RuntimeWarning)
-        reject, corr_p, _, _ = multi.multipletests(vals, method='fdr_bh',
-                                                   alpha=Sett.alpha)
+        reject, corr_p, _, _ = multi.multipletests(vals, method='fdr_bh', alpha=Sett.alpha)
 
     # Add corrected values to DF
     stat_data.iloc[:, corr_ind], stat_data.iloc[:, rej_ind] = corr_p, reject

@@ -11,9 +11,10 @@ Created on Wed Mar  6 12:42:28 2019
 import logging
 import time
 import sys
+
 # A list of logger names used by the modules. Used for clearing of handlers.
-loggers = ['run', 'process', 'analysis', 'interface', 'plot', 'system',
-           'plotfuncs', 'border_detection']
+loggers = ['src.run', 'src.process', 'src.analysis', 'src.interface', 'src.plot', 'src.system', 'src.plotfuncs',
+           'src.border_detect']
 # Needed variables
 logFile = ""
 ctime = time.strftime("%d%b%y_%H%M%S")
@@ -32,7 +33,7 @@ def setup_logger(name=None, new=True):
     # Create variables for the creation of logfile
     global logFile, ctime, log_created
     ctime = time.strftime("%d%b%y_%H%M%S")  # Start time for the run
-    from settings import settings as Sett
+    from src.settings import settings as Sett
 
     # filepath:
     logFile = str(Sett.workdir.joinpath("log_{}.txt".format(ctime)))
@@ -59,7 +60,9 @@ def get_logger(name):
 def _get_handler():
     """Create message handler in conjunction with get_logger()."""
     # Create format for log messages
-    formatting = "%(asctime)s — %(name)s — %(levelname)s — %(message)s"
+    formatting = "%(asctime)-25s %(name)-20s %(levelname)-10s %(message)s"
+    # formatting = "{:s<25s} {:s<20s} {:s<10s} {:s<}".format(*strings)
+    #formatting = "%(asctime)s %(name)s %(levelname)s %(message)s"
     Formatter = logging.Formatter(formatting)
 
     # create handler and assign logfile's path
@@ -129,19 +132,15 @@ def logprint(self, msg="Missing", logtype='e'):
 
 def print_settings():
     """Write settings into the log file."""
-    from settings import settings as Sett
+    from src.settings import settings as Sett
     with open(logFile, 'w') as file:  # Write into the logfile
         file.write("Log time: {}\n".format(ctime))
         file.write("Analysis directory: {}\n\n".format(str(Sett.workdir)))
         pnames = ['Process', 'Count', 'Plots', 'Distances', 'Stats']
-        psets = [Sett.process_samples, Sett.process_counts,
-                 Sett.Create_Plots, Sett.process_dists,
-                 Sett.statistics]
-        primarymsg = ', '.join([pnames[i] for i, s in enumerate(psets) if
-                                s is True])
+        psets = [Sett.process_samples, Sett.process_counts, Sett.Create_Plots, Sett.process_dists, Sett.statistics]
+        primarymsg = ', '.join([pnames[i] for i, s in enumerate(psets) if s is True])
         file.write("Primary settings: {}\n".format(primarymsg))
-        if any([Sett.process_samples, Sett.process_counts,
-                Sett.process_dists]):
+        if any([Sett.process_samples, Sett.process_counts, Sett.process_dists]):
             if Sett.useMP:
                 MPmsg = "Using MP with label {}.\n".format(Sett.MPname)
             else:
@@ -162,16 +161,13 @@ def print_settings():
             vectordict = {'Simplify tolerance': Sett.simplifyTol}
             if Sett.SkeletonVector:
                 file.write("Creation type: Skeleton\n")
-                vectordict.update({'Resize': Sett.SkeletonResize,
-                                   'Find distance': Sett.find_dist,
-                                   'Dilation iterations': Sett.BDiter,
-                                   'Smoothing': Sett.SigmaGauss})
+                vectordict.update({'Resize': Sett.SkeletonResize, 'Find distance': Sett.find_dist,
+                                   'Dilation iterations': Sett.BDiter, 'Smoothing': Sett.SigmaGauss})
             else:
                 file.write("Creation type: Median\n")
                 vectordict.update({'Median bins': Sett.medianBins})
             keys = sorted(list(vectordict.keys()))
-            file.write(', '.join(["{}: {}".format(key, vectordict.get(key))
-                                  for key in keys]))
+            file.write(', '.join(["{}: {}".format(key, vectordict.get(key)) for key in keys]))
             file.write("\n")
 
         if Sett.process_counts:  # Count settings
@@ -180,37 +176,30 @@ def print_settings():
             file.write("Number of bins: {}\n".format(Sett.projBins))
             file.write("-Additional data-\n")
             addD = Sett.AddData
-            addtypes = ', '.join(["{}".format(key) for key in
-                                  sorted(list(addD.keys()))])
+            addtypes = ', '.join(["{}".format(key) for key in sorted(list(addD.keys()))])
             file.write("Types: {}\n".format(addtypes))
 
         if Sett.process_dists:  # Distance settings
             file.write("--- Distance Settings ---\n")
             if Sett.Find_Distances:
                 file.write("-Nearest Distance-\n")
-                distD = {'Channels': Sett.Distance_Channels,
-                         'Maximum distance': Sett.maxDist}
+                distD = {'Channels': Sett.Distance_Channels, 'Maximum distance': Sett.maxDist}
                 if Sett.use_target:
                     distD.update({'Target channel': Sett.target_chan})
                 if Sett.inclusion > 0:
                     if not Sett.incl_type:
-                        inclmsg = 'Smaller than {}'.format(
-                                                        Sett.inclusion)
+                        inclmsg = f'Smaller than {Sett.inclusion}'
                     else:
-                        inclmsg = 'Greater than {}'.format(
-                                                        Sett.inclusion)
+                        inclmsg = f'Greater than {Sett.inclusion}'
                     distD.update({'Cell inclusion': inclmsg})
                 keys = sorted(list(distD.keys()))
-                file.write(', '.join(["{}: {}".format(key, distD.get(key))
-                                      for key in keys]))
+                file.write(', '.join(["{}: {}".format(key, distD.get(key)) for key in keys]))
                 file.write("\n")
 
             if Sett.Find_Clusters:  # Cluster settings
                 file.write("-Clusters-\n")
-                clustD = {'Channels': Sett.Cluster_Channels,
-                          'Maximum distance': Sett.Cl_maxDist,
-                          'Minimum cluster': Sett.Cl_min,
-                          'Maximum cluster': Sett.Cl_max}
+                clustD = {'Channels': Sett.Cluster_Channels, 'Maximum distance': Sett.Cl_maxDist,
+                          'Minimum cluster': Sett.Cl_min, 'Maximum cluster': Sett.Cl_max}
                 if Sett.inclusion > 0:
                     if not Sett.Cl_incl_type:
                         inclmsg = f'Smaller than {Sett.Cl_inclusion}'
@@ -218,8 +207,7 @@ def print_settings():
                         inclmsg = f'Greater than {Sett.Cl_inclusion}'
                     clustD.update({'Cell inclusion': inclmsg})
                 keys = sorted(list(clustD.keys()))
-                file.write(', '.join(["{}: {}".format(key, clustD.get(key))
-                                      for key in keys]))
+                file.write(', '.join([f"{key}: {clustD.get(key)}" for key in keys]))
                 file.write("\n")
 
         if Sett.statistics:  # Statistics settings
@@ -232,23 +220,19 @@ def print_settings():
 
         if Sett.Create_Plots:  # Plotting settings
             file.write("--- Plot Settings ---\n")
-            plotnames = ['Channels', 'Additional', 'Pair', 'Heatmap',
-                         'Distribution', 'Borders', 'Sample borders', 'Width',
-                         'Statistics', 'ChanVSAdd', 'AddVSAdd']
-            plots = [Sett.Create_Channel_Plots, Sett.Create_AddData_Plots,
-                     Sett.Create_Channel_PairPlots, Sett.Create_Heatmaps,
-                     Sett.Create_Distribution_Plots, Sett.Create_Border_Plots,
-                     Sett.plot_samples, Sett.plot_width,
-                     Sett.Create_Statistics_Plots,
-                     Sett.Create_ChanVSAdd_Plots, Sett.Create_AddVSAdd_Plots]
-            plotmsg = ', '.join([plotnames[i] for i, s in enumerate(plots)
-                                 if s is True])
+            plotnames = ['Channels', 'Additional', 'Pair', 'Heatmap', 'Distribution', 'Borders', 'Sample borders',
+                         'Width', 'Statistics', 'ChanVSAdd', 'AddVSAdd']
+            plots = [Sett.Create_Channel_Plots, Sett.Create_AddData_Plots, Sett.Create_Channel_PairPlots,
+                     Sett.Create_Heatmaps, Sett.Create_Distribution_Plots, Sett.Create_Border_Plots, Sett.plot_samples,
+                     Sett.plot_width, Sett.Create_Statistics_Plots, Sett.Create_ChanVSAdd_Plots,
+                     Sett.Create_AddVSAdd_Plots]
+            plotmsg = ', '.join([plotnames[i] for i, s in enumerate(plots) if s is True])
             file.write("Plot types: {}\n".format(plotmsg))
             file.write("Drop outliers: {}\n".format(Sett.Drop_Outliers))
 
         # Create header for the messages sent during the analysis
         file.write("="*75 + "\n")
-        msg = ' ' * 8 + "-Time-" + ' ' * 12 + "-Module-" + ' ' * 4 + "-Level-"\
-            + ' ' * 9 + "-Message-"
+        "%(asctime)-25s %(name)-20s %(levelname)-10s %(message)s"
+        msg = "{:<25} {:<19}{:^10}\t\t{}".format('-Time-', '-Module-', '-Level-', '-Message-')
         file.write(msg)
         file.write("\n" + "-" * 75 + "\n")

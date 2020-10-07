@@ -5,9 +5,7 @@ Individual plot functions for LAM.
 Created on Mon Mar 16 16:34:33 2020
 @author: Arto I. Viitanen
 """
-# LAM modules
-from settings import settings as Sett
-import logger as lg
+
 # Standard libraries
 import warnings
 from random import shuffle
@@ -17,6 +15,10 @@ import numpy as np
 import seaborn as sns
 import pandas as pd
 
+# LAM modules
+from src.settings import settings as Sett
+import src.logger as lg
+
 LAM_logger = None
 
 
@@ -25,22 +27,18 @@ def bivariate_kde(plotter, **in_kws):
     kws = in_kws.get('plot_kws')
     data = plotter.data.drop('Channel', axis=1)
     if plotter.sec_data is not None:
-        plot_data = data.merge(plotter.sec_data, how='outer',
-                               on=['Sample Group', 'Sample',
-                                   'Linear Position'])
+        plot_data = data.merge(plotter.sec_data, how='outer', on=['Sample Group', 'Sample', 'Linear Position'])
     else:
         plot_data = data
-    g = sns.FacetGrid(data=plot_data, row=kws.get('row'), col=kws.get('col'),
-                      hue="Sample Group", sharex=False, sharey=False,
-                      height=5)
+    g = sns.FacetGrid(data=plot_data, row=kws.get('row'), col=kws.get('col'), hue="Sample Group", sharex=False,
+                      sharey=False, height=5)
     with warnings.catch_warnings():
         warnings.simplefilter('ignore', category=UserWarning)
         try:
-            g = g.map(sns.kdeplot, 'Value_y', 'Value_x', shade_lowest=False,
-                      shade=False, linewidths=2.5, alpha=0.6)
+            g = g.map(sns.kdeplot, 'Value_y', 'Value_x', shade_lowest=False, shade=False, linewidths=2.5, alpha=0.6)
         except np.linalg.LinAlgError:
             msg = '-> Confirm that all samples have proper channel data'
-            fullmsg = 'Bivariate plot singular matrix\n{}'.format(msg)
+            fullmsg = f'Bivariate plot singular matrix\n{msg}'
             lg.logprint(LAM_logger, fullmsg, 'ex')
             print('ERROR: Bivariate plot singular matrix')
             print(msg)
@@ -51,8 +49,7 @@ def bivariate_kde(plotter, **in_kws):
 def channel_matrix(plotter, **kws):
     """Creation of pair plots."""
     # Settings for plotting:
-    pkws = {'x_ci': None, 'truncate': True, 'order': 2,
-            'scatter_kws': {'linewidth': 0.1, 's': 15, 'alpha': 0.4},
+    pkws = {'x_ci': None, 'truncate': True, 'order': 2, 'scatter_kws': {'linewidth': 0.1, 's': 15, 'alpha': 0.4},
             'line_kws': {'alpha': 0.45, 'linewidth': 1}}
     if Sett.plot_jitter:
         pkws.update({'x_jitter': 0.49, 'y_jitter': 0.49})
@@ -62,13 +59,8 @@ def channel_matrix(plotter, **kws):
     cols = data.columns != 'Sample Group'
     data = data.dropna(how='all', subset=data.columns[cols]).replace(np.nan, 0)
     try:
-        g = sns.pairplot(data=data, hue=kws.get('hue'),
-                         height=1.5, aspect=1,
-                         kind=kws.get('kind'),
-                         diag_kind=kws.get('diag_kind'),
-                         palette=plotter.handle.palette,
-                         plot_kws=pkws,
-                         diag_kws={'linewidth': 1.25})
+        g = sns.pairplot(data=data, hue=kws.get('hue'), height=1.5, aspect=1, kind=kws.get('kind'), plot_kws=pkws,
+                         diag_kind=kws.get('diag_kind'), palette=plotter.handle.palette, diag_kws={'linewidth': 1.25})
         # Set bottom values to zero, as no negatives in count data
         for ax in g.axes.flat:
             ax.set_ylim(bottom=0)
@@ -109,28 +101,28 @@ def cluster_positions(plotter, **kws):
     chans = plotter.data.Channel.unique()
     for ind, ax in enumerate(plotter.g.axes.flat):  # Plot background
         ax.axis('equal')
-        ax.scatter(b_data.loc[:, "Position X"], b_data.loc[:, "Position Y"],
-                   s=10, c='xkcd:tan')
+        ax.scatter(b_data.loc[:, "Position X"], b_data.loc[:, "Position Y"], s=10, c='xkcd:tan')
         # Plot clusters
         plot_data = plotter.data.loc[plotter.data.Channel == chans[ind], :]
-        sns.scatterplot(data=plot_data, x="Position X", y="Position Y",
-                        hue="ClusterID", palette=palette, s=20, legend=False,
-                        ax=ax, **p_kws)
+        sns.scatterplot(data=plot_data, x="Position X", y="Position Y", hue="ClusterID", palette=palette, s=20,
+                        legend=False, ax=ax, **p_kws)
         ax.set_title("{} Clusters".format(chans[ind]))
     return plotter.g
 
 
 def distribution(plotter, **kws):
     """Plot distributions."""
+    data = plotter.data
+    row_order = data.loc[:, kws.get('row')].unique()
+    discrete = False
+    if kws.get('row') == 'Channel':
+        discrete = True
     try:
-        g = (plotter.g.map(sns.distplot, 'Value', kde=True, hist=True,
-                           norm_hist=True, hist_kws={"alpha": 0.3,
-                                                     "linewidth": 1}))
-    except RuntimeError:
-        g = (plotter.g.map(sns.distplot, 'Value', kde=True, hist=True,
-                           norm_hist=True, hist_kws={"alpha": 0.3,
-                                                     "linewidth": 1},
-                           kde_kws={'bw': 20}))
+        g = sns.displot(data=data, x='Value', hue=kws.get('hue'), col=kws.get('col'), row=kws.get('row'), alpha=0.4,
+                        stat="density", palette=plotter.handle.palette, kde=True, height=2.5, aspect=2.25,
+                        row_order=row_order, common_norm=False, discrete=discrete, common_bins=False,
+                        facet_kws={'legend_out': True, 'sharex': False, 'sharey': False,
+                                   'gridspec_kws': kws.get('gridspec')})
     except np.linalg.LinAlgError:
         msg = '-> Confirm that all samples have proper channel data'
         fullmsg = 'Distribution plot singular matrix\n{}'.format(msg)
@@ -138,8 +130,9 @@ def distribution(plotter, **kws):
         print('ERROR: Distribution plot singular matrix')
         print(msg)
         return None
-    for ax in g.axes.flat:
-        ax.set_xlim(left=0)
+    for ind, ax in enumerate(g.axes.flat):
+        xmax = data.loc[(data.loc[:, kws.get('row')] == row_order[ind]), 'Value'].max()
+        ax.set_xlim(left=0, right=xmax*1.2)
     return g
 
 
@@ -148,10 +141,8 @@ def heatmap(plotter, **kws):
     data = plotter.data.replace(np.nan, 0)
     rows = data.loc[:, kws.get('row')].unique()
     for ind, ax in enumerate(plotter.g.axes.flat):
-        sub_data = data.loc[data[kws.get('row')] == rows[ind],
-                            data.columns != kws.get('row')]
-        sns.heatmap(data=sub_data, cmap='coolwarm', robust=True,
-                    linewidth=0.05, linecolor='dimgrey', ax=ax)
+        sub_data = data.loc[data[kws.get('row')] == rows[ind], data.columns != kws.get('row')]
+        sns.heatmap(data=sub_data, cmap='coolwarm', robust=True, linewidth=0.05, linecolor='dimgrey', ax=ax)
         ax.set_title(rows[ind])
         if kws.get('Sample_plot'):
             ylabels = ax.get_yticklabels()
@@ -161,8 +152,7 @@ def heatmap(plotter, **kws):
             left, right = ax.get_xlim()
             for idx in inds:
                 ax.hlines(idx, xmin=left, xmax=right, linestyles='dotted',
-                          color=plotter.handle.palette.get(strings[idx]),
-                          linewidth=1.5)
+                          color=plotter.handle.palette.get(strings[idx]), linewidth=1.5)
     plt.subplots_adjust(left=0.25, right=0.99)
     return plotter.g
 
@@ -173,25 +163,18 @@ def lines(plotter, **kws):
     data = plotter.data
     # data = plotter.data.dropna()
     melt_kws = kws.get('melt')
-    g = (plotter.g.map_dataframe(sns.lineplot, data=data,
-                                 x=data.loc[:, melt_kws.get('var_name')
-                                            ].astype(float),
-                                 y=data.loc[:, melt_kws.get('value_name')],
-                                 ci='sd', err_style='band',
-                                 hue=kws.get('hue'), dashes=False, alpha=1,
-                                 palette=plotter.handle.palette,
+    g = (plotter.g.map_dataframe(sns.lineplot, data=data, x=data.loc[:, melt_kws.get('var_name')].astype(float),
+                                 y=data.loc[:, melt_kws.get('value_name')], ci='sd', err_style='band',
+                                 hue=kws.get('hue'), dashes=False, alpha=1, palette=plotter.handle.palette,
                                  err_kws=err_dict))
     return g
 
 
 def skeleton_plot(savepath, samplename, binaryArray, skeleton):
-    sett_dict = {'Type': 'Skeleton', 'Simplif.': Sett.simplifyTol,
-                 'Resize': Sett.SkeletonResize, 'Distance': Sett.find_dist,
-                 'Dilation': Sett.BDiter, 'Smooth': Sett.SigmaGauss}
-    sett_string = '  |  '.join(["{} = {}".format(k, v) for k, v in
-                                sett_dict.items()])
-    figskel, axes = plt.subplots(nrows=1, ncols=2, figsize=(15, 6),
-                                 sharex=True, sharey=True)
+    sett_dict = {'Type': 'Skeleton', 'Simplif.': Sett.simplifyTol, 'Resize': Sett.SkeletonResize,
+                 'Distance': Sett.find_dist, 'Dilation': Sett.BDiter, 'Smooth': Sett.SigmaGauss}
+    sett_string = '  |  '.join(["{} = {}".format(k, v) for k, v in sett_dict.items()])
+    figskel, axes = plt.subplots(nrows=1, ncols=2, figsize=(15, 6), sharex='row', sharey='row')
     ax = axes.ravel()
     # Plot of binary array
     ax[0].imshow(binaryArray)
@@ -229,14 +212,12 @@ def create_vector_plots(workdir, savedir, sample_dirs):
             vector = pd.DataFrame(data=[np.nan, np.nan], columns=['X', 'Y'])
         full = pd.concat([full, data])
         vectors = pd.concat([vectors, vector])
-    grid = sns.FacetGrid(data=full, col='sample', col_wrap=4, sharex=False,
-                         sharey=False, height=2, aspect=3.5)
+    grid = sns.FacetGrid(data=full, col='sample', col_wrap=4, sharex=False, sharey=False, height=2, aspect=3.5)
     plt.subplots_adjust(hspace=1)
     samples = pd.unique(full.loc[:, 'sample'])
     for ind, ax in enumerate(grid.axes.flat):
         data = full.loc[full.loc[:, 'sample'] == samples[ind], :]
-        sns.scatterplot(data=data, x='Position X', y='Position Y',
-                        color='xkcd:tan', linewidth=0, ax=ax)
+        sns.scatterplot(data=data, x='Position X', y='Position Y', color='xkcd:tan', linewidth=0, ax=ax)
         vector_data = vectors.loc[vectors.loc[:, 'sample'] == samples[ind], :]
         ax.plot(vector_data.X, vector_data.Y)
         ax.set_xlabel('')
@@ -248,10 +229,7 @@ def create_vector_plots(workdir, savedir, sample_dirs):
 
 def violin(plotter, **kws):
     """Plot violins."""
-    plotter.g = sns.catplot(x='Sample Group', y='Value',
-                            data=plotter.data, row=kws.get('row'),
-                            col=kws.get('col'),
-                            height=kws.get('height'), aspect=kws.get('aspect'),
-                            palette=plotter.handle.palette, kind='violin',
-                            sharey=False, saturation=0.5)
+    plotter.g = sns.catplot(x='Sample Group', y='Value', data=plotter.data, row=kws.get('row'), col=kws.get('col'),
+                            height=kws.get('height'), aspect=kws.get('aspect'), palette=plotter.handle.palette,
+                            kind='violin', sharey=False, saturation=0.5)
     return plotter.g

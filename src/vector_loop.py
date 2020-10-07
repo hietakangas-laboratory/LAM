@@ -12,25 +12,22 @@ import tkinter.ttk as ttk
 import tkinter.font as tkFont
 
 # LAM imports
-from settings import settings as Sett
-import system
-import process
-import plotfuncs as pfunc
+from src.settings import settings as Sett
+import src.system as system
+import src.process as process
+import src.plotfuncs as pfunc
 
 
 class VectorWin:
     """Open window for vector creation in loops."""
-    keys = ['workdir', 'vectChannel', 'project', 'projBins', 'SkeletonVector',
-            'SkeletonResize', 'find_dist', 'BDiter', 'SigmaGauss',
-            'simplifyTol', 'medianBins', 'process_samples']
+    keys = ['workdir', 'vectChannel', 'project', 'projBins', 'SkeletonVector', 'SkeletonResize', 'find_dist', 'BDiter',
+            'SigmaGauss', 'simplifyTol', 'medianBins', 'process_samples']
     head = ('sample', 'group', 'path')
 
     def __init__(self, master, handle):
         # The tkinter selection coloring is broken, these fix it:
-        ttk.Style().map("Treeview", foreground=fixed_map("foreground"),
-                        background=fixed_map("background"))
-        ttk.Style().map('Treeview', background=[('selected', 'lightgreen')],
-                        foreground=[('selected', 'darkgreen')])
+        ttk.Style().map("Treeview", foreground=fixed_map("foreground"), background=fixed_map("background"))
+        ttk.Style().map('Treeview', background=[('selected', 'lightgreen')], foreground=[('selected', 'darkgreen')])
 
         # Create window
         self.window = tk.Toplevel(master)
@@ -43,10 +40,8 @@ class VectorWin:
         self.handle = handle
         self.variables = handle.vars.loc[VectorWin.keys, :]
         self.workdir = pl.Path(self.variables.at['workdir', 'ref'].get())
-        self.samples = [p for p in self.workdir.iterdir() if p.is_dir() and
-                        'Analysis Data' not in p.name]
-        self.sample_vars = [(p.name, str(p.name).split('_')[0], str(p))
-                            for p in self.samples]
+        self.samples = [p for p in self.workdir.iterdir() if p.is_dir() and 'Analysis Data' not in p.name]
+        self.sample_vars = [(p.name, str(p.name).split('_')[0], str(p)) for p in self.samples]
         self.tree = None
 
         # Create widgets
@@ -56,40 +51,32 @@ class VectorWin:
     def _setup(self):
         """Create window elements."""
         # CREATE TREEVIEW
-        self.tree = ttk.Treeview(self.window, columns=VectorWin.head,
-                                 show="headings")
+        self.tree = ttk.Treeview(self.window, columns=VectorWin.head, show="headings")
         self.tree.grid(column=0, row=0, rowspan=25, columnspan=3, sticky='nsw')
         # scroll bars
-        vsb = ttk.Scrollbar(self.window, orient="vertical",
-                            command=self.tree.yview)
-        hsb = ttk.Scrollbar(self.window, orient="horizontal",
-                            command=self.tree.xview)
+        vsb = ttk.Scrollbar(self.window, orient="vertical", command=self.tree.yview)
+        hsb = ttk.Scrollbar(self.window, orient="horizontal", command=self.tree.xview)
         vsb.grid(column=3, row=0, rowspan=25, sticky='ns')
         hsb.grid(column=0, row=27, columnspan=3, sticky='ew')
 
-        self.tree.configure(yscrollcommand=vsb.set, xscrollcommand=hsb.set,
-                            height=25)
+        self.tree.configure(yscrollcommand=vsb.set, xscrollcommand=hsb.set, height=25)
 
         # BUTTONS
         style = 'TkDefaultFont 9 bold'
         # Loop
-        run_b = tk.Button(self.window, text='Loop', font=style,
-                          command=self.creation_loop)
+        run_b = tk.Button(self.window, text='Loop', font=style, command=self.creation_loop)
         run_b.configure(height=2, width=7, bg='lightgreen', fg="black")
         run_b.grid(row=29, column=1, columnspan=1, sticky='n')
         # Done
-        quit_b = tk.Button(self.window, text="Done", command=self._done,
-                           font=style,)
+        quit_b = tk.Button(self.window, text="Done", command=self._done, font=style,)
         quit_b.configure(height=1, width=5, fg="red")
         quit_b.grid(row=29, column=3, sticky='ne')
         # Keep
-        keep_b = tk.Button(self.window, text="Keep\n<Enter>", font=style,
-                           command=self.keep_vectors)
+        keep_b = tk.Button(self.window, text="Keep\n<Enter>", font=style, command=self.keep_vectors)
         keep_b.configure(height=2, width=7, fg="green")
         keep_b.grid(row=29, column=2, sticky='nw')
         # Help
-        help_b = tk.Button(self.window, text='?', font=style,
-                           command=self.open_help)
+        help_b = tk.Button(self.window, text='?', font=style, command=self.open_help)
         help_b.configure(height=1, width=2, bd=3)
         help_b.grid(row=29, column=0, columnspan=1, sticky='nw')
 
@@ -184,8 +171,7 @@ USAGE:
 
     7) Press 'Done' and run LAM-analysis
 """)
-        tk.Label(self.help, text=text, font='TkDefaultFont 9 bold', anchor='w'
-                 ).grid(row=0, column=0, sticky='w')
+        tk.Label(self.help, text=text, font='TkDefaultFont 9 bold', anchor='w').grid(row=0, column=0, sticky='w')
 
 
 def fixed_map(option):
@@ -195,17 +181,14 @@ def fixed_map(option):
 
     # style.map() returns an empty list for missing options, so this should
     # be future-safe
-    return [elm for elm in ttk.Style().map("Treeview", query_opt=option)
-            if elm[:2] != ("!disabled", "!selected")]
+    return [elm for elm in ttk.Style().map("Treeview", query_opt=option) if elm[:2] != ("!disabled", "!selected")]
 
 
 def print_settings():
     """Print settings of creation loop."""
     if Sett.SkeletonVector:
-        sett_dict = {'Type': 'Skeleton', 'Simplif.': Sett.simplifyTol,
-                     'Resize': Sett.SkeletonResize, 'Distance': Sett.find_dist,
-                     'Dilation': Sett.BDiter, 'Smooth': Sett.SigmaGauss}
+        sett_dict = {'Type': 'Skeleton', 'Simplif.': Sett.simplifyTol, 'Resize': Sett.SkeletonResize,
+                     'Distance': Sett.find_dist, 'Dilation': Sett.BDiter, 'Smooth': Sett.SigmaGauss}
     else:
-        sett_dict = {'Type': 'Median', 'Simplif.': Sett.simplifyTol,
-                     'Bins': Sett.medianBins}
+        sett_dict = {'Type': 'Median', 'Simplif.': Sett.simplifyTol, 'Bins': Sett.medianBins}
     print(f'Settings: {sett_dict}')

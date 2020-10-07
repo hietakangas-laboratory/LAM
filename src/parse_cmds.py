@@ -10,7 +10,9 @@ Created on Fri Jun  5 15:26:28 2020
 
 import argparse
 import pathlib as pl
-from settings import settings as Sett
+
+# LAM module
+from src.settings import settings as Sett
 
 def make_parser():
     """Make parser-object for LAM run."""
@@ -32,45 +34,30 @@ def make_parser():
     htext = f"primary option string: {ops}"
     parser.add_argument("-o", "--options", help=htext, type=str)
     parser.add_argument("-b", "--bins", help="Sample bin number", type=int)
-    parser.add_argument("-v", "--channel", help="Vector channel name",
-                        type=str)
-    parser.add_argument("-g", "--control_group", help="Name of control group",
-                        type=str)
-    parser.add_argument("-H", "--header", help="Data header row number",
-                        type=int)
-    parser.add_argument("-M", "--measurement_point", help="toggle useMP",
-                        action="store_true")
+    parser.add_argument("-v", "--channel", help="Vector channel name", type=str)
+    parser.add_argument("-g", "--control_group", help="Name of control group", type=str)
+    parser.add_argument("-H", "--header", help="Data header row number", type=int)
+    parser.add_argument("-M", "--measurement_point", help="toggle useMP", action="store_true")
     parser.add_argument("-m", "--mp_name", help="Name of MP", type=str)
     parser.add_argument("-G", "--GUI", help="toggle GUI", action="store_true")
 
 
     # Distance args
-    parser.add_argument("-F", "--feature_distances", help="f-to-f distances",
-                        action="store_true")
-    parser.add_argument("-f", "--distance_channels",
-                        help="f-to-f distance channels", type=str,
-                        action='append')
+    parser.add_argument("-F", "--feature_distances", help="f-to-f distances", action="store_true")
+    parser.add_argument("-f", "--distance_channels", help="f-to-f distance channels", type=str, action='append')
 
 
     # Cluster args
-    parser.add_argument("-C", "--clusters", help="Feature clustering",
-                        action="store_true")
-    parser.add_argument("-c", "--cluster_channels",
-                        help="Clustering channels", type=str, action='append')
-    parser.add_argument("-d", "--cluster_distance",
-                        help="Clustering max distance", type=int)
+    parser.add_argument("-C", "--clusters", help="Feature clustering", action="store_true")
+    parser.add_argument("-c", "--cluster_channels", help="Clustering channels", type=str, action='append')
+    parser.add_argument("-d", "--cluster_distance", help="Clustering max distance", type=int)
 
 
     # Other operations
-    parser.add_argument("-B", "--borders",
-                        help="Toggle border detection",
-                        action="store_true")
-    parser.add_argument("-W", "--widths", help="Toggle width calculation",
-                        action="store_true")
-    parser.add_argument("-r", "--no_projection", help="Projection to false",
-                        action="store_true")
-    parser.add_argument("-D", "--force_dialog", help="Force no user input",
-                        action="store_true")
+    parser.add_argument("-B", "--borders", help="Toggle border detection", action="store_true")
+    parser.add_argument("-W", "--widths", help="Toggle width calculation", action="store_true")
+    parser.add_argument("-r", "--no_projection", help="Projection to false", action="store_true")
+    parser.add_argument("-D", "--force_dialog", help="Force no user input", action="store_true")
 
     parser = parser.parse_args()
     return parser

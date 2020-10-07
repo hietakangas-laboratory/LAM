@@ -15,9 +15,10 @@ from itertools import chain
 import pathlib as pl
 import pandas as pd
 # LAM modules
-from run import main_catch_exit
-from settings import settings as Sett
-import vector_loop
+from src.run import main_catch_exit
+from src.settings import settings as Sett
+import src.vector_loop as vector_loop
+from src.version import __version__
 
 LAM_logger = None
 
@@ -26,7 +27,7 @@ class base_GUI(tk.Toplevel):
     """Container for the most important settings of the GUI."""
 
     def __init__(self, master=None):
-        master.title("LAM-0.3.1")
+        master.title(f'LAM-{__version__}')
         self.master = master
         self.master.grab_set()
         self.master.bind('<Escape>', self.func_destroy)
@@ -48,11 +49,9 @@ class base_GUI(tk.Toplevel):
         self.topf.grid(row=0, rowspan=2, columnspan=6, sticky="new")
         self.midf.grid(row=2, rowspan=3, columnspan=6, sticky="new")
         self.leftf.grid(row=5, column=0, columnspan=3, rowspan=4, sticky="new")
-        self.rightf.grid(row=5, column=3, columnspan=3, rowspan=9,
-                         sticky="new")
+        self.rightf.grid(row=5, column=3, columnspan=3, rowspan=9, sticky="new")
         self.distf.grid(row=12, rowspan=8, columnspan=6, sticky="new")
-        self.bottomf.grid(row=18, rowspan=2, columnspan=6, sticky="new",
-                          pady=(2, 2))
+        self.bottomf.grid(row=18, rowspan=2, columnspan=6, sticky="new", pady=(2, 2))
         col_count, row_count = self.master.grid_size()
         for col in range(col_count):
             self.master.grid_columnconfigure(col, minsize=45)
@@ -60,67 +59,45 @@ class base_GUI(tk.Toplevel):
             self.master.grid_rowconfigure(row, minsize=32)
 
         # TOP FRAME / WORK DIRECTORY
-        tk.Label(self.topf, text=self.handle('workdir').get(),
-                 textvariable=self.handle('workdir'), bd=2, bg='white',
+        tk.Label(self.topf, text=self.handle('workdir').get(), textvariable=self.handle('workdir'), bd=2, bg='white',
                  relief='sunken').grid(row=0, column=1, columnspan=7)
-        tk.Button(self.topf, text="Directory", command=self.browse
-                  ).grid(row=0, column=0)
+        tk.Button(self.topf, text="Directory", command=self.browse).grid(row=0, column=0)
 
         # Detected groups and channels
         self.det_chans = tk.StringVar(value="Detected channels:")
         self.det_groups = tk.StringVar(value="Detected groups:")
-        tk.Button(self.topf, text="Detect", command=self.detect_chans
-                  ).grid(row=1, column=0)
-        tk.Label(self.topf, text=self.det_groups.get(),
-                 textvariable=self.det_groups
-                 ).grid(row=1, column=1, columnspan=8)
-        tk.Label(self.topf, text=self.det_chans.get(),
-                 textvariable=self.det_chans
-                 ).grid(row=2, column=1, columnspan=8)
+        tk.Button(self.topf, text="Detect", command=self.detect_chans).grid(row=1, column=0)
+        tk.Label(self.topf, text=self.det_groups.get(), textvariable=self.det_groups).grid(row=1, column=1,
+                                                                                           columnspan=8)
+        tk.Label(self.topf, text=self.det_chans.get(), textvariable=self.det_chans).grid(row=2, column=1, columnspan=8)
 
         # MIDDLE FRAME / PRIMARY SETTINGS BOX
         stl = {1: 'groove', 2: 'lightgrey', 3: ('TkDefaultFont 8 bold')}
-        tk.Checkbutton(self.midf, text="Process", bg=stl[2],
-                       variable=self.handle('process_samples'), relief=stl[1],
-                       font=stl[3], bd=4, command=self.process_check
-                       ).grid(row=0, column=0, columnspan=1, padx=(2, 2))
-        tk.Checkbutton(self.midf, text="Count  ",
-                       variable=self.handle('process_counts'), relief=stl[1],
-                       bd=4, bg=stl[2], font=stl[3], command=self.count_check
-                       ).grid(row=0, column=1, columnspan=1, padx=(2, 2))
-        tk.Checkbutton(self.midf, text="Distance", bg=stl[2],
-                       variable=self.handle('process_dists'), relief=stl[1],
-                       bd=4, font=stl[3], command=self.distance_check
-                       ).grid(row=0, column=2, columnspan=1, padx=(2, 2))
-        tk.Checkbutton(self.midf, text="Plots   ",
-                       variable=self.handle('Create_Plots'), relief=stl[1],
-                       bd=4, bg=stl[2], font=stl[3], command=self.plot_check
-                       ).grid(row=0, column=3, columnspan=1, padx=(2, 2))
-        tk.Checkbutton(self.midf, text="Stats   ",
-                       variable=self.handle('statistics'), relief=stl[1], bd=4,
-                       bg=stl[2], font=stl[3], command=self.stat_check
-                       ).grid(row=0, column=4, columnspan=1, padx=(2, 2))
+        tk.Checkbutton(self.midf, text="Process", bg=stl[2], variable=self.handle('process_samples'), relief=stl[1],
+                       font=stl[3], bd=4, command=self.process_check).grid(row=0, column=0, columnspan=1, padx=(2, 2))
+        tk.Checkbutton(self.midf, text="Count  ", variable=self.handle('process_counts'), relief=stl[1], bd=4,
+                       bg=stl[2], font=stl[3], command=self.count_check).grid(row=0, column=1, columnspan=1, padx=(2, 2)
+                                                                              )
+        tk.Checkbutton(self.midf, text="Distance", bg=stl[2], variable=self.handle('process_dists'), relief=stl[1],
+                       bd=4, font=stl[3], command=self.distance_check).grid(row=0, column=2, columnspan=1, padx=(2, 2))
+        tk.Checkbutton(self.midf, text="Plots   ", variable=self.handle('Create_Plots'), relief=stl[1], bd=4, bg=stl[2],
+                       font=stl[3], command=self.plot_check).grid(row=0, column=3, columnspan=1, padx=(2, 2))
+        tk.Checkbutton(self.midf, text="Stats   ", variable=self.handle('statistics'), relief=stl[1], bd=4, bg=stl[2],
+                       font=stl[3], command=self.stat_check).grid(row=0, column=4, columnspan=1, padx=(2, 2))
 
         # Projection, Measurement point, widths, borders & file header settings
-        proj = tk.Checkbutton(self.midf, text="Project", relief='groove', bd=3,
-                              variable=self.handle('project'))
-        mp = tk.Checkbutton(self.midf, text="Use MP ", relief='groove',
-                            variable=self.handle('useMP'), bd=3,
+        proj = tk.Checkbutton(self.midf, text="Project", relief='groove', bd=3, variable=self.handle('project'))
+        mp = tk.Checkbutton(self.midf, text="Use MP ", relief='groove', variable=self.handle('useMP'), bd=3,
                             command=self.mp_check)
-        width = tk.Checkbutton(self.midf, text="Widths",
-                               variable=self.handle('measure_width'),
-                               relief='groove', bd=3,
+        width = tk.Checkbutton(self.midf, text="Widths", variable=self.handle('measure_width'), relief='groove', bd=3,
                                command=self.width_check)
-        border = tk.Checkbutton(self.midf, text="Borders", bd=3,
-                                relief='groove',
-                                variable=self.handle('border_detection'),
-                                command=self.border_check)
+        border = tk.Checkbutton(self.midf, text="Borders", relief='groove', variable=self.handle('border_detection'),
+                                bd=3, command=self.border_check)
         lmp = tk.Label(self.midf, text='MP label:', bd=1)
-        mpin = tk.Entry(self.midf, text=self.handle('MPname').get(), bd=2,
-                        textvariable=self.handle('MPname'))
+        mpin = tk.Entry(self.midf, text=self.handle('MPname').get(), bd=2, textvariable=self.handle('MPname'))
         self.lhead = tk.Label(self.midf, bd=1, text='Data header row:\n(0..n)')
-        self.headin = tk.Entry(self.midf, text=self.handle('header_row').get(),
-                               bd=2, textvariable=self.handle('header_row'))
+        self.headin = tk.Entry(self.midf, text=self.handle('header_row').get(), bd=2,
+                               textvariable=self.handle('header_row'))
         proj.grid(row=1, column=0, columnspan=1, padx=(2, 2))
         mp.grid(row=1, column=1, columnspan=1, padx=(2, 2))
         width.grid(row=2, column=0, columnspan=1, padx=(2, 2))
@@ -132,24 +109,15 @@ class base_GUI(tk.Toplevel):
 
         # BOTTOM BUTTONS
         style = ("TkDefaultFont 10 bold")
-        tk.Checkbutton(self.bottomf, text="Redirect stdout",
-                       variable=self.handle('non_stdout'), relief='groove',
-                       bd=1, command=self.redirect_stdout
-                       ).grid(row=0, column=4, columnspan=4, sticky='n')
-        self.run_b = tk.Button(self.bottomf, font=style,
-                               text='Run\n<Enter>', command=self.run_button)
-        quit_b = tk.Button(self.bottomf, font=style, text="Quit",
-                           command=self.func_destroy)
+        tk.Checkbutton(self.bottomf, text="Redirect stdout", variable=self.handle('non_stdout'), relief='groove',
+                       bd=1, command=self.redirect_stdout).grid(row=0, column=4, columnspan=4, sticky='n')
+        self.run_b = tk.Button(self.bottomf, font=style, text='Run\n<Enter>', command=self.run_button)
+        quit_b = tk.Button(self.bottomf, font=style, text="Quit", command=self.func_destroy)
         wins = [OtherWin, PlotWin, StatWin]
-        add_b = tk.Button(self.bottomf, font=style, text="Other",
-                          command=lambda x=wins[0]: self.open_win(x))
-        self.plot_b = tk.Button(self.bottomf, font=style, text="Plots",
-                                command=lambda x=wins[1]: self.open_win(x))
-        self.stats_b = tk.Button(self.bottomf, font=style, text="Stats",
-                                 command=lambda x=wins[2]: self.open_win(x))
-        self.vector_b = tk.Button(self.bottomf, font=style,
-                                  text="Create\nvectors",
-                                  command=self.vector_creation)
+        add_b = tk.Button(self.bottomf, font=style, text="Other", command=lambda x=wins[0]: self.open_win(x))
+        self.plot_b = tk.Button(self.bottomf, font=style, text="Plots", command=lambda x=wins[1]: self.open_win(x))
+        self.stats_b = tk.Button(self.bottomf, font=style, text="Stats", command=lambda x=wins[2]: self.open_win(x))
+        self.vector_b = tk.Button(self.bottomf, font=style, text="Create\nvectors", command=self.vector_creation)
         # Style
         self.run_b.configure(height=2, width=7, bg='lightgreen', fg="black")
         quit_b.configure(height=1, width=5, fg="red")
@@ -158,72 +126,51 @@ class base_GUI(tk.Toplevel):
         self.stats_b.configure(height=2, width=7)
         self.vector_b.configure(height=2, width=6, bg='#ffe9ba', fg="black")
         # Grid
-        self.run_b.grid(row=1, column=4, columnspan=1, padx=(5, 15),
-                        sticky='ne')
+        self.run_b.grid(row=1, column=4, columnspan=1, padx=(5, 15), sticky='ne')
         quit_b.grid(row=1, column=5, sticky='nes')
         add_b.grid(row=1, column=0, columnspan=1, padx=(0, 5), sticky='nw')
-        self.plot_b.grid(row=1, column=1, columnspan=1, padx=(0, 5),
-                         sticky='nw')
+        self.plot_b.grid(row=1, column=1, columnspan=1, padx=(0, 5), sticky='nw')
         self.stats_b.grid(row=1, column=2, columnspan=1, sticky='nw')
-        self.vector_b.grid(row=1, column=3, columnspan=1, padx=(55, 0),
-                           sticky='ne')
+        self.vector_b.grid(row=1, column=3, columnspan=1, padx=(55, 0), sticky='ne')
 
         # RIGHT FRAME / PLOTTING
         # header
-        lbl2 = tk.Label(self.rightf, text='Plotting:', bd=2,
-                        font=('Arial', 9, 'bold'))
+        lbl2 = tk.Label(self.rightf, text='Plotting:', bd=2, font=('Arial', 9, 'bold'))
         lbl2.grid(row=0, column=0)
 
         # create checkboxes
-        tk.Checkbutton(self.rightf, text="Channels",
-                       variable=self.handle('Create_Channel_Plots')
+        tk.Checkbutton(self.rightf, text="Channels", variable=self.handle('Create_Channel_Plots')
                        ).grid(row=1, column=0, sticky='w', pady=(2, 0))
-        tk.Checkbutton(self.rightf, text="Additional Data",
-                       variable=self.handle('Create_AddData_Plots')
+        tk.Checkbutton(self.rightf, text="Additional Data", variable=self.handle('Create_AddData_Plots')
                        ).grid(row=2, column=0, sticky='w')
-        tk.Checkbutton(self.rightf, text="Channel Matrix",
-                       variable=self.handle('Create_Channel_PairPlots')
+        tk.Checkbutton(self.rightf, text="Channel Matrix", variable=self.handle('Create_Channel_PairPlots')
                        ).grid(row=3, column=0, sticky='w')
-        tk.Checkbutton(self.rightf, text="Heatmaps",
-                       variable=self.handle('Create_Heatmaps')
+        tk.Checkbutton(self.rightf, text="Heatmaps", variable=self.handle('Create_Heatmaps')
                        ).grid(row=1, column=1, sticky='w', pady=(2, 0))
-        tk.Checkbutton(self.rightf, text="Distributions",
-                       variable=self.handle('Create_Distribution_Plots')
+        tk.Checkbutton(self.rightf, text="Distributions", variable=self.handle('Create_Distribution_Plots')
                        ).grid(row=4, column=0, sticky='w')
-        tk.Checkbutton(self.rightf, text="Channel VS. Add.",
-                       variable=self.handle('Create_ChanVSAdd_Plots')
+        tk.Checkbutton(self.rightf, text="Channel VS. Add.", variable=self.handle('Create_ChanVSAdd_Plots')
                        ).grid(row=7, column=0, sticky='w', pady=(10, 0))
-        tk.Checkbutton(self.rightf, text="Add. VS. Add.",
-                       variable=self.handle('Create_AddVSAdd_Plots')
+        tk.Checkbutton(self.rightf, text="Add. VS. Add.", variable=self.handle('Create_AddVSAdd_Plots')
                        ).grid(row=8, column=0, sticky='ws', pady=(2, 30))
-        self.statc = tk.Checkbutton(self.rightf, text="Statistics",
-                                    variable=self.handle(
-                                        'Create_Statistics_Plots'))
+        self.statc = tk.Checkbutton(self.rightf, text="Statistics", variable=self.handle('Create_Statistics_Plots'))
         self.statc.grid(row=3, column=1, sticky='w')
-        self.clustc = tk.Checkbutton(self.rightf, text="Clusters",
-                                     variable=self.handle(
-                                         'Create_Cluster_Plots'))
+        self.clustc = tk.Checkbutton(self.rightf, text="Clusters", variable=self.handle('Create_Cluster_Plots'))
         self.clustc.grid(row=2, column=1, sticky='w')
-        self.borderc = tk.Checkbutton(self.rightf, text="Borders",
-                                      variable=self.handle(
-                                          'Create_Border_Plots'))
+        self.borderc = tk.Checkbutton(self.rightf, text="Borders", variable=self.handle('Create_Border_Plots'))
         self.borderc.grid(row=4, column=1, sticky='w')
-        self.widthc = tk.Checkbutton(self.rightf, text="Widths",
-                                     variable=self.handle('plot_width'))
+        self.widthc = tk.Checkbutton(self.rightf, text="Widths", variable=self.handle('plot_width'))
         self.widthc.grid(row=5, column=0, sticky='w')
 
         # LEFT FRAME (UP) / VECTOR CREATION
         # header
-        self.lbl3 = tk.Label(self.leftf, text='Vector:', bd=2,
-                             font=('TkDefaultFont 9 bold'))
+        self.lbl3 = tk.Label(self.leftf, text='Vector:', bd=2, font=('TkDefaultFont 9 bold'))
         self.lbl3.grid(row=0, column=0)
 
         # vector type radio buttons
-        self.vbut1 = tk.Radiobutton(self.leftf, text="Skeleton", value=1,
-                                    variable=self.handle('SkeletonVector'),
+        self.vbut1 = tk.Radiobutton(self.leftf, text="Skeleton", value=1, variable=self.handle('SkeletonVector'),
                                     command=self.switch_pages)
-        self.vbut2 = tk.Radiobutton(self.leftf, text="Median", value=0,
-                                    variable=self.handle('SkeletonVector'),
+        self.vbut2 = tk.Radiobutton(self.leftf, text="Median", value=0, variable=self.handle('SkeletonVector'),
                                     command=self.switch_pages)
         self.vbut1.grid(row=1, column=0)
         self.vbut2.grid(row=1, column=1)
@@ -231,15 +178,13 @@ class base_GUI(tk.Toplevel):
         # vector channel input
         lbl4 = tk.Label(self.leftf, text='Channel: ', bd=1)
         lbl4.grid(row=2, column=0)
-        ch_in = tk.Entry(self.leftf, text=self.handle('vectChannel').get(),
-                         textvariable=self.handle('vectChannel'))
+        ch_in = tk.Entry(self.leftf, text=self.handle('vectChannel').get(), textvariable=self.handle('vectChannel'))
         ch_in.grid(row=2, column=1, columnspan=1)
 
         # Bin number input
         lbl5 = tk.Label(self.leftf, text='Bin #: ', bd=1)
         lbl5.grid(row=3, column=0)
-        bin_in = tk.Entry(self.leftf, text=self.handle('projBins').get(),
-                          textvariable=self.handle('projBins'), bd=2)
+        bin_in = tk.Entry(self.leftf, text=self.handle('projBins').get(), textvariable=self.handle('projBins'), bd=2)
         bin_in.grid(row=3, column=1, columnspan=1)
 
         # LEFT FRAME (LOWER) - VECTOR SETTINGS
@@ -248,29 +193,23 @@ class base_GUI(tk.Toplevel):
 
         # UPPER BOTTOM / DISTANCES
         # header
-        tk.Label(self.distf, text='Distance Calculations:', bd=2,
-                 font=('TkDefaultFont 9 bold')
+        tk.Label(self.distf, text='Distance Calculations:', bd=2, font=('TkDefaultFont 9 bold')
                  ).grid(row=0, column=0, columnspan=6)
 
         # distance and cluster checkbuttons
-        tk.Checkbutton(self.distf, text="Find clusters ",
-                       variable=self.handle('Find_Clusters'),
+        tk.Checkbutton(self.distf, text="Find clusters ", variable=self.handle('Find_Clusters'),
                        command=self.cluster_check, bd=1, relief='raised'
                        ).grid(row=1, column=0, columnspan=2, sticky='n')
-        tk.Checkbutton(self.distf, text="Find distances",
-                       variable=self.handle('Find_Distances'),
+        tk.Checkbutton(self.distf, text="Find distances", variable=self.handle('Find_Distances'),
                        command=self.nearest_dist_check, bd=1, relief='raised'
                        ).grid(row=1, column=2, columnspan=2, sticky='n')
         # Filtering
-        test = any([bool(self.handle(v).get()) for v in ('inclusion',
-                                                         'Cl_inclusion')])
+        test = any([bool(self.handle(v).get()) for v in ('inclusion', 'Cl_inclusion')])
         self.fltr_val = tk.BooleanVar(value=test)
-        tk.Checkbutton(self.distf, text="Filter", relief='raised',
-                       variable=self.fltr_val, bd=1, command=self.filter_check
-                       ).grid(row=1, column=4, columnspan=2, sticky='n')
+        tk.Checkbutton(self.distf, text="Filter", relief='raised', variable=self.fltr_val, bd=1,
+                       command=self.filter_check).grid(row=1, column=4, columnspan=2, sticky='n')
         # Add distance calculation's filter column name variable:
-        col_in = tk.Entry(self.distf, text=self.handle('incl_col').get(),
-                          textvariable=self.handle('incl_col'), bd=1)
+        col_in = tk.Entry(self.distf, text=self.handle('incl_col').get(), textvariable=self.handle('incl_col'), bd=1)
         col_in.grid(row=1, column=6, columnspan=2, sticky='n', pady=(2, 0))
         cl_lbl = tk.Label(self.distf, text="Clusters:")
         cl_lbl.grid(row=2, column=0, columnspan=2)
@@ -285,32 +224,27 @@ class base_GUI(tk.Toplevel):
 
         cl_distlbl = tk.Label(self.distf, text='Max Dist.:')
         cl_distlbl.grid(row=4, column=0, columnspan=2)
-        cl_dist_in = tk.Entry(self.distf, text=self.handle('Cl_maxDist').get(),
-                              textvariable=self.handle('Cl_maxDist'), bd=2)
+        cl_dist_in = tk.Entry(self.distf, text=self.handle('Cl_maxDist').get(), textvariable=self.handle('Cl_maxDist'),
+                              bd=2)
         cl_dist_in.grid(row=4, column=2, columnspan=2)
         cl_minlbl = tk.Label(self.distf, text='Min cell #:')
         cl_minlbl.grid(row=5, column=0, columnspan=2)
-        cl_min_in = tk.Entry(self.distf, text=self.handle('Cl_min').get(),
-                             textvariable=self.handle('Cl_min'), bd=2)
+        cl_min_in = tk.Entry(self.distf, text=self.handle('Cl_min').get(), textvariable=self.handle('Cl_min'), bd=2)
         cl_min_in.grid(row=5, column=2, columnspan=2)
 
         cl_maxlbl = tk.Label(self.distf, text='Max cell #:')
         cl_maxlbl.grid(row=6, column=0, columnspan=2)
-        cl_max_in = tk.Entry(self.distf, text=self.handle('Cl_max').get(),
-                             textvariable=self.handle('Cl_max'), bd=2)
+        cl_max_in = tk.Entry(self.distf, text=self.handle('Cl_max').get(), textvariable=self.handle('Cl_max'), bd=2)
         cl_max_in.grid(row=6, column=2, columnspan=2)
         # Filtering
         cl_sizelbl = tk.Label(self.distf, text='Filter value:')
         cl_sizelbl.grid(row=7, column=0, columnspan=2)
-        cl_size = tk.Entry(self.distf, text=self.handle('Cl_inclusion').get(),
-                           textvariable=self.handle('Cl_inclusion'))
+        cl_size = tk.Entry(self.distf, text=self.handle('Cl_inclusion').get(), textvariable=self.handle('Cl_inclusion'))
         cl_size.grid(row=7, column=2, columnspan=2)
-        cl_but1 = tk.Radiobutton(self.distf, text="  keep greater  ",
-                                 variable=self.handle('Cl_incl_type'),
+        cl_but1 = tk.Radiobutton(self.distf, text="  keep greater  ", variable=self.handle('Cl_incl_type'),
                                  value='greater', indicatoron=0)
-        cl_but2 = tk.Radiobutton(self.distf, text="  keep smaller  ",
-                                 variable=self.handle('Cl_incl_type'),
-                                 value='', indicatoron=0)
+        cl_but2 = tk.Radiobutton(self.distf, text="  keep smaller  ", variable=self.handle('Cl_incl_type'), value='',
+                                 indicatoron=0)
         cl_but1.grid(row=8, column=0, columnspan=2, sticky='nse')
         cl_but2.grid(row=8, column=2, columnspan=2, sticky='nsw')
 
@@ -323,46 +257,36 @@ class base_GUI(tk.Toplevel):
 
         d_distlbl = tk.Label(self.distf, text='Max Dist.:')
         d_distlbl.grid(row=4, column=4, columnspan=2)
-        d_dist_in = tk.Entry(self.distf, text=self.handle('maxDist').get(),
-                             textvariable=self.handle('maxDist'), bd=2)
+        d_dist_in = tk.Entry(self.distf, text=self.handle('maxDist').get(), textvariable=self.handle('maxDist'), bd=2)
         d_dist_in.grid(row=4, column=6, columnspan=2)
         # Nearestdist target channel
-        d_target = tk.Checkbutton(self.distf, text='Use target:',
-                                  variable=self.handle('use_target'),
+        d_target = tk.Checkbutton(self.distf, text='Use target:', variable=self.handle('use_target'),
                                   command=self.target_check)
         d_target.grid(row=5, column=4, columnspan=2)
-        self.d_trgt_in = tk.Entry(self.distf, bd=2,
-                                  text=self.handle('target_chan').get(),
+        self.d_trgt_in = tk.Entry(self.distf, bd=2, text=self.handle('target_chan').get(),
                                   textvariable=self.handle('target_chan'))
         self.d_trgt_in.grid(row=5, column=6, columnspan=2)
         # Filtering
         d_sizelbl = tk.Label(self.distf, text='Filter value:')
         d_sizelbl.grid(row=7, column=4, columnspan=2)
-        d_size_in = tk.Entry(self.distf, text=self.handle('inclusion').get(),
-                             textvariable=self.handle('inclusion'), bd=2)
+        d_size_in = tk.Entry(self.distf, text=self.handle('inclusion').get(), textvariable=self.handle('inclusion'),
+                             bd=2)
         d_size_in.grid(row=7, column=6, columnspan=2)
-        d_but1 = tk.Radiobutton(self.distf, text="  keep greater  ",
-                                variable=self.handle('incl_type'),
-                                value='greater', indicatoron=0)
-        d_but2 = tk.Radiobutton(self.distf, text="  keep smaller  ",
-                                variable=self.handle('incl_type'),
-                                value='', indicatoron=0)
+        d_but1 = tk.Radiobutton(self.distf, text="  keep greater  ", variable=self.handle('incl_type'), value='greater',
+                                indicatoron=0)
+        d_but2 = tk.Radiobutton(self.distf, text="  keep smaller  ", variable=self.handle('incl_type'), value='',
+                                indicatoron=0)
         d_but1.grid(row=8, column=4, columnspan=2, sticky='nse')
         d_but2.grid(row=8, column=6, columnspan=2, sticky='nsw')
 
         # Store created widgets for enabling/disabling
-        self.wdgs = {'cluster': [cl_chanlbl, cl_ch_in, cl_distlbl, cl_dist_in,
-                                 cl_minlbl, cl_min_in, cl_maxlbl, cl_max_in,
-                                 cl_sizelbl, cl_size, cl_but1, cl_but2,
-                                 cl_lbl],
-                     'dist': [d_chanlbl, d_chan, d_distlbl, d_dist_in,
-                              d_target, self.d_trgt_in, d_sizelbl, d_size_in,
+        self.wdgs = {'cluster': [cl_chanlbl, cl_ch_in, cl_distlbl, cl_dist_in, cl_minlbl, cl_min_in, cl_maxlbl,
+                                 cl_max_in, cl_sizelbl, cl_size, cl_but1, cl_but2, cl_lbl],
+                     'dist': [d_chanlbl, d_chan, d_distlbl, d_dist_in, d_target, self.d_trgt_in, d_sizelbl, d_size_in,
                               d_but1, d_but2, dist_lbl],
                      'count': [bin_in, lbl5, lmp, mpin, mp, proj, width],
-                     'fltr_cl': [cl_sizelbl, cl_size, cl_but1, cl_but2,
-                                 col_in],
-                     'fltr_dist': [d_sizelbl, d_size_in, d_but1, d_but2,
-                                   col_in],
+                     'fltr_cl': [cl_sizelbl, cl_size, cl_but1, cl_but2, col_in],
+                     'fltr_dist': [d_sizelbl, d_size_in, d_but1, d_but2, col_in],
                      'process': [bin_in, lbl5, ch_in, lbl4], 'mp': [lmp, mpin]}
 
         # Disable / enable widgets
@@ -404,8 +328,7 @@ class base_GUI(tk.Toplevel):
             self.lhead.configure(state='normal')
             self.headin.configure(state='normal')
             configure('normal', self.wdgs['count'])
-        check_switch(self.mp_check, self.width_check, self.border_check,
-                     self.run_check)
+        check_switch(self.mp_check, self.width_check, self.border_check, self.run_check)
 
     def distance_check(self):
         """Relevant changes when distances-setting is checked."""
@@ -416,8 +339,7 @@ class base_GUI(tk.Toplevel):
             for widget in self.distf.winfo_children():
                 if int(widget.grid_info()["row"]) in [0, 1, 2]:
                     widget.configure(state='normal')
-            check_switch(self.cluster_check, self.nearest_dist_check,
-                         self.filter_check)
+            check_switch(self.cluster_check, self.nearest_dist_check, self.filter_check)
         self.run_check()
 
     def filter_check(self):
@@ -425,8 +347,7 @@ class base_GUI(tk.Toplevel):
         if not self.fltr_val.get():
             self.handle('Cl_inclusion').set(0)
             self.handle('inclusion').set(0)
-            configure('disable', chain(self.wdgs['fltr_cl'],
-                                       self.wdgs['fltr_dist']))
+            configure('disable', chain(self.wdgs['fltr_cl'], self.wdgs['fltr_dist']))
         else:
             if self.handle('Find_Distances').get():
                 configure('normal', self.wdgs['fltr_dist'])
@@ -459,16 +380,14 @@ class base_GUI(tk.Toplevel):
         else:
             self.plot_b.configure(state='normal')
             for widget in self.rightf.winfo_children():
-                if not self.handle('statistics').get() and (widget.cget('text')
-                                                            == 'Statistics'):
+                if not self.handle('statistics').get() and (widget.cget('text') == 'Statistics'):
                     continue
                 widget.configure(state='normal')
         self.run_check()
 
     def process_check(self):
         """Relevant changes when Process-setting is checked."""
-        widgets = (wdg for wdg in self.leftf.winfo_children() if wdg not in
-                   self.wdgs['process'])
+        widgets = (wdg for wdg in self.leftf.winfo_children() if wdg not in self.wdgs['process'])
         if not self.handle('process_samples').get():
             self.vector_b.configure(state='disable', bg='#d9cfbd')
             configure('disable', widgets)
@@ -488,8 +407,7 @@ class base_GUI(tk.Toplevel):
 
     def run_check(self):
         """Determine if run button should be active."""
-        sets = ['process_samples', 'process_counts', 'process_dists',
-                'Create_Plots', 'statistics']
+        sets = ['process_samples', 'process_counts', 'process_dists', 'Create_Plots', 'statistics']
         if any([self.handle(v).get() for v in sets]):
             self.run_b.configure(state='normal', bg='lightgreen')
         else:
@@ -527,7 +445,7 @@ class base_GUI(tk.Toplevel):
         # SAVE SETTING
         self.handle.change_settings(options)
         # CREATE LOGGER
-        import logger as lg
+        import src.logger as lg
         import logging
         if lg.log_created is True:
             # Close old loggers and create new:
@@ -543,10 +461,9 @@ class base_GUI(tk.Toplevel):
 
     def redirect_stdout(self):
         """Change stdout direction based on r_stdout check box."""
-        import redirect as rd
+        import src.redirect as rd
         if self.handle('non_stdout').get():
-            self.stdout_win = rd.text_window(self.master,
-                                             self.handle('non_stdout'))
+            self.stdout_win = rd.text_window(self.master, self.handle('non_stdout'))
         else:
             if hasattr(self, 'stdout_win'):
                 self.stdout_win.func_destroy()
@@ -567,7 +484,7 @@ class base_GUI(tk.Toplevel):
 
     def func_destroy(self, event=None):
         """Destroy GUI."""
-        import logger as lg
+        import src.logger as lg
         lg.log_Shutdown()
         if hasattr(self, 'stdout_win'):
             self.stdout_win.func_destroy()
@@ -585,8 +502,7 @@ class base_GUI(tk.Toplevel):
         workdir = pl.Path(self.handle('workdir').get())
         det_chans, det_groups = set(), set()
         # Loop found sample directories
-        for samplepath in [p for p in workdir.iterdir() if p.is_dir() and
-                           'Analysis Data' not in p.name]:
+        for samplepath in [p for p in workdir.iterdir() if p.is_dir() and 'Analysis Data' not in p.name]:
             try:  # Get groups from folder names
                 group = str(samplepath.name).split('_')[0]
                 det_groups.add(group)
@@ -599,22 +515,19 @@ class base_GUI(tk.Toplevel):
                 pass
         # Change text variables to contain new groups and channels
         if det_chans:
-            msg = ', '.join(sorted(det_chans))
-            chanstring = tk.StringVar(value=f"Detected channels: {msg}")
+            chanstring = tk.StringVar(value=f"Detected channels: {', '.join(sorted(det_chans))}")
         else:
             chanstring = tk.StringVar(value='No detected channels!')
         if det_groups:
-            msg = ', '.join(sorted(det_groups))
-            grpstring = tk.StringVar(value=f"Detected groups: {msg}")
+            grpstring = tk.StringVar(value=f"Detected groups: {', '.join(sorted(det_groups))}")
         else:
             grpstring = tk.StringVar(value='No detected groups!')
         # Set new text variables to be shown
         self.det_groups.set(grpstring.get())
         self.det_chans.set(chanstring.get())
-        from settings import store
+        from src.settings import store
         store.samplegroups = list(det_groups)
-        store.channels = [c for c in det_chans if
-                          c.lower() != self.handle('MPname').get().lower()]
+        store.channels = [c for c in det_chans if c.lower() != self.handle('MPname').get().lower()]
 
     def vector_creation(self):
         self.run_b.configure(state='disable')
@@ -655,25 +568,17 @@ class SkelSettings(tk.Frame):
         tk.Label(self, text='Vector Parameters:', bd=1, font='TkDefaultFont 10'
                  ).grid(row=0, column=0, columnspan=3, pady=(0, 3))
         # Container widgets
-        tk.Label(self, text='Simplify tol.', bd=1).grid(row=1, column=0,
-                                                        columnspan=1)
-        tk.Entry(self, text=handle('simplifyTol').get(), bd=2,
-                 textvariable=handle('simplifyTol')).grid(row=1, column=1)
+        tk.Label(self, text='Simplify tol.', bd=1).grid(row=1, column=0, columnspan=1)
+        tk.Entry(self, text=handle('simplifyTol').get(), bd=2, textvariable=handle('simplifyTol')).grid(row=1, column=1)
         tk.Label(self, text='Resize', bd=1).grid(row=2, column=0, columnspan=1)
-        tk.Entry(self, text=handle('SkeletonResize').get(), bd=2,
-                 textvariable=handle('SkeletonResize')).grid(row=2, column=1)
-        tk.Label(self, text='Find distance', bd=1).grid(row=3, column=0,
-                                                        columnspan=1)
-        tk.Entry(self, text=handle('find_dist').get(), bd=2,
-                 textvariable=handle('find_dist')).grid(row=3, column=1)
-        tk.Label(self, text='Dilation iter', bd=1).grid(row=4, column=0,
-                                                        columnspan=1)
-        tk.Entry(self, text=handle('BDiter').get(), bd=2,
-                 textvariable=handle('BDiter')).grid(row=4, column=1)
-        tk.Label(self, text='Smoothing', bd=1).grid(row=5, column=0,
-                                                    columnspan=1, pady=(0, 3))
-        tk.Entry(self, text=handle('SigmaGauss').get(), bd=2,
-                 textvariable=handle('SigmaGauss')
+        tk.Entry(self, text=handle('SkeletonResize').get(), bd=2, textvariable=handle('SkeletonResize')
+                 ).grid(row=2, column=1)
+        tk.Label(self, text='Find distance', bd=1).grid(row=3, column=0, columnspan=1)
+        tk.Entry(self, text=handle('find_dist').get(), bd=2, textvariable=handle('find_dist')).grid(row=3, column=1)
+        tk.Label(self, text='Dilation iter', bd=1).grid(row=4, column=0, columnspan=1)
+        tk.Entry(self, text=handle('BDiter').get(), bd=2, textvariable=handle('BDiter')).grid(row=4, column=1)
+        tk.Label(self, text='Smoothing', bd=1).grid(row=5, column=0, columnspan=1, pady=(0, 3))
+        tk.Entry(self, text=handle('SigmaGauss').get(), bd=2, textvariable=handle('SigmaGauss')
                  ).grid(row=5, column=1, pady=(0, 3))
 
 
@@ -684,17 +589,12 @@ class MedianSettings(tk.Frame):
         # Container label
         tk.Frame.__init__(self, parent, bd=2, relief='groove')
 
-        tk.Label(self, text='Vector Parameters:', bd=1
-                 ).grid(row=0, column=0, columnspan=3, pady=(0, 3))
+        tk.Label(self, text='Vector Parameters:', bd=1).grid(row=0, column=0, columnspan=3, pady=(0, 3))
         # Container widgets
-        tk.Label(self, text='Simplify tol.', bd=1).grid(row=1, column=0,
-                                                        columnspan=1)
-        tk.Entry(self, bd=2, text=handle('simplifyTol').get(),
-                 textvariable=handle('simplifyTol')).grid(row=1, column=1)
-        tk.Label(self, text='Median bins  ', bd=1
-                 ).grid(row=2, column=0, columnspan=1, pady=(0, 63))
-        tk.Entry(self, bd=2, text=handle('medianBins').get(),
-                 textvariable=handle('medianBins')
+        tk.Label(self, text='Simplify tol.', bd=1).grid(row=1, column=0, columnspan=1)
+        tk.Entry(self, bd=2, text=handle('simplifyTol').get(), textvariable=handle('simplifyTol')).grid(row=1, column=1)
+        tk.Label(self, text='Median bins  ', bd=1).grid(row=2, column=0, columnspan=1, pady=(0, 63))
+        tk.Entry(self, bd=2, text=handle('medianBins').get(), textvariable=handle('medianBins')
                  ).grid(row=2, column=1, pady=(0, 63))
 
 
@@ -730,40 +630,30 @@ class OtherWin:
         self.insert = [tk.StringVar(value=s) for s in ex_str]
 
         # Entry for names of data columns
-        tk.Label(self.frame, text='Column label', bd=1).grid(row=0, column=0,
-                                                             columnspan=2)
-        tk.Entry(self.frame, text=self.insert[0].get(),
-                 textvariable=self.insert[0], bd=2,
+        tk.Label(self.frame, text='Column label', bd=1).grid(row=0, column=0, columnspan=2)
+        tk.Entry(self.frame, text=self.insert[0].get(), textvariable=self.insert[0], bd=2,
                  ).grid(row=1, column=0, columnspan=2, pady=(0, 10))
 
         # Entry for data file name:
-        tk.Label(self.frame, text='csv-file', bd=1).grid(row=0, column=3,
-                                                         columnspan=2)
-        tk.Entry(self.frame, text=self.insert[1].get(),
-                 textvariable=self.insert[1], bd=2,
+        tk.Label(self.frame, text='csv-file', bd=1).grid(row=0, column=3, columnspan=2)
+        tk.Entry(self.frame, text=self.insert[1].get(), textvariable=self.insert[1], bd=2,
                  ).grid(row=1, column=3, columnspan=2, pady=(0, 10))
 
         # Unit of data type:
-        tk.Label(self.frame, text='Unit', bd=1).grid(row=0, column=5,
-                                                     columnspan=2)
-        tk.Entry(self.frame, text=self.insert[2].get(),
-                 textvariable=self.insert[2], bd=2,
+        tk.Label(self.frame, text='Unit', bd=1).grid(row=0, column=5, columnspan=2)
+        tk.Entry(self.frame, text=self.insert[2].get(), textvariable=self.insert[2], bd=2,
                  ).grid(row=1, column=5, columnspan=2, pady=(0, 10))
 
         # BUTTONS
         self.add_b = tk.Button(self.frame, text='Add', command=self.add_data)
         self.add_b.configure(bg='lightgreen', fg="darkgreen")
-        self.save_b = tk.Button(self.bframe, text='Save & Return\n<Enter>',
-                                command=self.window.destroy)
-        self.save_b.configure(height=2, width=12, bg='lightgreen',
-                              fg="darkgreen")
-        self.exit_b = tk.Button(self.bframe, text="Return",
-                                command=self.func_destroy)
+        self.save_b = tk.Button(self.bframe, text='Save & Return\n<Enter>', command=self.window.destroy)
+        self.save_b.configure(height=2, width=12, bg='lightgreen', fg="darkgreen")
+        self.exit_b = tk.Button(self.bframe, text="Return", command=self.func_destroy)
         self.exit_b.configure(height=1, width=5, fg="red")
 
         self.add_b.grid(row=0, column=7, rowspan=2, padx=(5, 10), pady=(0, 10))
-        self.save_b.grid(row=11, column=5, rowspan=2, columnspan=2,
-                         padx=(0, 9))
+        self.save_b.grid(row=11, column=5, rowspan=2, columnspan=2, padx=(0, 9))
         self.exit_b.grid(row=11, column=7)
 
         # additional data labels and removal buttons:
@@ -772,33 +662,25 @@ class OtherWin:
 
         for i, (key, vals) in enumerate(self.handle('AddData').items()):
             row = i+2
-            tk.Label(self.frame, text=key, bd=2, bg='lightgrey',
-                     relief='groove').grid(row=row, column=0, columnspan=2)
-            tk.Label(self.frame, text=vals[0].get(), bd=2, bg='lightgrey',
-                     relief='groove').grid(row=row, column=3, columnspan=2)
-            tk.Label(self.frame, text=vals[1].get(), bd=2, bg='lightgrey',
-                     relief='groove').grid(row=row, column=5, columnspan=2)
-            self.btns.append(tk.Button(self.frame, text='x',
-                                       font=('Arial', 10), relief='raised',
+            tk.Label(self.frame, text=key, bd=2, bg='lightgrey', relief='groove').grid(row=row, column=0, columnspan=2)
+            tk.Label(self.frame, text=vals[0].get(), bd=2, bg='lightgrey', relief='groove'
+                     ).grid(row=row, column=3,columnspan=2)
+            tk.Label(self.frame, text=vals[1].get(), bd=2, bg='lightgrey', relief='groove'
+                     ).grid(row=row, column=5, columnspan=2)
+            self.btns.append(tk.Button(self.frame, text='x', font=('Arial', 10), relief='raised',
                                        command=lambda i=i: self.rmv_data(i)))
             self.btns[i].grid(row=row, column=7, sticky='w')
 
         # additional data ID-replacement
-        tk.Checkbutton(self.dframe, text="Replace file ID",
-                       variable=self.handle('replaceID'), relief='groove',
-                       bd=4, command=self.replace_check
-                       ).grid(row=0, column=0, columnspan=4)
-        tk.Label(self.dframe, text='File descriptor:', bd=1
-                 ).grid(row=1, column=0, columnspan=3)
-        tk.Label(self.dframe, text='Change to:', bd=1
-                 ).grid(row=1, column=3, columnspan=3)
+        tk.Checkbutton(self.dframe, text="Replace file ID", variable=self.handle('replaceID'), relief='groove',
+                       bd=4, command=self.replace_check).grid(row=0, column=0, columnspan=4)
+        tk.Label(self.dframe, text='File descriptor:', bd=1).grid(row=1, column=0, columnspan=3)
+        tk.Label(self.dframe, text='Change to:', bd=1).grid(row=1, column=3, columnspan=3)
         for i, (key, val) in enumerate(self.handle('channelID').items()):
             row = i+2
             file_id = tk.StringVar(value=key)
-            tk.Entry(self.dframe, text=file_id.get(), textvariable=file_id,
-                     bd=2,).grid(row=row, column=0, columnspan=3)
-            tk.Entry(self.dframe, text=val.get(), textvariable=val, bd=2
-                     ).grid(row=row, column=3, columnspan=3)
+            tk.Entry(self.dframe, text=file_id.get(), textvariable=file_id, bd=2,).grid(row=row, column=0, columnspan=3)
+            tk.Entry(self.dframe, text=val.get(), textvariable=val, bd=2).grid(row=row, column=3, columnspan=3)
         self.replace_check()
 
     def replace_check(self):
@@ -816,18 +698,14 @@ class OtherWin:
         """Addition of data input to the additional data table."""
         if self.insert[0].get() not in self.handle('AddData').keys():
             row = self.rwn+2
-            tk.Label(self.frame, text=self.insert[0].get(), bd=2,
-                     bg='lightgrey', relief='groove').grid(row=row, column=0,
-                                                           columnspan=2)
-            tk.Label(self.frame, text=self.insert[1].get(), bd=2,
-                     bg='lightgrey', relief='groove').grid(row=row, column=3,
-                                                           columnspan=2)
-            tk.Label(self.frame, text=self.insert[2].get(), bd=2,
-                     bg='lightgrey', relief='groove').grid(row=row, column=5,
-                                                           columnspan=2)
+            tk.Label(self.frame, text=self.insert[0].get(), bd=2, bg='lightgrey', relief='groove'
+                     ).grid(row=row, column=0, columnspan=2)
+            tk.Label(self.frame, text=self.insert[1].get(), bd=2, bg='lightgrey', relief='groove'
+                     ).grid(row=row, column=3, columnspan=2)
+            tk.Label(self.frame, text=self.insert[2].get(), bd=2, bg='lightgrey', relief='groove'
+                     ).grid(row=row, column=5, columnspan=2)
             self.btns.append(tk.Button(self.frame, text='x', relief='raised',
-                                       command=lambda i=self.rwn:
-                                       self.rmv_data(i)))
+                                       command=lambda i=self.rwn: self.rmv_data(i)))
             self.btns[self.rwn].grid(row=row, column=7, sticky='w')
             var = [get_tkvar(self.insert[1]), get_tkvar(self.insert[2])]
             self.handle('AddData').update({self.insert[0].get(): var})
@@ -871,69 +749,46 @@ class PlotWin:
         self.frame = tk.Frame(self.window, bd=3, relief='groove')
         self.frame.grid(row=0, column=0, rowspan=9, columnspan=4, sticky="nw")
         self.statframe = tk.Frame(self.window, bd=2, relief='groove')
-        self.statframe.grid(row=9, column=0, rowspan=4, columnspan=4,
-                            sticky="n")
+        self.statframe.grid(row=9, column=0, rowspan=4, columnspan=4, sticky="n")
         self.bframe = tk.Frame(self.window)
-        self.bframe.grid(row=13, column=0, rowspan=2, columnspan=4, pady=5,
-                         sticky="ne")
+        self.bframe.grid(row=13, column=0, rowspan=2, columnspan=4, pady=5, sticky="ne")
         # General settings:
         # Outliers
-        tk.Label(self.frame, text="General Settings:",
-                 font='TkDefaultFont 10 bold'
-                 ).grid(row=0, column=0, columnspan=2)
-        tk.Checkbutton(self.frame, text="Drop outliers", bd=1, relief='groove',
-                       variable=self.handle('Drop_Outliers'),
-                       command=self.drop_check
-                       ).grid(row=1, column=0, columnspan=2)
-        tk.Label(self.frame, text='Std dev.:').grid(row=2, column=0,
-                                                    columnspan=2)
-        self.stdin = tk.Entry(self.frame, text=self.handle('dropSTD').get(),
-                              textvariable=self.handle('dropSTD'), bd=2)
+        tk.Label(self.frame, text="General Settings:", font='TkDefaultFont 10 bold').grid(row=0, column=0, columnspan=2)
+        tk.Checkbutton(self.frame, text="Drop outliers", bd=1, relief='groove', variable=self.handle('Drop_Outliers'),
+                       command=self.drop_check).grid(row=1, column=0, columnspan=2)
+        tk.Label(self.frame, text='Std dev.:').grid(row=2, column=0, columnspan=2)
+        self.stdin = tk.Entry(self.frame, text=self.handle('dropSTD').get(), textvariable=self.handle('dropSTD'), bd=2)
         self.stdin.grid(row=2, column=2, columnspan=2)
         self.drop_check()
         # Pairplot jitter
-        tk.Checkbutton(self.frame, text="Pair plot jitter",
-                       variable=self.handle('plot_jitter')
+        tk.Checkbutton(self.frame, text="Pair plot jitter", variable=self.handle('plot_jitter')
                        ).grid(row=3, column=0, columnspan=2)
         # Save format
-        tk.Label(self.frame, text='Save format:'
-                 ).grid(row=4, column=0, columnspan=1)
-        tk.Entry(self.frame, bd=2, text=self.handle('saveformat'),
-                 textvariable=self.handle('saveformat')
+        tk.Label(self.frame, text='Save format:').grid(row=4, column=0, columnspan=1)
+        tk.Entry(self.frame, bd=2, text=self.handle('saveformat'), textvariable=self.handle('saveformat')
                  ).grid(row=4, column=1, columnspan=2)
         comment = "Supported formats:\n\
         eps, jpeg, jpg, pdf, pgf, png, ps, raw, rgba,\nsvg, svgz, tif, tiff"
-        tk.Label(self.frame, text=comment, fg='dimgrey'
-                 ).grid(row=5, column=0, columnspan=4, pady=(0, 10))
+        tk.Label(self.frame, text=comment, fg='dimgrey').grid(row=5, column=0, columnspan=4, pady=(0, 10))
         # versus
-        tk.Label(self.frame, text='Versus plots:'
-                 ).grid(row=6, column=0, columnspan=3)
-        tk.Label(self.frame, text='Plotted channels:'
-                 ).grid(row=7, column=0, columnspan=2)
-        tk.Entry(self.frame, bd=2, text=self.handle('vs_channels'),
-                 textvariable=self.handle('vs_channels')
+        tk.Label(self.frame, text='Versus plots:').grid(row=6, column=0, columnspan=3)
+        tk.Label(self.frame, text='Plotted channels:').grid(row=7, column=0, columnspan=2)
+        tk.Entry(self.frame, bd=2, text=self.handle('vs_channels'), textvariable=self.handle('vs_channels')
                  ).grid(row=7, column=2, columnspan=2)
-        tk.Entry(self.frame, bd=2, text=self.handle('vs_adds'),
-                 textvariable=self.handle('vs_adds')
+        tk.Entry(self.frame, bd=2, text=self.handle('vs_adds'), textvariable=self.handle('vs_adds')
                  ).grid(row=8, column=2, columnspan=2)
-        tk.Label(self.frame, text='Plotted add. data:'
-                 ).grid(row=8, column=0, columnspan=2)
+        tk.Label(self.frame, text='Plotted add. data:').grid(row=8, column=0, columnspan=2)
         # Statistics settings:
-        tk.Label(self.statframe, text='Statistical Plotting:'
-                 ).grid(row=0, column=0, columnspan=3)
-        tk.Checkbutton(self.statframe, text="Sign. color",
-                       variable=self.handle('fill')
+        tk.Label(self.statframe, text='Statistical Plotting:').grid(row=0, column=0, columnspan=3)
+        tk.Checkbutton(self.statframe, text="Sign. color", variable=self.handle('fill')
                        ).grid(row=1, column=2, columnspan=2)
-        tk.Checkbutton(self.statframe, text="Neg. log2",
-                       variable=self.handle('negLog2'),
-                       command=self.sign_check
+        tk.Checkbutton(self.statframe, text="Neg. log2", variable=self.handle('negLog2'), command=self.sign_check
                        ).grid(row=2, column=0, columnspan=1)
-        self.starc = tk.Checkbutton(self.statframe, text="Sign. stars",
-                                    variable=self.handle('stars'),
+        self.starc = tk.Checkbutton(self.statframe, text="Sign. stars", variable=self.handle('stars'),
                                     command=self.sign_check)
         self.ylimlbl = tk.Label(self.statframe, text='y-limit:')
-        self.ylim_in = tk.Entry(self.statframe, text=self.handle('ylim').get(),
-                                textvariable=self.handle('ylim'), bd=2)
+        self.ylim_in = tk.Entry(self.statframe, text=self.handle('ylim').get(), textvariable=self.handle('ylim'), bd=2)
         self.starc.grid(row=1, column=0, columnspan=2)
         self.ylimlbl.grid(row=2, column=1, columnspan=1)
         self.ylim_in.grid(row=2, column=2, columnspan=2)
@@ -941,12 +796,10 @@ class PlotWin:
         self.sign_check()
         # BUTTONS
         stl = 'TkDefaultFont 10 bold'
-        self.save_b = tk.Button(self.bframe, text='Save & Return\n<Enter>',
-                                font=stl, command=self.window.destroy)
+        self.save_b = tk.Button(self.bframe, text='Save & Return\n<Enter>', font=stl, command=self.window.destroy)
         self.save_b.configure(height=2, width=12, bg='lightgreen', fg="black")
         self.save_b.grid(row=0, column=2, rowspan=2, columnspan=2, padx=(0, 9))
-        self.exit_b = tk.Button(self.bframe, text="Return", font=stl,
-                                command=self.func_destroy)
+        self.exit_b = tk.Button(self.bframe, text="Return", font=stl, command=self.func_destroy)
         self.exit_b.configure(height=1, width=5, fg="red")
         self.exit_b.grid(row=0, column=4)
 
@@ -993,52 +846,35 @@ class StatWin():
         self.bframe = tk.Frame(self.window)
         self.bframe.grid(row=7, rowspan=2, columnspan=4, sticky="ne")
         # Control group
-        tk.Label(self.frame, text='Control Group:').grid(row=0, column=0,
-                                                         columnspan=2, pady=4)
-        tk.Entry(self.frame, text=self.handle('cntrlGroup').get(),
-                 textvariable=self.handle('cntrlGroup'), bd=2
+        tk.Label(self.frame, text='Control Group:').grid(row=0, column=0, columnspan=2, pady=4)
+        tk.Entry(self.frame, text=self.handle('cntrlGroup').get(), textvariable=self.handle('cntrlGroup'), bd=2
                  ).grid(row=0, column=2, columnspan=2, pady=4)
         # Statistic types
-        tk.Checkbutton(self.frame, text="Total Statistics", relief='groove',
-                       variable=self.handle('stat_total'), bd=1
+        tk.Checkbutton(self.frame, text="Total Statistics", relief='groove', variable=self.handle('stat_total'), bd=1
                        ).grid(row=1, column=0, columnspan=2, pady=4)
-        tk.Checkbutton(self.frame, text="Group vs Group", relief='groove',
-                       variable=self.handle('stat_versus'), bd=1
+        tk.Checkbutton(self.frame, text="Group vs Group", relief='groove', variable=self.handle('stat_versus'), bd=1
                        ).grid(row=1, column=2, columnspan=2, pady=4)
         # Alpha
-        tk.Label(self.frame, text='Alpha:').grid(row=2, column=0, columnspan=2,
-                                                 pady=4)
-        tk.Entry(self.frame, text=self.handle('alpha').get(),
-                 textvariable=self.handle('alpha'), bd=2,
+        tk.Label(self.frame, text='Alpha:').grid(row=2, column=0, columnspan=2, pady=4)
+        tk.Entry(self.frame, text=self.handle('alpha').get(), textvariable=self.handle('alpha'), bd=2,
                  ).grid(row=2, column=2, columnspan=2, pady=4)
         # Stat window
-        tk.Checkbutton(self.frame, text="Windowed statistics",
-                       variable=self.handle('windowed'), relief='raised', bd=1,
-                       command=self.window_check
-                       ).grid(row=3, column=0, columnspan=3, pady=(10, 0))
-        tk.Label(self.wframe, text='Trailing window:'
-                 ).grid(row=0, column=0, columnspan=2, pady=1)
-        tk.Entry(self.wframe, text=self.handle('trail').get(),
-                 textvariable=self.handle('trail'), bd=2,
+        tk.Checkbutton(self.frame, text="Windowed statistics", variable=self.handle('windowed'), relief='raised', bd=1,
+                       command=self.window_check).grid(row=3, column=0, columnspan=3, pady=(10, 0))
+        tk.Label(self.wframe, text='Trailing window:').grid(row=0, column=0, columnspan=2, pady=1)
+        tk.Entry(self.wframe, text=self.handle('trail').get(), textvariable=self.handle('trail'), bd=2,
                  ).grid(row=0, column=2, columnspan=2, pady=1)
-        tk.Label(self.wframe, text='Leading window:'
-                 ).grid(row=1, column=0, columnspan=2, pady=(1, 5))
-        tk.Entry(self.wframe, text=self.handle('lead').get(),
-                 textvariable=self.handle('lead'), bd=2,
+        tk.Label(self.wframe, text='Leading window:').grid(row=1, column=0, columnspan=2, pady=(1, 5))
+        tk.Entry(self.wframe, text=self.handle('lead').get(), textvariable=self.handle('lead'), bd=2,
                  ).grid(row=1, column=2, columnspan=2, pady=(1, 5))
         self.window_check()
         # Buttons
-        self.save_b = tk.Button(self.bframe, text='Save & Return\n<Enter>',
-                                font=('TkDefaultFont 10 bold'),
+        self.save_b = tk.Button(self.bframe, text='Save & Return\n<Enter>', font=('TkDefaultFont 10 bold'),
                                 command=self.window.destroy)
-        self.save_b.configure(height=2, width=12, bg='lightgreen',
-                              fg="darkgreen")
-        self.exit_b = tk.Button(self.bframe, text="Return",
-                                font=('TkDefaultFont 9 bold'),
-                                command=self.func_destroy)
+        self.save_b.configure(height=2, width=12, bg='lightgreen', fg="darkgreen")
+        self.exit_b = tk.Button(self.bframe, text="Return", font=('TkDefaultFont 9 bold'), command=self.func_destroy)
         self.exit_b.configure(height=1, width=5, fg="red")
-        self.save_b.grid(row=0, column=2, rowspan=2, columnspan=2,
-                         padx=(0, 10))
+        self.save_b.grid(row=0, column=2, rowspan=2, columnspan=2, padx=(0, 10))
         self.exit_b.grid(row=0, column=4)
 
     def window_check(self):
@@ -1078,8 +914,7 @@ class SettingHandler:
         """Translate tk variables to original format."""
         mods = self.vars.loc[self.vars.check, 'ref'].to_dict()
         for key, value in mods.items():
-            if key in ('Cluster_Channels', 'Distance_Channels', 'vs_channels',
-                       'vs_adds'):
+            if key in ('Cluster_Channels', 'Distance_Channels', 'vs_channels', 'vs_adds'):
                 var = mods[key].get().split(',')
                 mods[key] = [v.strip() for v in var]
             elif isinstance(value, dict):
@@ -1092,8 +927,7 @@ class SettingHandler:
 
     def change_settings(self, options):
         """Change run-settings based on given dict variables."""
-        if Sett.border_channel is Sett.vectChannel and (options['vectChannel']
-                                                        != Sett.vectChannel):
+        if Sett.border_channel is Sett.vectChannel and options['vectChannel'] != Sett.vectChannel:
             rename_scoring_vars(options)
         for (key, value) in options.items():
             setattr(Sett, key, value)
@@ -1104,9 +938,8 @@ def lst_get(key_value):
     if isinstance(key_value, list):
         if len(key_value) == 1:
             try:
-                return key_value.get().split(', ')
+                return key_value[0].get().split(', ')
             except AttributeError:
-                print(key_value)
                 return key_value
         return [v.get() for v in key_value]
     return key_value.get()
@@ -1160,8 +993,7 @@ def configure(state, widgets):
         widget.configure(state=state)
 
 def rename_scoring_vars(options):
-    keys = [k for k in options['scoring_vars'].keys() if Sett.border_channel
-            in k]
+    keys = [k for k in options['scoring_vars'].keys() if Sett.border_channel in k]
     for key in keys:
         nkey = key.replace(Sett.border_channel, options['vectChannel'])
         options['scoring_vars'][nkey] = options['scoring_vars'].pop(key)

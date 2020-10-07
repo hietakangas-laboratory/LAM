@@ -8,7 +8,9 @@ Created on Thu Jan 16 10:37:42 2020
 """
 import tkinter as tk
 import sys
-import settings as Sett
+
+# LAM module
+import src.settings as Sett
 
 
 class text_window(tk.Toplevel):
@@ -20,19 +22,14 @@ class text_window(tk.Toplevel):
         self.txtwin = tk.Toplevel(master)
         self.txtwin.title("Output")
         self.txtwin.protocol("WM_DELETE_WINDOW", self.func_destroy)
-        self.upframe = tk.Frame(self.txtwin, bd=3, relief='groove',
-                                bg='lightgray')
-        self.upframe.grid(row=0, column=0, rowspan=1, columnspan=7,
-                          sticky="nwe")
+        self.upframe = tk.Frame(self.txtwin, bd=3, relief='groove', bg='lightgray')
+        self.upframe.grid(row=0, column=0, rowspan=1, columnspan=7, sticky="nwe")
         self.dnframe = tk.Frame(self.txtwin, bd=3, relief='sunken')
-        self.dnframe.grid(row=1, column=0, rowspan=10, columnspan=7,
-                          sticky="nwe")
+        self.dnframe.grid(row=1, column=0, rowspan=10, columnspan=7, sticky="nwe")
         self.rframe = tk.Frame(self.txtwin, bd=3, relief='raised')
         self.rframe.grid(row=1, column=8, rowspan=10, sticky="nes")
         # Exit button
-        self.exit_b = tk.Button(self.upframe, text="Close",
-                                font=('Arial', 9, 'bold'),
-                                command=self.func_destroy)
+        self.exit_b = tk.Button(self.upframe, text="Close", font=('Arial', 9, 'bold'), command=self.func_destroy)
         self.exit_b.configure(height=1, width=5, fg="red")
         self.exit_b.grid(row=0, column=5, sticky="nwe")
         # Text area

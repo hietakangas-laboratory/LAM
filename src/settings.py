@@ -236,10 +236,9 @@ class settings:
 
     # Define colors used for sample groups
     # (xkcd colors: 'https://xkcd.com/color/rgb/')
-    palette_colors = ['orange yellow', 'aqua marine', 'tomato', 'dark lime',
-                      'tan brown', 'red violet', 'dusty green', 'sandy brown',
-                      'dusky purple', 'purply pink', 'blood', 'soft blue',
-                      'brown grey', 'deep lavender', 'pine']
+    palette_colors = ['orange yellow', 'aqua marine', 'tomato', 'dark lime', 'tan brown', 'red violet', 'dusty green',
+                      'sandy brown', 'dusky purple', 'purply pink', 'blood', 'soft blue', 'brown grey', 'deep lavender',
+                      'pine']
 
     non_stdout = False  # Redirect stdout to a window when using executable
 
