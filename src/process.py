@@ -470,44 +470,38 @@ class GetChannel:
     def read_additional(self, dataKeys):
         """Read relevant additional data of channel."""
 
-        def _testVariance(data):
+        def _test_variance(data):
             """Test if additional data column contains variance."""
             for col in data.columns.difference(['ID']):
                 test = data.loc[:, col].dropna()
-                if test.nunique() <= 2:
-                    data.loc[:, col] = np.nan
+                test = (test - test.min()) / test.max()
+                if test.std() < 0.01:
                     self.datafail.append(col)
+                    data.loc[:, col] = np.nan
+            return data
 
-        def _rename_ID():
+        def _rename_id(data):
             """Rename filename identification of channel."""
             # I.e. as defined by settings.channelID
-            rename = None
-            strings = str(col).split('_')
-            if len(strings) > 1:
-                IDstring = strings[-1]
-                key = '_'.join(strings[:-1])
-                if Sett.replaceID:
-                    temp = Sett.channelID.get(IDstring)
-                    if temp is not None:
-                        IDstring = temp
-                rename = str(key + '-' + IDstring)
-            return rename
+            for col in data.columns:
+                id_str = str(col).split('_')[-1]
+                if id_str in Sett.channelID.keys():
+                    new_id = Sett.channelID.get(id_str)
+                    data.rename(columns={col: col.replace(f'_{id_str}', f'-{new_id}')}, inplace=True)
+            return data
 
-        for key in dataKeys:
-            fstring = dataKeys.get(key)[0]
-            finder = str('*{}*'.format(fstring))
-            paths = list(self.path.glob(finder))
-            addData = pd.DataFrame(self.data.loc[:, 'ID'])
+        addData = pd.DataFrame(self.data.loc[:, 'ID'])
+        for key, values in dataKeys.items():
+            paths = list(self.path.glob(f'*{values[0]}*'))
             if not paths:
-                print("-> {} {} file not found".format(self.name, key))
+                print(f"-> {self.name} {key} file not found")
                 continue
             if len(paths) == 1:
-                namer = re.compile('^{}'.format(key), re.I)
-                if (paths[0] == self.pospath and
-                        any(self.data.columns.str.contains(namer))):
+                namer = re.compile(f'^{key}', re.I)
+                if paths[0] == self.pospath and any(self.data.columns.str.contains(namer)):
                     continue
                 if paths[0] == self.pospath and not any(self.data.columns.str.contains(namer)):
-                    print(f"'{key}' not in AddData-file of {self.sample.name} on channel {self.name}")
+                    print(f"'{key}' not in {self.pospath.name} of {self.sample.name} on channel {self.name}")
                 tmpData = system.read_data(str(paths[0]))
                 cols = tmpData.columns.map(lambda x, namer=namer: bool(re.match(namer, x)) or x == 'ID')
                 tmpData = tmpData.loc[:, cols]
@@ -515,22 +509,20 @@ class GetChannel:
             else:  # If multiple files, e.g. intensity, get all
                 for path in paths:
                     # Search identifier for column from filename
-                    strings = str(path.stem).split(fstring)
-                    IDstring = strings[1].split('_')[1]
+                    strings = str(path.stem).split(f'_{values[0]}_')
+                    id_string = strings[1].split('_')[0]
                     # Locate columns
                     tmpData = system.read_data(str(path))
                     tmpData = tmpData.loc[:, [key, 'ID']]
                     for col in [c for c in tmpData.columns if c != 'ID']:
-                        rename = str(col + '_' + IDstring)
+                        rename = str(col + '_' + id_string)
                         tmpData.rename(columns={key: rename}, inplace=True)
                     addData = pd.merge(addData, tmpData, on='ID')
-            # Go through all columns and drop invariant data
-            for col in [c for c in addData.columns if c != 'ID']:
-                _testVariance(tmpData)
-                rename = _rename_ID()  # Rename columns if wanted
-                if rename is not None:
-                    addData.rename(columns={col: rename}, inplace=True)
-            self.data = pd.merge(self.data, addData, on='ID')
+        # Drop invariant data
+        addData = _test_variance(addData)
+        if Sett.replaceID:
+            addData = _rename_id(addData)
+        self.data = pd.merge(self.data, addData, on='ID')
 
 
 class normalize:
@@ -850,7 +842,7 @@ def Project(PATHS):
             # If no variance in found additional data, it is discarded.
             if channel.datafail:
                 datatypes = ', '.join(channel.datafail)
-                info = "No variance, data discarded"
+                info = "Invariant data discarded"
                 msg = f"   -> {info} - {channel.name}: {datatypes}"
                 print(msg)
             # Project features of channel onto vector

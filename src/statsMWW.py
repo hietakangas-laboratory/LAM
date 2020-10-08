@@ -188,9 +188,9 @@ class TotalStats:
             if str(err) == 'All numbers are identical in mannwhitneyu':
                 msg = f'Identical {variable}-values between control and {grp}'
             else:
-                msg = 'ValueError for {}'.format(variable)
+                msg = f'ValueError for {variable}'
 
-            print('WARNING: {}'.format(msg))
+            print(f'WARNING: {self.filename} - {msg}')
 
             if grp not in self.error_vars.keys():
                 self.error_vars.update({grp: [variable]})

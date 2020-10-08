@@ -195,9 +195,10 @@ def main_catch_exit(LAM_logger=None, gui_root=None):
         lg.log_Shutdown()
 
 
-def run(argv=[]):
+def run():
     # If arguments given from commandline, parse them
-    if len(argv) > 1:
+    print(sys.argv)
+    if len(sys.argv) > 1:
         parser = pc.make_parser()
         pc.change_settings(parser)
 
@@ -216,4 +217,4 @@ def run(argv=[]):
 
 
 if __name__ == '__main__':
-    run(sys.argv)
+    run()
