@@ -673,7 +673,8 @@ def identifiers(data, path, ids):
         data.loc['Sample', :] = data.columns
     if 'Type' in ids:
         name = str(path.stem).split('_')[2:]
-        data.loc['Type', :] = name
+        data.loc['Type', :] = name[0]
+        print(name[0])
     return data
 
 

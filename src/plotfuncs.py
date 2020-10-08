@@ -198,17 +198,20 @@ def create_vector_plots(workdir, savedir, sample_dirs):
     vectors = pd.DataFrame()
     cols = ['Position X', 'Position Y']
     for path in sample_dirs:
-        cpath = workdir.joinpath(path.name).glob(f'*_{Sett.vectChannel}_*')
+        cpath = [p for p in workdir.joinpath(path.name).glob(f'*_{Sett.vectChannel}_*') if p.is_dir()]
         try:
-            dpath = next(cpath).glob('*Position.csv')
+            dpath = cpath[0].glob('*Position.csv')
             data = pd.read_csv(next(dpath), header=Sett.header_row)
             data = data.loc[:, cols].assign(sample=path.name)
-        except StopIteration:
+        except (IndexError, FileNotFoundError) as err:
+            print(f'WARNING: Cannot read {Sett.vectChannel}-file for {path.name}')
+            print(f'  --> error message: {err}')
             data = pd.DataFrame(data=[np.nan, np.nan], columns=cols)
         try:
             vector = pd.read_csv(next(path.glob('Vector.*')))
             vector = vector.assign(sample=path.name)
         except (FileNotFoundError, StopIteration):
+            print(f'WARNING: Cannot find vector-file for {path.name}')
             vector = pd.DataFrame(data=[np.nan, np.nan], columns=['X', 'Y'])
         full = pd.concat([full, data])
         vectors = pd.concat([vectors, vector])
