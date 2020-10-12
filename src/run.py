@@ -197,7 +197,6 @@ def main_catch_exit(LAM_logger=None, gui_root=None):
 
 def run():
     # If arguments given from commandline, parse them
-    print(sys.argv)
     if len(sys.argv) > 1:
         parser = pc.make_parser()
         pc.change_settings(parser)

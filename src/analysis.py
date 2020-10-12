@@ -10,21 +10,21 @@ Created on Wed Mar  6 12:42:28 2019
 import re
 import warnings
 from itertools import product, chain
-import pathlib as pl
 
 # Other packages
 import numpy as np
 import pandas as pd
+import pathlib as pl
 import seaborn as sns
 from sklearn.neighbors import KDTree
 
 # LAM imports
-import src.system as system
+import src.logger as lg
 import src.process as process
+import src.system as system
+from src.plot import plotting
 from src.settings import store, settings as Sett
 from src.statsMWW import statistics, TotalStats
-from src.plot import plotting
-import src.logger as lg
 
 LAM_logger = None
 

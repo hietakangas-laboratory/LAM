@@ -29,31 +29,27 @@ LAM_logger = None
 class paths:
     """Handle required system paths."""
 
-    def __init__(self, workdir, only_vectors=False):
+    def __init__(self, workdir: pl.Path, only_vectors: bool=False):
         """Creation of output folders."""
-        try:
-            # Create path-variables necessary for the analysis
-            self.outputdir = workdir.joinpath('Analysis Data')
-            self.datadir = pl.Path(self.outputdir / 'Data Files')
-            self.plotdir = pl.Path(self.outputdir / 'Plots')
-            self.samplesdir = pl.Path(self.outputdir / 'Samples')
-            self.statsdir = pl.Path(self.outputdir / 'Statistics')
+        # Create path-variables necessary for the analysis
+        self.outputdir = workdir.joinpath('Analysis Data')
+        self.datadir = pl.Path(self.outputdir / 'Data Files')
+        self.plotdir = pl.Path(self.outputdir / 'Plots')
+        self.samplesdir = pl.Path(self.outputdir / 'Samples')
+        self.statsdir = pl.Path(self.outputdir / 'Statistics')
 
-            # If samples are to be processed and output data directory exists,
-            # the directory will be removed with all files as not to interfere
-            # with analysis.
-            if not only_vectors:
-                self.clear_analysis()
+        # If samples are to be processed and output data directory exists,
+        # the directory will be removed with all files as not to interfere
+        # with analysis.
+        if not only_vectors:
+            self.clear_analysis()
 
-            # Create output directories
-            pl.Path.mkdir(self.outputdir, exist_ok=True)
-            pl.Path.mkdir(self.plotdir, exist_ok=True)
-            pl.Path.mkdir(self.samplesdir, exist_ok=True)
-            pl.Path.mkdir(self.datadir, exist_ok=True)
-            pl.Path.mkdir(self.statsdir, exist_ok=True)
-
-        except KeyboardInterrupt:
-            raise KeyboardInterrupt
+        # Create output directories
+        pl.Path.mkdir(self.outputdir, exist_ok=True)
+        pl.Path.mkdir(self.plotdir, exist_ok=True)
+        pl.Path.mkdir(self.samplesdir, exist_ok=True)
+        pl.Path.mkdir(self.datadir, exist_ok=True)
+        pl.Path.mkdir(self.statsdir, exist_ok=True)
         if LAM_logger is not None:
             lg.logprint(LAM_logger, 'Directories successfully created.', 'i')
 
@@ -180,8 +176,7 @@ class DataHandler:
                         sub_data.drop(col, axis=1, inplace=True)
             # Add identifier columns and melt data
             sub_data.loc[:, 'Channel'] = path.stem
-            sub_data.loc[:, 'Sample Group'] = str(path.parent.name
-                                                  ).split('_')[0]
+            sub_data.loc[:, 'Sample Group'] = str(path.parent.name).split('_')[0]
 
             if 'melt' in kws.keys():
                 mkws = kws.get('melt')

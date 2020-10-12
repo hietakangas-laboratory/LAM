@@ -36,7 +36,7 @@ LAM_logger = None
 class GetSample:
     """Collect sample data and process for analysis."""
 
-    def __init__(self, path, PATHS, process=True, project=False):
+    def __init__(self, path: pl.Path, PATHS: system.paths, process=True, project=False):
         self.name = path.stem
         self.sampledir = PATHS.samplesdir.joinpath(self.name)
         self.group = self.name.split('_')[0]
@@ -60,8 +60,8 @@ class GetSample:
 
         if process is False and project is True:
             for channel in self.channels:  # Store all found channel names
-                if (channel.lower() not in [c.lower() for c in store.channels]
-                        and channel.lower() != Sett.MPname.lower()):
+                if channel.lower() not in [c.lower() for c in store.channels] and (channel.lower()
+                                                                                   != Sett.MPname.lower()):
                     store.channels.append(channel)
             self.find_sample_vector(PATHS.datadir)
 
@@ -71,7 +71,7 @@ class GetSample:
             paths = list(self.sampledir.glob('Vector.*'))
             if len(paths) > 1:  # If multiple vector files found
                 try:  # Prioritize txt before csv
-                    vectorp = [p for p in paths if p.suffix=='.txt'][0]
+                    vectorp = [p for p in paths if p.suffix == '.txt'][0]
                 except IndexError:
                     vectorp = paths[0]
             else:
@@ -147,7 +147,7 @@ class GetSample:
         vector = vector.simplify(Sett.simplifyTol)
         system.saveToFile(line_df, self.sampledir, 'Vector.csv', append=False)
 
-    def SkeletonVector(self, X, Y, resize, BDiter, SigmaGauss):
+    def SkeletonVector(self, X, Y, resize: float, BDiter: int, SigmaGauss: float):
         """Create vector by skeletonization of image-transformed positions."""
 
         def _binarize(coords):
@@ -343,14 +343,14 @@ class GetSample:
         linedf = pd.DataFrame(XYmedian, columns=['X', 'Y'])
         return vector, linedf
 
-    def get_MPs(self, MPname, useMP, datadir):
+    def get_MPs(self, MPname: str, useMP: bool, datadir: pl.Path) -> pd.Series:
         """Collect MPs for sample anchoring."""
         if useMP:
             try:  # Get measurement point for anchoring
                 MPdirPath = next(self.channelpaths.pop(i) for i, s in enumerate(self.channelpaths) if
                                  str('_' + MPname + '_') in str(s))
                 MPpath = next(MPdirPath.glob("*Position.csv"))
-                MPdata = system.read_data(MPpath)
+                MPdata = system.read_data(MPpath, test=False)
                 MPdata = MPdata.loc[:, ['Position X', 'Position Y']]
                 if not MPdata.empty:
                     MPbin = self.project_MPs(MPdata, self.vector, datadir, filename="MPs.csv")
@@ -374,8 +374,7 @@ class GetSample:
         # projection.
         points = gm.MultiPoint(XYpos)
         # Find point of projection on the vector.
-        positions["VectPoint"] = [vector.interpolate(
-            vector.project(gm.Point(x))) for x in points]
+        positions["VectPoint"] = [vector.interpolate(vector.project(gm.Point(x))) for x in points]
         # Find normalized distance (0->1)
         positions["NormDist"] = [vector.project(x, normalized=True) for x in positions["VectPoint"]]
         # Find the bins that the points fall into
@@ -509,7 +508,7 @@ class GetChannel:
             else:  # If multiple files, e.g. intensity, get all
                 for path in paths:
                     # Search identifier for column from filename
-                    strings = str(path.stem).split(f'_{values[0]}_')
+                    strings = str(path.stem).split(f'{values[0]}_')
                     id_string = strings[1].split('_')[0]
                     # Locate columns
                     tmpData = system.read_data(str(path))
@@ -534,7 +533,7 @@ class normalize:
         self.counts = system.read_data(path, header=0, test=False)
         self.starts = None
 
-    def averages(self, NormCounts):
+    def averages(self, NormCounts: pd.DataFrame):
         """Find bin averages of channels."""
         # Find groups of each sample based on samplenames
         samples = NormCounts.columns.tolist()
@@ -550,7 +549,7 @@ class normalize:
         filename = str('ChanAvg_{}.csv'.format(self.channel))
         system.saveToFile(Avgs, self.path.parent, filename, append=False)
 
-    def Avg_AddData(self, PATHS, dataNames, TotalLen):
+    def Avg_AddData(self, PATHS: system.paths, dataNames: dict, TotalLen: int):
         """Find bin averages of additional data."""
         samples = self.starts.index
         for sample in samples:

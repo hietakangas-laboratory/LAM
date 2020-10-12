@@ -663,7 +663,7 @@ def select(paths, adds=True):
     return ret_paths
 
 
-def identifiers(data, path, ids):
+def identifiers(data: pd.DataFrame, path, ids: list) -> pd.DataFrame:
     """Add identifier variables to dataframes."""
     if 'Channel' in ids:
         data.loc['Channel', :] = path.stem.split('_')[1]
@@ -674,7 +674,6 @@ def identifiers(data, path, ids):
     if 'Type' in ids:
         name = str(path.stem).split('_')[2:]
         data.loc['Type', :] = name[0]
-        print(name[0])
     return data
 
 

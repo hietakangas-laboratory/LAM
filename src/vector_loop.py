@@ -176,11 +176,6 @@ USAGE:
 
 def fixed_map(option):
     """Repair broken tkinter coloring."""
-    # Returns the style map for 'option' with any styles starting with
-    # ("!disabled", "!selected", ...) filtered out
-
-    # style.map() returns an empty list for missing options, so this should
-    # be future-safe
     return [elm for elm in ttk.Style().map("Treeview", query_opt=option) if elm[:2] != ("!disabled", "!selected")]
 
 
