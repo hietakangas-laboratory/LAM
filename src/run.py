@@ -191,7 +191,7 @@ def main_catch_exit(LAM_logger=None, gui_root=None):
     except process.VectorError as e:
         print(e.message + '\n')
         print(f'Missing: {", ".join(e.samples)}')
-        lg.logprint(LAM_logger, e.message, 'c')
+        lg.logprint(LAM_logger, e.message, 'ex')
         lg.log_Shutdown()
 
 

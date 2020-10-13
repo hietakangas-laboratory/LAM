@@ -703,7 +703,7 @@ def ask_new_channel(border_channel):
             new_channel = system.ask_user(dlg)  # Ask channel name
             change_keys(border_channel, new_channel)  # Change variables
             Sett.border_channel = new_channel
-            msg = ('Border detection channel changed from {border_channel} to {new_channel}.')
+            msg = f'Border detection channel changed from {border_channel} to {new_channel}.'
             print('\n' + msg)
             lg.logprint(LAM_logger, msg, 'i')
             return True
