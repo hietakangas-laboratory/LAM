@@ -108,21 +108,21 @@ class settings:
 
     # ---FEATURE-TO-FEATURE DISTANCE--- #
 
-    # Define column name for filtering data (for inclusion and Cl_inclusion)
+    # Define column name for filtering data (for inclusion and cl_inclusion)
     incl_col = "Volume"
 
     # Find nearest cell of each cell. Distance estimation is performed for all
-    # channels in Distance_Channels list. If use target is True, the nearest
+    # channels in distance_channels list. If use target is True, the nearest
     # cell is found on the channel defined by target_chan, otherwise they are
     # found within the channel undergoing analysis.
-    Find_Distances = True
-    Distance_Channels = ['DAPI']
+    find_distances = True
+    distance_channels = ['DAPI']
     use_target = False
     target_chan = "Pros"
     # FILTERING DOES NOT AFFECT DATA ON TARGET CHANNEL (use_target/target_chan)
 
     # The maximum distance the nearest cell will be looked at.
-    maxDist = 99    # Radius around a cell
+    max_dist = 99    # Radius around a cell
     # Whether to look only at cells with certain characteristics. Default is
     # to include cells smaller than 'inclusion'. If cells of greater volume are
     # wanted, designate incl_type to be 'greater'. Otherwise, it can be left
@@ -134,13 +134,13 @@ class settings:
     # ---CLUSTERS--- #
 
     # Whether to compute clusters
-    Find_Clusters = False
+    find_clusters = False
     Cluster_Channels = ["GFP"]  # , "Pros"]
-    Cl_maxDist = 10         # Radius around a cell
-    Cl_inclusion = 0    # Set to zero if not wanted.
-    Cl_incl_type = ""       # Same as above in feature-to-feature distances
-    Cl_min = 3
-    Cl_max = 50
+    cl_max_dist = 10         # Radius around a cell
+    cl_inclusion = 0    # Set to zero if not wanted.
+    cl_incl_type = ""       # Same as above in feature-to-feature distances
+    cl_min = 3
+    cl_max = 50
 
 
     # ---BORDER DETECTION--- #

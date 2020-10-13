@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+# Standard libs
 r"""
 Run file for Longitudinal Analysis of Midgut.
 
@@ -8,63 +9,57 @@ Created on Wed Mar  6 12:42:28 2019
 
 Distributed under GNU General Public License v3.0
 -------------------------------------------------------------------------------
-
-DEPENDENCIES:
-------------
-matplotlib (3.1.3), numpy (1.18.1), pandas (1.0.1), pathlib2(2.3.5), scipy (1.4.1), seaborn (0.10.0), shapely (1.7.0),
-scikit-image (0.16.2), statsmodels (0.11.0)
-
 INSTALLATION:
 ------------
-The master folder contains environment.yml that can be used to create Anaconda
-environment for LAM-use. For a Python environment, requirements.txt is
-included.
+LAM is developed in Python >=3.7 environment. The LAM-master–folder has setup.cfg
+that contains required information for installation with setuptools.
 
-Below, replace all text with <>
+It is recommended to create your own virtual environment for LAM in order to avoid
+any dependency clashes. You can do this in command line by giving the following
+command:
+     python -m venv <yourenvname>
+     e.g. python -m venv lam_env
 
-- Anaconda env:
-    conda env create -n <yourenvname> -f <path\to\environment.yml>
-    conda activate <yourenvname>
+If you do not have Python in your system environment variables, you will also need
+to give the full path to your python.exe,
+    e.g. c:\Program Files\Python38\python install setup.py
 
-- Python env:
-    1.	python -m venv <yourenvname>
-        •	Linux:
-            source <yourenvname>/bin/activate
-        •	Windows:
-            <yourenvname>\Scripts\activate.bat
-    2.	pip install -r <path-to-requirements.txt>
+Then activate the virtual environment with:
+     Linux: 	source <yourenvname>/bin/activate
+     Windows: 	<yourenvname>\Scripts\activate
 
-- Anaconda3 base environment:
-    1. install Anaconda3 distribution (https://www.anaconda.com/distribution/)
-    2. Add dependencies
-         Open Anaconda Prompt and write command:
-           conda install --file <LAM-master\requirements.txt>
-         (You may need to add conda-forge to conda channels:
-           conda config --add channels conda-forge           )
+You can then install LAM and dependencies on your environment with:
+    python install <path\to\LAM-master\setup.py>
+    E.g. python install C:\User\LAM-master\setup.py
+
 
 USAGE:
 -----
 Script for longitudinal analysis of Drosophila midgut images. To run the
 script, change the work directory in either Sett.py or the GUI to the directory
 containing the directories for each individual sample.
-The sample directories should be named as "<samplegroup>_xyz_<samplename>",
-where xyz can be anything, e.g. "starv_2018-11-06_Ctrl starved 1". Within the
-sample directories, cell positions and other data should be in channel-specific
-directories named as"<channel>_xyz", e.g. GFP_Statistics or GFP+Pros_whatevs.
-Avoid using underscore "_" in naming of directories and files, as it is used
-as delimiter between the various information contained in the paths. Doing so
-may cause the analysis to fail.
+The sample directories should be named as:
+    <samplegroup>_<samplename>
+    e.g. starv_sample1
+Within the sample directories, cell positions and other data should be in
+channel-specific directories named as:
+    <samplegroup>_<samplename>_<channel>_xyz
+    e.g. starv_sample1_GFP_Stats
+Avoid using additional underscores "_" in naming of directories and files, as
+it is used as delimiter between the various information contained in the paths.
+Doing so may cause the analysis to fail.
 
 The channel directories have to contain "Position.csv" with column labels
 "Position X", "Position Y", "Position Z", and "ID". The cell ID should be the
 same between files containing other used data, such as "Area.csv", to properly
-associate the data
+associate the data.
 
-The script first creates a vector based on one channel ("vectChannel",
-typically DAPI), in order to approximate the midgut along its length. Positions
-on other channels can then be projected onto the vector, and cell numbers can
-be quantified along the midgut. The vector is divided into user-defined number
-of bins that are used for comparative analyses.
+You must first create vectors for the samples based on one channel ("vectChannel",
+typically DAPI) in order to approximate the midgut along its length. The
+vector-creation is controlled by the process-setting. After, positions on other
+channels can then be projected onto the vector, and cell numbers can be
+quantified along the midgut. The vector is divided into user-defined number of
+bins that are used for comparative analyses.
 
 On some experiments the size proportions of different regions may alter, e.g.
 when comparing starved and fully-fed midguts, more accurate results can be
@@ -78,9 +73,8 @@ from the MP grows. When MP is not used, the samples are lined at bin 0, and
 compared bin-by-bin. The MP-input is done similarly to channel data, i.e. as a
 separate directory that contains position.csv for a single coordinate, the MP.
 
-For more extensive description and instructions, see user manual.
+For more extensive description and instructions, see docs\user manual.
 """
-# Standard libs
 import sys
 import pathlib as pl
 
@@ -130,11 +124,11 @@ def main(gui_root=None):
     sample_groups = analysis.Samplegroups(system_paths)
 
     # Finding of nearest cells and distances
-    if Sett.Find_Distances and Sett.process_dists:
+    if Sett.find_distances and Sett.process_dists:
         sample_groups.Get_DistanceMean()
 
     # Finding clustered cells
-    if Sett.Find_Clusters and Sett.process_dists:
+    if Sett.find_clusters and Sett.process_dists:
         sample_groups.Get_Clusters()
 
     # Computing total values from each sample's each bin

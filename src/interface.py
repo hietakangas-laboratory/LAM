@@ -197,14 +197,14 @@ class base_GUI(tk.Toplevel):
                  ).grid(row=0, column=0, columnspan=6)
 
         # distance and cluster checkbuttons
-        tk.Checkbutton(self.distf, text="Find clusters ", variable=self.handle('Find_Clusters'),
+        tk.Checkbutton(self.distf, text="Find clusters ", variable=self.handle('find_clusters'),
                        command=self.cluster_check, bd=1, relief='raised'
                        ).grid(row=1, column=0, columnspan=2, sticky='n')
-        tk.Checkbutton(self.distf, text="Find distances", variable=self.handle('Find_Distances'),
+        tk.Checkbutton(self.distf, text="Find distances", variable=self.handle('find_distances'),
                        command=self.nearest_dist_check, bd=1, relief='raised'
                        ).grid(row=1, column=2, columnspan=2, sticky='n')
         # Filtering
-        test = any([bool(self.handle(v).get()) for v in ('inclusion', 'Cl_inclusion')])
+        test = any([bool(self.handle(v).get()) for v in ('inclusion', 'cl_inclusion')])
         self.fltr_val = tk.BooleanVar(value=test)
         tk.Checkbutton(self.distf, text="Filter", relief='raised', variable=self.fltr_val, bd=1,
                        command=self.filter_check).grid(row=1, column=4, columnspan=2, sticky='n')
@@ -224,26 +224,26 @@ class base_GUI(tk.Toplevel):
 
         cl_distlbl = tk.Label(self.distf, text='Max Dist.:')
         cl_distlbl.grid(row=4, column=0, columnspan=2)
-        cl_dist_in = tk.Entry(self.distf, text=self.handle('Cl_maxDist').get(), textvariable=self.handle('Cl_maxDist'),
+        cl_dist_in = tk.Entry(self.distf, text=self.handle('cl_max_dist').get(), textvariable=self.handle('cl_max_dist'),
                               bd=2)
         cl_dist_in.grid(row=4, column=2, columnspan=2)
         cl_minlbl = tk.Label(self.distf, text='Min cell #:')
         cl_minlbl.grid(row=5, column=0, columnspan=2)
-        cl_min_in = tk.Entry(self.distf, text=self.handle('Cl_min').get(), textvariable=self.handle('Cl_min'), bd=2)
+        cl_min_in = tk.Entry(self.distf, text=self.handle('cl_min').get(), textvariable=self.handle('cl_min'), bd=2)
         cl_min_in.grid(row=5, column=2, columnspan=2)
 
         cl_maxlbl = tk.Label(self.distf, text='Max cell #:')
         cl_maxlbl.grid(row=6, column=0, columnspan=2)
-        cl_max_in = tk.Entry(self.distf, text=self.handle('Cl_max').get(), textvariable=self.handle('Cl_max'), bd=2)
+        cl_max_in = tk.Entry(self.distf, text=self.handle('cl_max').get(), textvariable=self.handle('cl_max'), bd=2)
         cl_max_in.grid(row=6, column=2, columnspan=2)
         # Filtering
         cl_sizelbl = tk.Label(self.distf, text='Filter value:')
         cl_sizelbl.grid(row=7, column=0, columnspan=2)
-        cl_size = tk.Entry(self.distf, text=self.handle('Cl_inclusion').get(), textvariable=self.handle('Cl_inclusion'))
+        cl_size = tk.Entry(self.distf, text=self.handle('cl_inclusion').get(), textvariable=self.handle('cl_inclusion'))
         cl_size.grid(row=7, column=2, columnspan=2)
-        cl_but1 = tk.Radiobutton(self.distf, text="  keep greater  ", variable=self.handle('Cl_incl_type'),
+        cl_but1 = tk.Radiobutton(self.distf, text="  keep greater  ", variable=self.handle('cl_incl_type'),
                                  value='greater', indicatoron=0)
-        cl_but2 = tk.Radiobutton(self.distf, text="  keep smaller  ", variable=self.handle('Cl_incl_type'), value='',
+        cl_but2 = tk.Radiobutton(self.distf, text="  keep smaller  ", variable=self.handle('cl_incl_type'), value='',
                                  indicatoron=0)
         cl_but1.grid(row=8, column=0, columnspan=2, sticky='nse')
         cl_but2.grid(row=8, column=2, columnspan=2, sticky='nsw')
@@ -251,13 +251,13 @@ class base_GUI(tk.Toplevel):
         # DISTANCE settings
         d_chanlbl = tk.Label(self.distf, text="Channels:")
         d_chanlbl.grid(row=3, column=4, columnspan=2)
-        d_chan = tk.Entry(self.distf, text=self.handle('Distance_Channels'),
-                          textvariable=self.handle('Distance_Channels'), bd=2)
+        d_chan = tk.Entry(self.distf, text=self.handle('distance_channels'),
+                          textvariable=self.handle('distance_channels'), bd=2)
         d_chan.grid(row=3, column=6, columnspan=2)
 
         d_distlbl = tk.Label(self.distf, text='Max Dist.:')
         d_distlbl.grid(row=4, column=4, columnspan=2)
-        d_dist_in = tk.Entry(self.distf, text=self.handle('maxDist').get(), textvariable=self.handle('maxDist'), bd=2)
+        d_dist_in = tk.Entry(self.distf, text=self.handle('max_dist').get(), textvariable=self.handle('max_dist'), bd=2)
         d_dist_in.grid(row=4, column=6, columnspan=2)
         # Nearestdist target channel
         d_target = tk.Checkbutton(self.distf, text='Use target:', variable=self.handle('use_target'),
@@ -314,7 +314,7 @@ class base_GUI(tk.Toplevel):
 
     def cluster_check(self):
         """Relevant changes when cluster-setting is checked."""
-        if not self.handle('Find_Clusters').get():
+        if not self.handle('find_clusters').get():
             configure('disable', self.wdgs['cluster'])
         else:
             configure('normal', self.wdgs['cluster'])
@@ -345,13 +345,13 @@ class base_GUI(tk.Toplevel):
     def filter_check(self):
         """Relevant changes when filtering by size is checked."""
         if not self.fltr_val.get():
-            self.handle('Cl_inclusion').set(0)
+            self.handle('cl_inclusion').set(0)
             self.handle('inclusion').set(0)
             configure('disable', chain(self.wdgs['fltr_cl'], self.wdgs['fltr_dist']))
         else:
-            if self.handle('Find_Distances').get():
+            if self.handle('find_distances').get():
                 configure('normal', self.wdgs['fltr_dist'])
-            if self.handle('Find_Clusters').get():
+            if self.handle('find_clusters').get():
                 configure('normal', self.wdgs['fltr_cl'])
 
     def mp_check(self):
@@ -363,7 +363,7 @@ class base_GUI(tk.Toplevel):
 
     def nearest_dist_check(self):
         """Relevant changes when find distance-setting is checked."""
-        if not self.handle('Find_Distances').get():
+        if not self.handle('find_distances').get():
             configure('disable', self.wdgs['dist'])
         else:
             configure('normal', self.wdgs['dist'])
@@ -914,7 +914,7 @@ class SettingHandler:
         """Translate tk variables to original format."""
         mods = self.vars.loc[self.vars.check, 'ref'].to_dict()
         for key, value in mods.items():
-            if key in ('Cluster_Channels', 'Distance_Channels', 'vs_channels', 'vs_adds'):
+            if key in ('Cluster_Channels', 'distance_channels', 'vs_channels', 'vs_adds'):
                 var = mods[key].get().split(',')
                 mods[key] = [v.strip() for v in var]
             elif isinstance(value, dict):

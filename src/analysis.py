@@ -189,7 +189,7 @@ class Samplegroups:
 
             for path in samplegroup.groupPaths:  # Get one sample of the group
                 test_sample = Sample(path, samplegroup)
-                test_sample.Clusters(Sett.Cl_maxDist)  # Find clusters
+                test_sample.Clusters(Sett.cl_max_dist)  # Find clusters
 
         lg.logprint(LAM_logger, 'Clusters calculated', 'i')
 
@@ -206,7 +206,7 @@ class Samplegroups:
             for path in samplegroup.groupPaths:  # Get one sample of the group
                 test_sample = Sample(path, samplegroup)
                 # Find distances between features within the sample
-                test_sample.DistanceMean(Sett.maxDist)
+                test_sample.DistanceMean(Sett.max_dist)
 
         lg.logprint(LAM_logger, 'Distances calculated', 'i')
 
@@ -462,7 +462,7 @@ class Sample(Group):
             data.name = path.stem  # The name of the clustering channel
 
             # Find clusters
-            self.find_distances(data, vol_incl=Sett.Cl_inclusion, compare=Sett.Cl_incl_type, clusters=True, **kws)
+            self.find_distances(data, vol_incl=Sett.cl_inclusion, compare=Sett.cl_incl_type, clusters=True, **kws)
 
     def find_distances(self, data, vol_incl=200, compare='smfull_dfer', clusters=False, **kws):
         """Calculate cell-to-cell distances or find clusters."""
@@ -507,7 +507,7 @@ class Sample(Group):
 
             # Change the generator into list of lists and drop clusters of size
             # under/over limits
-            all_cl = [list(y) for x in cl_gen for y in x if y and Sett.Cl_min <= len(y) <= Sett.Cl_max]
+            all_cl = [list(y) for x in cl_gen for y in x if y and Sett.cl_min <= len(y) <= Sett.cl_max]
             return all_cl
 
         def _find_nearest():
@@ -540,7 +540,7 @@ class Sample(Group):
             # Concatenate the obtained data with the read data.
             new_data = pd.concat([data, new_data], axis=1)
 
-            # limit data based on maxDist
+            # limit data based on max_dist
             new_data[cols] = new_data[cols].where((new_data[cols[0]] <= max_dist))
 
             # Get bin and distance to nearest cell for each cell, calculate
@@ -586,7 +586,7 @@ class Sample(Group):
 
             # DBSCAN TEST
             # from sklearn.cluster import DBSCAN
-            # model = DBSCAN(eps=Sett.Cl_maxDist, min_samples=Sett.Cl_min)
+            # model = DBSCAN(eps=Sett.cl_max_dist, min_samples=Sett.cl_min)
             # clusters = model.fit(xy_pos.loc[:, ['x', 'y', 'z']].values)
             # cl_labels = pd.Series(clusters.labels_).replace(-1, np.nan)
             # DBSCAN END TEST
@@ -622,7 +622,7 @@ class Sample(Group):
         kws = {'Dist': dist}  # Maximum distance used to find cells
 
         # List paths of channels where distances are to be found
-        dist_chans = [p for p in self.channelPaths for t in Sett.Distance_Channels if t.lower() == p.stem.lower()]
+        dist_chans = [p for p in self.channelPaths for t in Sett.distance_channels if t.lower() == p.stem.lower()]
 
         if Sett.use_target:  # If distances are found against other channel:
             target = Sett.target_chan  # Get the name of the target channel

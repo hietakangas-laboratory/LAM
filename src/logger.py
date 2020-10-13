@@ -181,9 +181,9 @@ def print_settings():
 
         if Sett.process_dists:  # Distance settings
             file.write("--- Distance Settings ---\n")
-            if Sett.Find_Distances:
+            if Sett.find_distances:
                 file.write("-Nearest Distance-\n")
-                distD = {'Channels': Sett.Distance_Channels, 'Maximum distance': Sett.maxDist}
+                distD = {'Channels': Sett.distance_channels, 'Maximum distance': Sett.max_dist}
                 if Sett.use_target:
                     distD.update({'Target channel': Sett.target_chan})
                 if Sett.inclusion > 0:
@@ -196,15 +196,15 @@ def print_settings():
                 file.write(', '.join(["{}: {}".format(key, distD.get(key)) for key in keys]))
                 file.write("\n")
 
-            if Sett.Find_Clusters:  # Cluster settings
+            if Sett.find_clusters:  # Cluster settings
                 file.write("-Clusters-\n")
-                clustD = {'Channels': Sett.Cluster_Channels, 'Maximum distance': Sett.Cl_maxDist,
-                          'Minimum cluster': Sett.Cl_min, 'Maximum cluster': Sett.Cl_max}
+                clustD = {'Channels': Sett.Cluster_Channels, 'Maximum distance': Sett.cl_max_dist,
+                          'Minimum cluster': Sett.cl_min, 'Maximum cluster': Sett.cl_max}
                 if Sett.inclusion > 0:
-                    if not Sett.Cl_incl_type:
-                        inclmsg = f'Smaller than {Sett.Cl_inclusion}'
+                    if not Sett.cl_incl_type:
+                        inclmsg = f'Smaller than {Sett.cl_inclusion}'
                     else:
-                        inclmsg = f'Greater than {Sett.Cl_inclusion}'
+                        inclmsg = f'Greater than {Sett.cl_inclusion}'
                     clustD.update({'Cell inclusion': inclmsg})
                 keys = sorted(list(clustD.keys()))
                 file.write(', '.join([f"{key}: {clustD.get(key)}" for key in keys]))

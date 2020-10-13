@@ -100,28 +100,28 @@ def change_settings(parser):
 
     # Whether to calculate feature-tofeature distances
     if parser.feature_distances is not None:
-        Sett.Find_Distances = parser.feature_distances
-        changed_settings.update({'Distance': Sett.Find_Distances})
+        Sett.find_distances = parser.feature_distances
+        changed_settings.update({'Distance': Sett.find_distances})
 
     # Channels that are used for f-to-f distances
     if parser.distance_channels is not None:
-        Sett.Distance_Channels = parser.distance_channels
-        changed_settings.update({'Distance channels': Sett.Distance_Channels})
+        Sett.distance_channels = parser.distance_channels
+        changed_settings.update({'Distance channels': Sett.distance_channels})
 
     # Whether to determine clusters
     if parser.clusters is not None:
-        Sett.Find_Clusters = parser.clusters
-        changed_settings.update({'Clusters': Sett.Find_Clusters})
+        Sett.find_clusters = parser.clusters
+        changed_settings.update({'Clusters': Sett.find_clusters})
 
     # Defining of channels that clustering is performed on
     if parser.cluster_channels is not None:
-        Sett.Cluster_Channels = parser.cluster_channels
+        Sett.Cluster_Channels = parser.Cluster_Channels
         changed_settings.update({'Cluster channels': Sett.Cluster_Channels})
 
     # Maximal distance of cells that are considered a cluster
     if parser.cluster_distance is not None:
-        Sett.Cl_maxDist = parser.cluster_distance
-        changed_settings.update({'Cluster max distance': Sett.Cl_maxDist})
+        Sett.cl_max_dist = parser.cluster_distance
+        changed_settings.update({'Cluster max distance': Sett.cl_max_dist})
 
     # Whether to do border detection
     if parser.borders  is True:
