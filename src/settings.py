@@ -13,7 +13,6 @@ class settings:
     # ####################### PRIMARY SETTINGS #######################
     GUI = True  # Use graphical user interface (True / False)
     force_dialog = False  # Force no user input (True for no dialog)
-    vector_loop = True  # Loop vector creation until ready
 
     # Detect border regions
     border_detection = True
@@ -199,7 +198,7 @@ class settings:
     Create_AddVSAdd_Plots = False  # Pairs of additional data
     # Create plots of all possible pair combinations of the following:
     vs_channels = ['DAPI', 'GFP']
-    vs_adds = ['Intensity Mean']  # Use the pre-defined keys
+    vs_adds = ['Intensity Mean', 'Area']  # Use the pre-defined keys
 
     # Add border detection peaks to other plots
     add_peaks = True

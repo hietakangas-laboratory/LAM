@@ -75,9 +75,10 @@ def _get_handler():
 def create_loggers():
     for module in loggers:
         mod = sys.modules.get(module)
-        if mod.LAM_logger is not None:
+        if hasattr(mod, 'LAM_logger') and mod.LAM_logger is not None:
             continue
-        setattr(mod, 'LAM_logger', get_logger(module))
+        if mod is not None:
+            setattr(mod, 'LAM_logger', get_logger(module))
 
 
 def Close():
@@ -88,7 +89,8 @@ def Close():
             handler.close()
         logger.handlers = []
         mod = sys.modules.get(lgr)
-        setattr(mod, 'LAM_logger', None)
+        if mod is not None:
+            setattr(mod, 'LAM_logger', None)
 
 
 def Update():

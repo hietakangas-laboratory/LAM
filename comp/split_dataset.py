@@ -138,8 +138,8 @@ import shapely.ops as op
 
 ROOT = pl.Path(r"E:\Code_folder\ALLSTATS")
 SAVEDIR = pl.Path(r"E:\Code_folder\test_ALLSTAT_split")
-CUT_POINTS = ["R1R2", "R2R3", "R3R4", "R4R5"]
-CHANNELS = ['DAPI', 'GFP', 'Delta', 'Prospero']
+CUT_POINTS = ["R1R2", "R2R3", "R3R4", "R4R5"]  # Names of channel folders or index labels in cutpoint file
+CHANNELS = ['DAPI', 'GFP', 'SuH', 'Pros']
 # Number of bins for whole length of samples. Script gives recommendation for
 # numbers of bins for each split region based on this value:
 TOTAL_BIN = 62
@@ -166,19 +166,19 @@ class VectorLengths:
     def find_averages(self):
         """Calculate average sub-vector lengths for each sample group."""
         # Add group identifier to the samples
-        self.lengths.loc['Group', :] = [s.split('_')[0] for s in
-                                        self.lengths.columns]
+        self.lengths.loc['Group', :] = [s.split('_')[0] for s in self.lengths.columns]
 
         # Group the data by their sample groups
         grouped = self.lengths.T.groupby(by='Group', axis=0)
 
         # Get average lengths of sub-vectors for each sample group
-        for group in grouped.groups:
-            self.averages = pd.concat(
-                [self.averages, grouped.get_group(group).mean()], axis=1)
+        for group, data in grouped:
+            means = data.infer_objects().mean()
+            means.rename(group, inplace=True)
+            self.averages = pd.concat([self.averages, means], axis=1)
 
         # Rename columns to correspond to the groups
-        self.averages.columns = grouped.groups.keys()
+        # self.averages.columns = grouped.groups.keys()
 
     def save_substrings(self, sample_name, sub_vectors):
         """Store a sample's sub-vector lengths."""
@@ -314,11 +314,11 @@ def get_sample_data(samplepath, points, l_data, bins):
             name = "Position.csv".format()
             data.loc[cut, :].to_csv(data_dir.joinpath(name), index=False)
 
-            # Define and make vector's save-directory, then save
-            vector_dir = SAVEDIR.joinpath(points[i], "Analysis Data",
-                                          "Samples", sample_name)
-            vector_dir.mkdir(parents=True, exist_ok=True)
-            save_vector(vector_dir, sub_vectors[i])
+    # Define and make vector's save-directory, then save
+    for ind, cut_point in enumerate(points):
+        vector_dir = SAVEDIR.joinpath(cut_point, "Analysis Data", "Samples", sample_name)
+        vector_dir.mkdir(parents=True, exist_ok=True)
+        save_vector(vector_dir, sub_vectors[ind])
 
 
 def read_vector(vector_path):

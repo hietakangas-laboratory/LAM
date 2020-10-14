@@ -218,8 +218,8 @@ class GetSample:
 
         def _score_nearest():
             # DataFrame for storing relevant info on pixel coordinates
-            distances = pd.DataFrame(np.zeros((nearest.size, 6)), index=nearest, columns=['rads', 'dist', 'distOG',
-                                                                                          'penalty', 'X', 'Y'])
+            distances = pd.DataFrame(np.zeros((nearest.size, 6)), index=nearest,
+                                     columns=['rads', 'dist', 'distOG', 'penalty', 'X', 'Y'])
             # Create scores for each nearby pixel:
             for ind, __ in coord_df.loc[nearest, :].iterrows():
                 x_n, y_n = coord_df.X.at[ind], coord_df.Y.at[ind]
@@ -246,6 +246,7 @@ class GetSample:
         finder = Sett.find_dist * resize  # Distance for detection of nearby XY
         line = []  # For storing vector
         # Start from smallest x-coords
+        coord_df = coord_df.infer_objects()
         start = coord_df.nsmallest(5, 'X').idxmin()
         s_x = coord_df.loc[start, 'X'].mean()
         s_y = coord_df.loc[start, 'Y'].mean()
@@ -278,8 +279,9 @@ class GetSample:
             if nearest.size == 0:  # If none near, extend search distance once
                 with warnings.catch_warnings():
                     warnings.simplefilter('ignore', category=UserWarning)
-                    nearest = coord_df[(abs(coord_df.X - s_x) <= finder * 2) &
-                                       (abs(coord_df.Y - s_y) <= finder * 2)].index
+                    max_distance = finder * 2
+                    nearest = coord_df[(abs(coord_df.X - s_x) <= max_distance) &
+                                       (abs(coord_df.Y - s_y) <= max_distance)].index
             if nearest.size > 1:
                 # If pixels are found, establish the vector's direction:
                 try:
@@ -291,12 +293,12 @@ class GetSample:
                 shifty = point2[1] - point1[1]  # shift in y for test point
                 testP = gm.Point(s_x + shiftx, s_y + shifty)
                 # Calculate scoring of points
-                distances = _score_nearest()
+                scores = _score_nearest()
                 # Drop the pixels that are behind current vector coord
-                forfeit = distances.loc[((distances.dist > distances.distOG) & (abs(distances.rads) > 1.6))].index
+                forfeit = scores.loc[((scores.dist > scores.distOG) & (abs(scores.rads) > 1.6))].index
                 # Find the pixel with the smallest penalty and add to vector:
                 try:
-                    best = distances.loc[nearest.difference(forfeit) ].penalty.idxmin()
+                    best = scores.loc[nearest.difference(forfeit) ].penalty.idxmin()
                     x_2, y_2 = coord_df.X.at[best], coord_df.Y.at[best]
                     line.append((x_2, y_2))
                     best = pd.Index([best], dtype='int64')
@@ -312,7 +314,7 @@ class GetSample:
             vector = gm.LineString(line)
             linedf = pd.DataFrame(line, columns=['X', 'Y'])
             return vector, bin_array, skeleton, linedf
-        except ValueError:  # If something went wrong with creation, warn
+        except (ValueError, AttributeError):  # If something went wrong with creation, warn
             msg = 'Faulty vector for {}'.format(self.name)
             lg.logprint(LAM_logger, msg, 'e')
             print("WARNING: Faulty vector. Try different settings")
@@ -438,6 +440,7 @@ class VectorError(Exception):
         self.samples = samples
         self.message = message
         super().__init__(self.message)
+
 
 class GetChannel:
     """Find and read channel data plus additional data."""
