@@ -1,7 +1,7 @@
 paths = getArgument()
 print(paths);
 
-listy = split(paths, " ")
+listy = split(paths, "<>")
 
 companion_ome = listy[1]
 print(companion_ome)
@@ -53,8 +53,6 @@ Stack.setChannel(3);
 run("Enhance Contrast", "saturated=0.35");
 Stack.setChannel(4);
 run("Enhance Contrast", "saturated=0.35");
-run("Rotate 90 Degrees Right");
-run("Properties...", "unit=um pixel_width=0.3250000 pixel_height=0.3250000 voxel_depth=3.4000000");
 print("done ptI");
 } else if (x && ch_no == 3){
 print("processing composite");
@@ -75,8 +73,6 @@ Stack.setChannel(2);
 run("Enhance Contrast", "saturated=0.35");
 Stack.setChannel(3);
 run("Enhance Contrast", "saturated=0.35");
-run("Rotate 90 Degrees Right");
-run("Properties...", "unit=um pixel_width=0.3250000 pixel_height=0.3250000 voxel_depth=3.4000000");
 } else if (x && ch_no == 2){
 print("processing composite");
 print("performing 2ch macro");
@@ -92,8 +88,6 @@ Stack.setChannel(1);
 run("Enhance Contrast", "saturated=0.35");
 Stack.setChannel(2);
 run("Enhance Contrast", "saturated=0.35");
-run("Rotate 90 Degrees Right");
-run("Properties...", "unit=um pixel_width=0.3250000 pixel_height=0.3250000 voxel_depth=3.4000000");
 } else if (x && ch_no == 1) {
 print("processing composite");
 print("performing 1ch macro");
@@ -102,8 +96,6 @@ run("Cyan");
 //run("Brightness/Contrast...");
 //run("Channels Tool...");
 run("Enhance Contrast", "saturated=0.35");
-run("Rotate 90 Degrees Right");
-run("Properties...", "unit=um pixel_width=0.3250000 pixel_height=0.3250000 voxel_depth=3.4000000");
 } else if (x == 0 && ch_no == 4){
 print("performing 4ch macro");
 s = 1;
@@ -148,8 +140,6 @@ Stack.setChannel(3);
 run("Enhance Contrast", "saturated=0.35");
 Stack.setChannel(4);
 run("Enhance Contrast", "saturated=0.35");
-run("Rotate 90 Degrees Right");
-run("Properties...", "channels=4 slices="+i+" frames=1 unit=um pixel_width=0.3250000 pixel_height=0.3250000 voxel_depth=3.4000000");
 } else if (x == 0 && ch_no == 3){
 print("performing 3ch macro");
 s = 1;
@@ -188,8 +178,6 @@ Stack.setChannel(2);
 run("Enhance Contrast", "saturated=0.35");
 Stack.setChannel(3);
 run("Enhance Contrast", "saturated=0.35");
-run("Rotate 90 Degrees Right");
-run("Properties...", "channels=3 slices="+i+" frames=1 unit=um pixel_width=0.3250000 pixel_height=0.3250000 voxel_depth=3.4000000");
 } else if (x == 0 && ch_no == 2){
 print("performing 2ch macro");
 s = 1;
@@ -222,8 +210,6 @@ Stack.setChannel(1);
 run("Enhance Contrast", "saturated=0.35");
 Stack.setChannel(2);
 run("Enhance Contrast", "saturated=0.35");
-run("Rotate 90 Degrees Right");
-run("Properties...", "channels=2 slices="+i+" frames=1 unit=um pixel_width=0.3250000 pixel_height=0.3250000 voxel_depth=3.4000000");
 } else if (x == 0 && ch_no == 1){
 print("performing 1ch macro");
 s = 1;
@@ -247,9 +233,7 @@ run("Cyan");
 //run("Brightness/Contrast...");
 //run("Channels Tool...");
 run("Enhance Contrast", "saturated=0.35");
-run("Rotate 90 Degrees Right");
-run("Properties...", "channels=1 slices="+i+" frames=1 unit=um pixel_width=0.3250000 pixel_height=0.3250000 voxel_depth=3.4000000");
 } else {
 print("Macro could not be performed on " + fused_tiff)
 }
-print("macro process completed on" + fused_tiff);
+print("macro process completed on " + fused_tiff);
