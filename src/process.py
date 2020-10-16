@@ -133,19 +133,19 @@ class GetSample:
         # Extract point coordinates of the vector:
         positions = self.vect_data
         x, y = positions.loc[:, 'Position X'], positions.loc[:, 'Position Y']
-        vector, bin_array, skeleton, line_df = self.SkeletonVector(x, y, Sett.SkeletonResize, Sett.BDiter,
+        bin_array, skeleton, line_df = self.SkeletonVector(x, y, Sett.SkeletonResize, Sett.BDiter,
                                                                    Sett.SigmaGauss)
-        vector = vector.simplify(Sett.simplifyTol)
-        system.saveToFile(line_df, self.sampledir, 'Vector.csv', append=False)
+        if line_df is not None and not line_df.empty:
+            system.saveToFile(line_df, self.sampledir, 'Vector.csv', append=False)
         pfunc.skeleton_plot(self.sampledir, self.name, bin_array, skeleton)
 
     def create_median(self):
         # Extract point coordinates of the vector:
         positions = self.vect_data
         x, y = positions.loc[:, 'Position X'], positions.loc[:, 'Position Y']
-        vector, line_df = self.median_vector(x, y, Sett.medianBins)
-        vector = vector.simplify(Sett.simplifyTol)
-        system.saveToFile(line_df, self.sampledir, 'Vector.csv', append=False)
+        line_df = self.median_vector(x, y, Sett.medianBins)
+        if line_df is not None and not line_df.empty:
+            system.saveToFile(line_df, self.sampledir, 'Vector.csv', append=False)
 
     def SkeletonVector(self, X, Y, resize: float, BDiter: int, SigmaGauss: float):
         """Create vector by skeletonization of image-transformed positions."""
@@ -311,14 +311,15 @@ class GetSample:
             else:
                 flag = True
         try:  # Create LineString-object from finished vector
-            vector = gm.LineString(line)
-            linedf = pd.DataFrame(line, columns=['X', 'Y'])
-            return vector, bin_array, skeleton, linedf
+            xy_coord = gm.LineString(line).simplify(Sett.simplifyTol).xy
+            linedf = pd.DataFrame(data=list(zip(xy_coord[0], xy_coord[1])), columns=['X', 'Y'])
         except (ValueError, AttributeError):  # If something went wrong with creation, warn
+            linedf = pd.DataFrame().assign(X=[line[0][0]], Y=[line[0][1]])
             msg = 'Faulty vector for {}'.format(self.name)
-            lg.logprint(LAM_logger, msg, 'e')
+            if LAM_logger is not None:
+                lg.logprint(LAM_logger, msg, 'e')
             print("WARNING: Faulty vector. Try different settings")
-            return None, None, None, None
+        return bin_array, skeleton, linedf
 
     def median_vector(self, X, Y, creationBins):
         """Create vector by calculating median coordinates."""
@@ -340,10 +341,10 @@ class GetSample:
                 Ymedian[b] = Y[idx == b].min() + (Y[idx == b].max() - Y[idx == b].min()) / 2
         # Change bins and their medians into XY-coordinates
         XYmedian = [p for p in tuple(np.stack((bins, Ymedian), axis=1)) if ~np.isnan(p).any()]
-        # Create LineString-object from finished vector
-        vector = gm.LineString(XYmedian)
-        linedf = pd.DataFrame(XYmedian, columns=['X', 'Y'])
-        return vector, linedf
+        # Create LineString-object from finished vector, simplify, and get new coords
+        xy_coord = gm.LineString(XYmedian).simplify(Sett.simplifyTol).xy
+        linedf = pd.DataFrame(data=list(zip(xy_coord[0], xy_coord[1])), columns=['X', 'Y'])
+        return linedf
 
     def get_MPs(self, MPname: str, useMP: bool, datadir: pl.Path) -> pd.Series:
         """Collect MPs for sample anchoring."""

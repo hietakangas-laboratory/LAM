@@ -30,7 +30,7 @@ class VectorWin:
         ttk.Style().map('Treeview', background=[('selected', 'lightgreen')], foreground=[('selected', 'darkgreen')])
 
         # Create window
-        self.window = tk.Toplevel(master)
+        self.window = tk.Toplevel()
         self.window.lift()
         self.window.title("Vector Creation")
         self.window.protocol("WM_DELETE_WINDOW", self.func_destroy)

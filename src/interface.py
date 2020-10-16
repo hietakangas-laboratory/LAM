@@ -531,10 +531,12 @@ class base_GUI(tk.Toplevel):
 
     def vector_creation(self):
         self.run_b.configure(state='disable')
+        self.vector_b.configure(state='disable')
         win = vector_loop.VectorWin(self.master, self.handle)
         win.window.wait_window()
         self.process_check()
         self.run_b.configure(state='normal')
+        self.vector_b.configure(state='normal')
 
     def vector_frame(self):
         """Create frame for vector creation settings."""
