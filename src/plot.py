@@ -296,7 +296,7 @@ class Plotting:
         m_kws = {'IDs': data_vars, 'ylabel': 'collect', 'xlabel': 'collect', 'title_y': 1,
                  'melt': {'id_vars': data_vars, 'value_name': 'Value', 'var_name': 'Linear Position'},
                  'plot_kws': {'col': 'Type_X', 'row': 'Type_Y'}, 'drop_grouper': ['Sample Group', 'Channel', 'Type'],
-                 'gridpec': {'hspace': 0.75}}
+                 'adjust': {'hspace': 0.3, 'top': 0.95}}
         new_kws = merge_kws(self.kws, m_kws)
         # If required data hasn't been yet collected
         savepath = self.sgroups.paths.plotdir.joinpath('Versus')
@@ -328,7 +328,7 @@ class Plotting:
             data2_ind = data2[~data2.Type.isin(diff)].index
             # Define identifier columns that are in plottable format
             data = data.assign(Type_Y=data['Channel'] + '_' + data['Type'])
-            data2 = data2.assign(Type_X=data['Channel'] + '_' + data['Type'])
+            data2 = data2.assign(Type_X=data2['Channel'] + '_' + data2['Type'])
             # Make plot
             plotter = MakePlot(data.loc[data_ind, :], handle, f_title, sec_data=data2.loc[data2_ind, :])
             plotter(pfunc.bivariate_kde, 'title', 'legend', 'no_grid', 'labels', **new_kws)
