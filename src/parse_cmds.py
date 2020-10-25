@@ -12,7 +12,8 @@ import argparse
 import pathlib as pl
 
 # LAM module
-from src.settings import settings as Sett
+from src.settings import Settings as Sett
+
 
 def make_parser():
     """Make parser-object for LAM run."""
@@ -41,17 +42,14 @@ def make_parser():
     parser.add_argument("-m", "--mp_name", help="Name of MP", type=str)
     parser.add_argument("-G", "--GUI", help="toggle GUI", action="store_true")
 
-
     # Distance args
     parser.add_argument("-F", "--feature_distances", help="f-to-f distances", action="store_true")
     parser.add_argument("-f", "--distance_channels", help="f-to-f distance channels", type=str, action='append')
-
 
     # Cluster args
     parser.add_argument("-C", "--clusters", help="Feature clustering", action="store_true")
     parser.add_argument("-c", "--cluster_channels", help="Clustering channels", type=str, action='append')
     parser.add_argument("-d", "--cluster_distance", help="Clustering max distance", type=int)
-
 
     # Other operations
     parser.add_argument("-B", "--borders", help="Toggle border detection", action="store_true")
@@ -124,12 +122,12 @@ def change_settings(parser):
         changed_settings.update({'Cluster max distance': Sett.cl_max_dist})
 
     # Whether to do border detection
-    if parser.borders  is True:
+    if parser.borders is True:
         Sett.border_detection = not Sett.border_detection
         changed_settings.update({'Detect borders': Sett.border_detection})
 
     # Whether to estimate sample width
-    if parser.widths  is True:
+    if parser.widths is True:
         Sett.measure_width = not Sett.measure_width
         changed_settings.update({'Width estimation': Sett.measure_width})
 

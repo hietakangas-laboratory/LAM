@@ -21,15 +21,15 @@ import numpy as np
 # LAM modules
 import src.logger as lg
 import src.plot as plot
-from src.settings import store, settings as Sett
+from src.settings import store, Settings as Sett
 
 LAM_logger = None
 
 
-class paths:
+class Paths:
     """Handle required system paths."""
 
-    def __init__(self, workdir: pl.Path, only_vectors: bool=False):
+    def __init__(self, workdir: pl.Path, only_vectors: bool = False):
         """Creation of output folders."""
         # Create path-variables necessary for the analysis
         self.outputdir = workdir.joinpath('Analysis Data')
@@ -69,7 +69,6 @@ class paths:
                         flag = 0
                         shutil.rmtree(self.datadir)
                     elif ans in ("n", "N"):
-                        flag = 0
                         print('Analysis terminated')
                         raise KeyboardInterrupt
                     else:
@@ -242,7 +241,7 @@ def read_data(filepath, header=Sett.header_row, test=True, index_col=False):
     return data
 
 
-def saveToFile(data, directory, filename, append=True, w_index=False):
+def save_to_file(data, directory, filename, append=True, w_index=False):
     """Save series or DF to a file."""
     path = directory.joinpath(filename)
 
@@ -281,10 +280,10 @@ def start(test_vectors=True):
         raise SystemExit
 
     # Otherwise create paths and directories
-    PATHS = paths(Sett.workdir, only_vectors=True)
+    paths = Paths(Sett.workdir, only_vectors=True)
 
     if not test_vectors:
-        return PATHS
+        return paths
 
     # Check that vector channel data are found
     if Sett.process_samples or (Sett.measure_width and Sett.process_counts):
@@ -303,8 +302,8 @@ def start(test_vectors=True):
             raise SystemExit
 
     # Find and store all sample names
-    store.samples = [p.name for p in PATHS.samplesdir.iterdir() if p.is_dir()]
-    return PATHS
+    store.samples = [p.name for p in paths.samplesdir.iterdir() if p.is_dir()]
+    return paths
 
 
 def test_vector_ext(dir_path):
@@ -329,10 +328,8 @@ def test_vector_ext(dir_path):
             while flag:
                 ans = ask_user(msg)
                 if ans in ("y", "Y"):
-                    flag = 0
                     return
                 if ans in ("n", "N"):
-                    flag = 0
                     print('Analysis terminated')
                     raise KeyboardInterrupt
                 print('Command not understood.')
@@ -391,6 +388,7 @@ def drop_outliers(all_data, melted=False, raw=False, **kws):
 def ask_user(dlg, dlgtype='string', use_gui=Sett.GUI):
     """Create input dialog."""
     if use_gui:
+        ans = None
         if dlgtype == 'string':
             ans = sd.askstring(title="Dialog", prompt=dlg)
         elif dlgtype == 'integer':

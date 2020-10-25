@@ -7,7 +7,7 @@ Created on Wed Mar  6 12:42:28 2019
 
 """
 
-class settings:
+class Settings:
     """A class for holding all user-end settings for the analysis."""
 
     # ####################### PRIMARY SETTINGS #######################

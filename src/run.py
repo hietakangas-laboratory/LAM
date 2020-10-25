@@ -79,7 +79,7 @@ import sys
 import pathlib as pl
 
 # LAM module
-from src.settings import store, settings as Sett
+from src.settings import store, Settings as Sett
 import src.parse_cmds as pc
 import src.system as system
 import src.analysis as analysis
@@ -105,17 +105,17 @@ def main(gui_root=None):
     if Sett.process_counts and Sett.project:
         if not Sett.process_samples:
             process.vector_test(system_paths.samplesdir)
-        process.Project(system_paths)
+        process.project(system_paths)
 
     # If performing 'Count' without projection, only calculate counts:
     elif Sett.process_counts and not Sett.project:
         process.find_existing(system_paths)
         if Sett.measure_width:
-            analysis.Get_Widths(system_paths.samplesdir, system_paths.datadir)
+            analysis.get_widths(system_paths.samplesdir, system_paths.datadir)
 
     # After all samples have been collected/created, find their respective MP
     # bins and normalize (anchor) cell count data.
-    process.Get_Counts(system_paths)
+    process.get_counts(system_paths)
 
     # Storing of descriptive data of analysis, i.e. channels/samples/groups
     system_paths.save_AnalysisInfo(store.samples, store.samplegroups, store.channels)
@@ -125,11 +125,11 @@ def main(gui_root=None):
 
     # Finding of nearest cells and distances
     if Sett.find_distances and Sett.process_dists:
-        sample_groups.Get_DistanceMean()
+        sample_groups.get_distance_mean()
 
     # Finding clustered cells
     if Sett.find_clusters and Sett.process_dists:
-        sample_groups.Get_Clusters()
+        sample_groups.get_clusters()
 
     # Computing total values from each sample's each bin
     if (Sett.statistics and Sett.stat_total) or Sett.process_counts:
@@ -150,7 +150,7 @@ def main(gui_root=None):
     if Sett.statistics:
         conf = analysis.test_control()
         if conf:
-            sample_groups.Get_Statistics()
+            sample_groups.get_statistics()
 
     # Creation of plots from various data (excluding statistical plots)
     if Sett.Create_Plots:
@@ -168,25 +168,25 @@ def main_catch_exit(LAM_logger=None, gui_root=None):
         print("START ANALYSIS")
         main(gui_root=gui_root)  # run analysis
         lg.logprint(LAM_logger, 'Completed', 'i')
-        lg.Close()
+        lg.close_loggers()
         print('\nCOMPLETED\n')
 
     # Catch and log possible exits from the analysis
     except KeyboardInterrupt:
         lg.logprint(LAM_logger, 'STOPPED: keyboard interrupt', 'e')
         print("STOPPED: Keyboard interrupt by user.\n")
-        lg.Close()
+        lg.close_loggers()
 
     except SystemExit:
         lg.logprint(LAM_logger, 'EXIT\n\n', 'ex')
         print("STOPPED\n")
-        lg.log_Shutdown()
+        lg.log_shutdown()
 
     except process.VectorError as e:
         print(e.message + '\n')
         print(f'Missing: {", ".join(e.samples)}')
         lg.logprint(LAM_logger, e.message, 'ex')
-        lg.log_Shutdown()
+        lg.log_shutdown()
 
 
 def run():
@@ -199,9 +199,9 @@ def run():
     if Sett.GUI:
         import tkinter as tk
         import src.interface as interface
-        ROOT = tk.Tk()
-        interface.base_GUI(ROOT)
-        ROOT.mainloop()
+        root = tk.Tk()
+        interface.BaseGUI(root)
+        root.mainloop()
 
     # Otherwise make workdir into usable path and start the analysis
     else:

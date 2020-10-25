@@ -12,7 +12,7 @@ import tkinter.ttk as ttk
 import tkinter.font as tkFont
 
 # LAM imports
-from src.settings import settings as Sett
+from src.settings import Settings as Sett
 import src.system as system
 import src.process as process
 import src.plotfuncs as pfunc
@@ -107,11 +107,13 @@ class VectorWin:
 
     def creation_loop(self):
         """Get settings from main window and perform vector creation."""
+        from src.interface import change_settings
+
         # Translate tkinter variables of main window
         options = self.handle.translate()
         options['workdir'] = pl.Path(options['workdir'])
         # Adjust settings with the translated variables
-        self.handle.change_settings(options)
+        change_settings(options)
         # Get necessary paths for vector creation
         PATHS = system.start(test_vectors=False)
         process.check_resize_step(Sett.SkeletonResize)  # Test resize setting

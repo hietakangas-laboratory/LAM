@@ -15,11 +15,11 @@ import scipy.stats as ss
 import statsmodels.stats.multitest as multi
 
 # LAM modules
-from src.settings import settings as Sett
+from src.settings import Settings as Sett
 import src.system as system
 
 
-class statistics:
+class VersusStats:
     """Find bin-wise MWW statistics between sample groups."""
 
     def __init__(self, control, group2):
@@ -41,20 +41,19 @@ class statistics:
         self.error = False
         self.channel = ""
 
-    def MWW_test(self, channel_path):
+    def mww_test(self, channel_path):
         """Perform MWW-test for a data set of two groups."""
         self.error = False
         self.channel = ' '.join(str(channel_path.stem).split('_')[1:])
         data = system.read_data(channel_path, header=0, test=False)
 
-        # Test that data exists and has non-zero, numeric values
+        # Test that data exists and has non-zero numeric values
         cols = data.any().index
         valid_data = data.loc[:, cols]
         valid_grp_n = cols.map(lambda x: str(x).split('_')[0]).unique().size
-        if valid_data.empty or valid_grp_n < 2:
-            print("-> {}: Insufficient data, passed.".format(self.channel))
+        if not valid_data.any().any() or valid_grp_n < 2:
+            print(f"WARNING: {self.channel} - Insufficient data, skipped.")
             self.error = True
-            return self
 
         # Find group-specific data
         grp_data = valid_data.T.groupby(lambda x: str(x).split('_')[0])
@@ -76,17 +75,17 @@ class statistics:
         stat_data = correct(stat_data, stat_data.iloc[:, 8], 7, 9)  # 2-sided
 
         # Save statistics
-        filename = 'Stats_{} = {}.csv'.format(self.title, self.channel)
-        system.saveToFile(stat_data, self.stat_dir, filename, append=False)
+        filename = f'Stats_{self.title} = {self.channel}.csv'
+        system.save_to_file(stat_data, self.stat_dir, filename, append=False)
         self.stat_data = stat_data
-        return self
 
     def bin_test(self, stat_data):
         """Perform MWW test bin-to-bin."""
-        # Loop bins
-        for ind, row in self.ctrl_data.iterrows():
+        for ind, row in self.ctrl_data.iterrows():  # Loop bins
+            # Drop missing values from data
             ctrl_vals = row.dropna().values
             tst_vals = self.test_data.loc[ind, :].dropna().values
+            # Test values at current bin
             stat_data = get_stats(ctrl_vals, tst_vals, ind, stat_data)
         return stat_data
 
@@ -159,19 +158,22 @@ class TotalStats:
                                        test_data.columns.difference(['Sample Group', 'Variable'])]
 
                 # Perform test
-                test_values = self.total_MWW(grp, c_vals, t_vals, variable)
+                test_values = self.total_mww(grp, c_vals, t_vals, variable)
 
                 # Insert values to result DF
                 total_stats.loc[variable, (grp, cols)] = test_values
 
+            if grp in self.error_vars.keys():
+                print(f"WARNING: {self.filename} - No data on {', '.join(self.error_vars[grp])}")
+
         # Save statistics
         savename = self.filename + ' Stats.csv'
-        system.saveToFile(total_stats, self.stat_dir, savename, append=False, w_index=True)
+        system.save_to_file(total_stats, self.stat_dir, savename, append=False, w_index=True)
 
         # Store to object
         self.stat_data = total_stats
 
-    def total_MWW(self, grp, c_vals, t_vals, variable):
+    def total_mww(self, grp, c_vals, t_vals, variable):
         """Perform MWW-test for group totals of a variable."""
 
         # Flatten matrix and drop missing values
@@ -184,14 +186,7 @@ class TotalStats:
             stat, pval = ss.mannwhitneyu(c_vals, t_vals, alternative='two-sided')
             reject = bool(pval < Sett.alpha)
 
-        except ValueError as err:
-            if str(err) == 'All numbers are identical in mannwhitneyu':
-                msg = f'Identical {variable}-values between control and {grp}'
-            else:
-                msg = f'ValueError for {variable}'
-
-            print(f'WARNING: {self.filename} - {msg}')
-
+        except ValueError:
             if grp not in self.error_vars.keys():
                 self.error_vars.update({grp: [variable]})
             else:
@@ -206,7 +201,7 @@ def get_stats(row, row2, ind, stat_data):
     unqs = np.unique(np.hstack((row, row2))).size
 
     # If data rows are different, get stats
-    if ((row.any() or row2.any()) and not np.array_equal(np.unique(row), np.unique(row2)) and unqs > 1):
+    if (row.any() or row2.any()) and not np.array_equal(np.unique(row), np.unique(row2)) and unqs > 1:
 
         with warnings.catch_warnings():
             warnings.simplefilter('ignore', category=RuntimeWarning)

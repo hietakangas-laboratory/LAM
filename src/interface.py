@@ -16,14 +16,14 @@ import pathlib as pl
 import pandas as pd
 # LAM modules
 from src.run import main_catch_exit
-from src.settings import settings as Sett
+from src.settings import Settings as Sett
 import src.vector_loop as vector_loop
 from src.version import __version__
 
 LAM_logger = None
 
 
-class base_GUI(tk.Toplevel):
+class BaseGUI:
     """Container for the most important settings of the GUI."""
 
     def __init__(self, master=None):
@@ -32,6 +32,8 @@ class base_GUI(tk.Toplevel):
         self.master.grab_set()
         self.master.bind('<Escape>', self.func_destroy)
         self.master.bind('<Return>', self.run_button)
+        self.stdout_win = None  # Window for redirection of output
+
         # Fetch settings and transform to tkinter variables:
         self.handle = SettingHandler()
 
@@ -72,7 +74,7 @@ class base_GUI(tk.Toplevel):
         tk.Label(self.topf, text=self.det_chans.get(), textvariable=self.det_chans).grid(row=2, column=1, columnspan=8)
 
         # MIDDLE FRAME / PRIMARY SETTINGS BOX
-        stl = {1: 'groove', 2: 'lightgrey', 3: ('TkDefaultFont 8 bold')}
+        stl = {1: 'groove', 2: 'lightgrey', 3: 'TkDefaultFont 8 bold'}
         tk.Checkbutton(self.midf, text="Process", bg=stl[2], variable=self.handle('process_samples'), relief=stl[1],
                        font=stl[3], bd=4, command=self.process_check).grid(row=0, column=0, columnspan=1, padx=(2, 2))
         tk.Checkbutton(self.midf, text="Count  ", variable=self.handle('process_counts'), relief=stl[1], bd=4,
@@ -108,7 +110,7 @@ class base_GUI(tk.Toplevel):
         self.headin.grid(row=2, column=3, columnspan=2)
 
         # BOTTOM BUTTONS
-        style = ("TkDefaultFont 10 bold")
+        style = "TkDefaultFont 10 bold"
         tk.Checkbutton(self.bottomf, text="Redirect stdout", variable=self.handle('non_stdout'), relief='groove',
                        bd=1, command=self.redirect_stdout).grid(row=0, column=4, columnspan=4, sticky='n')
         self.run_b = tk.Button(self.bottomf, font=style, text='Run\n<Enter>', command=self.run_button)
@@ -164,7 +166,7 @@ class base_GUI(tk.Toplevel):
 
         # LEFT FRAME (UP) / VECTOR CREATION
         # header
-        self.lbl3 = tk.Label(self.leftf, text='Vector:', bd=2, font=('TkDefaultFont 9 bold'))
+        self.lbl3 = tk.Label(self.leftf, text='Vector:', bd=2, font='TkDefaultFont 9 bold')
         self.lbl3.grid(row=0, column=0)
 
         # vector type radio buttons
@@ -193,7 +195,7 @@ class base_GUI(tk.Toplevel):
 
         # UPPER BOTTOM / DISTANCES
         # header
-        tk.Label(self.distf, text='Distance Calculations:', bd=2, font=('TkDefaultFont 9 bold')
+        tk.Label(self.distf, text='Distance Calculations:', bd=2, font='TkDefaultFont 9 bold'
                  ).grid(row=0, column=0, columnspan=6)
 
         # distance and cluster checkbuttons
@@ -224,8 +226,8 @@ class base_GUI(tk.Toplevel):
 
         cl_distlbl = tk.Label(self.distf, text='Max Dist.:')
         cl_distlbl.grid(row=4, column=0, columnspan=2)
-        cl_dist_in = tk.Entry(self.distf, text=self.handle('cl_max_dist').get(), textvariable=self.handle('cl_max_dist'),
-                              bd=2)
+        cl_dist_in = tk.Entry(self.distf, text=self.handle('cl_max_dist').get(),
+                              textvariable=self.handle('cl_max_dist'), bd=2)
         cl_dist_in.grid(row=4, column=2, columnspan=2)
         cl_minlbl = tk.Label(self.distf, text='Min cell #:')
         cl_minlbl.grid(row=5, column=0, columnspan=2)
@@ -443,14 +445,14 @@ class base_GUI(tk.Toplevel):
             ops = ('measure_width', 'useMP', 'project')
             options.update({k: False for k in ops})
         # SAVE SETTING
-        self.handle.change_settings(options)
+        change_settings(options)
         # CREATE LOGGER
         import src.logger as lg
         import logging
         if lg.log_created is True:
             # Close old loggers and create new:
-            lg.Close()
-            lg.Update()
+            lg.close_loggers()
+            lg.update_loggers()
             LAM_logger = logging.getLogger(__name__)
         else:
             LAM_logger = lg.setup_logger(__name__, new=True)
@@ -463,9 +465,9 @@ class base_GUI(tk.Toplevel):
         """Change stdout direction based on r_stdout check box."""
         import src.redirect as rd
         if self.handle('non_stdout').get():
-            self.stdout_win = rd.text_window(self.master, self.handle('non_stdout'))
+            self.stdout_win = rd.TextWindow(self.master, self.handle('non_stdout'))
         else:
-            if hasattr(self, 'stdout_win'):
+            if hasattr(self, 'stdout_win') and self.stdout_win is not None:
                 self.stdout_win.func_destroy()
 
     def show_vector_settings(self, name):
@@ -485,8 +487,8 @@ class base_GUI(tk.Toplevel):
     def func_destroy(self, event=None):
         """Destroy GUI."""
         import src.logger as lg
-        lg.log_Shutdown()
-        if hasattr(self, 'stdout_win'):
+        lg.log_shutdown()
+        if hasattr(self, 'stdout_win') and self.stdout_win is not None:
             self.stdout_win.func_destroy()
         self.master.destroy()
 
@@ -662,16 +664,16 @@ class OtherWin:
         self.rwn = len(self.handle('AddData'))
         self.btns = []
 
-        for i, (key, vals) in enumerate(self.handle('AddData').items()):
-            row = i+2
+        for ind, (key, vals) in enumerate(self.handle('AddData').items()):
+            row = ind+2
             tk.Label(self.frame, text=key, bd=2, bg='lightgrey', relief='groove').grid(row=row, column=0, columnspan=2)
             tk.Label(self.frame, text=vals[0].get(), bd=2, bg='lightgrey', relief='groove'
-                     ).grid(row=row, column=3,columnspan=2)
+                     ).grid(row=row, column=3, columnspan=2)
             tk.Label(self.frame, text=vals[1].get(), bd=2, bg='lightgrey', relief='groove'
                      ).grid(row=row, column=5, columnspan=2)
             self.btns.append(tk.Button(self.frame, text='x', font=('Arial', 10), relief='raised',
-                                       command=lambda i=i: self.rmv_data(i)))
-            self.btns[i].grid(row=row, column=7, sticky='w')
+                                       command=lambda i=ind: self.rmv_data(i)))
+            self.btns[ind].grid(row=row, column=7, sticky='w')
 
         # additional data ID-replacement
         tk.Checkbutton(self.dframe, text="Replace file ID", variable=self.handle('replaceID'), relief='groove',
@@ -830,7 +832,7 @@ class PlotWin:
         self.handle.vars.loc[:, 'check'] = False
 
 
-class StatWin():
+class StatWin:
     """Container for statistics-window settings."""
 
     def __init__(self, master, check, ref):
@@ -871,10 +873,10 @@ class StatWin():
                  ).grid(row=1, column=2, columnspan=2, pady=(1, 5))
         self.window_check()
         # Buttons
-        self.save_b = tk.Button(self.bframe, text='Save & Return\n<Enter>', font=('TkDefaultFont 10 bold'),
+        self.save_b = tk.Button(self.bframe, text='Save & Return\n<Enter>', font='TkDefaultFont 10 bold',
                                 command=self.window.destroy)
         self.save_b.configure(height=2, width=12, bg='lightgreen', fg="darkgreen")
-        self.exit_b = tk.Button(self.bframe, text="Return", font=('TkDefaultFont 9 bold'), command=self.func_destroy)
+        self.exit_b = tk.Button(self.bframe, text="Return", font='TkDefaultFont 9 bold', command=self.func_destroy)
         self.exit_b.configure(height=1, width=5, fg="red")
         self.save_b.grid(row=0, column=2, rowspan=2, columnspan=2, padx=(0, 10))
         self.exit_b.grid(row=0, column=4)
@@ -927,12 +929,13 @@ class SettingHandler:
         out.update(mods)
         return out
 
-    def change_settings(self, options):
-        """Change run-settings based on given dict variables."""
-        if Sett.border_channel is Sett.vectChannel and options['vectChannel'] != Sett.vectChannel:
-            rename_scoring_vars(options)
-        for (key, value) in options.items():
-            setattr(Sett, key, value)
+
+def change_settings(options):
+    """Change run-settings based on given dict variables."""
+    if Sett.border_channel is Sett.vectChannel and options['vectChannel'] != Sett.vectChannel:
+        rename_scoring_vars(options)
+    for (key, value) in options.items():
+        setattr(Sett, key, value)
 
 
 def lst_get(key_value):
@@ -993,6 +996,7 @@ def configure(state, widgets):
     """Set state for all widgets in list."""
     for widget in widgets:
         widget.configure(state=state)
+
 
 def rename_scoring_vars(options):
     keys = [k for k in options['scoring_vars'].keys() if Sett.border_channel in k]

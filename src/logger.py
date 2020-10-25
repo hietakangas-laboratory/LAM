@@ -33,7 +33,7 @@ def setup_logger(name=None, new=True):
     # Create variables for the creation of logfile
     global logFile, ctime, log_created
     ctime = time.strftime("%d%b%y_%H%M%S")  # Start time for the run
-    from src.settings import settings as Sett
+    from src.settings import Settings as Sett
 
     # filepath:
     logFile = str(Sett.workdir.joinpath("log_{}.txt".format(ctime)))
@@ -61,13 +61,11 @@ def _get_handler():
     """Create message handler in conjunction with get_logger()."""
     # Create format for log messages
     formatting = "%(asctime)-25s %(name)-20s %(levelname)-10s %(message)s"
-    # formatting = "{:s<25s} {:s<20s} {:s<10s} {:s<}".format(*strings)
-    #formatting = "%(asctime)s %(name)s %(levelname)s %(message)s"
-    Formatter = logging.Formatter(formatting)
+    formatter = logging.Formatter(formatting)
 
     # create handler and assign logfile's path
     file_handler = logging.FileHandler(logFile)
-    file_handler.setFormatter(Formatter)  # Set format of log messages
+    file_handler.setFormatter(formatter)  # Set format of log messages
     file_handler.setLevel(logging.DEBUG)  # Set logs of all level to be shown
     return file_handler
 
@@ -81,7 +79,7 @@ def create_loggers():
             setattr(mod, 'LAM_logger', get_logger(module))
 
 
-def Close():
+def close_loggers():
     """Close all created loggers."""
     for lgr in loggers:
         logger = logging.getLogger(lgr)
@@ -93,7 +91,7 @@ def Close():
             setattr(mod, 'LAM_logger', None)
 
 
-def Update():
+def update_loggers():
     """Update current loggers."""
     setup_logger(new=False)
     for lgr in loggers:
@@ -101,9 +99,9 @@ def Update():
         logger.addHandler(_get_handler())
 
 
-def log_Shutdown():
+def log_shutdown():
     """Shut down all logging elements."""
-    Close()
+    close_loggers()
     logging.shutdown()
 
 
@@ -134,7 +132,7 @@ def logprint(self, msg="Missing", logtype='e'):
 
 def print_settings():
     """Write settings into the log file."""
-    from src.settings import settings as Sett
+    from src.settings import Settings as Sett
     with open(logFile, 'w') as file:  # Write into the logfile
         file.write("Log time: {}\n".format(ctime))
         file.write("Analysis directory: {}\n\n".format(str(Sett.workdir)))
@@ -144,9 +142,9 @@ def print_settings():
         file.write("Primary settings: {}\n".format(primarymsg))
         if any([Sett.process_samples, Sett.process_counts, Sett.process_dists]):
             if Sett.useMP:
-                MPmsg = "Using MP with label {}.\n".format(Sett.MPname)
+                mp_msg = f"Using MP with label {Sett.MPname}.\n"
             else:
-                MPmsg = "Not using MP.\n"
+                mp_msg = "Not using MP.\n"
 
         if Sett.border_detection or Sett.measure_width:
             sn = ['Widths', 'Borders']
@@ -174,42 +172,42 @@ def print_settings():
 
         if Sett.process_counts:  # Count settings
             file.write("--- Count Settings ---\n")
-            file.write(MPmsg)
+            file.write(mp_msg)
             file.write("Number of bins: {}\n".format(Sett.projBins))
             file.write("-Additional data-\n")
-            addD = Sett.AddData
-            addtypes = ', '.join(["{}".format(key) for key in sorted(list(addD.keys()))])
+            add_data = Sett.AddData
+            addtypes = ', '.join(["{}".format(key) for key in sorted(list(add_data.keys()))])
             file.write("Types: {}\n".format(addtypes))
 
         if Sett.process_dists:  # Distance settings
             file.write("--- Distance Settings ---\n")
             if Sett.find_distances:
                 file.write("-Nearest Distance-\n")
-                distD = {'Channels': Sett.distance_channels, 'Maximum distance': Sett.max_dist}
+                distance_data = {'Channels': Sett.distance_channels, 'Maximum distance': Sett.max_dist}
                 if Sett.use_target:
-                    distD.update({'Target channel': Sett.target_chan})
+                    distance_data.update({'Target channel': Sett.target_chan})
                 if Sett.inclusion > 0:
                     if not Sett.incl_type:
                         inclmsg = f'Smaller than {Sett.inclusion}'
                     else:
                         inclmsg = f'Greater than {Sett.inclusion}'
-                    distD.update({'Cell inclusion': inclmsg})
-                keys = sorted(list(distD.keys()))
-                file.write(', '.join(["{}: {}".format(key, distD.get(key)) for key in keys]))
+                    distance_data.update({'Cell inclusion': inclmsg})
+                keys = sorted(list(distance_data.keys()))
+                file.write(', '.join(["{}: {}".format(key, distance_data.get(key)) for key in keys]))
                 file.write("\n")
 
             if Sett.find_clusters:  # Cluster settings
                 file.write("-Clusters-\n")
-                clustD = {'Channels': Sett.Cluster_Channels, 'Maximum distance': Sett.cl_max_dist,
-                          'Minimum cluster': Sett.cl_min, 'Maximum cluster': Sett.cl_max}
+                cluster_data = {'Channels': Sett.Cluster_Channels, 'Maximum distance': Sett.cl_max_dist,
+                                'Minimum cluster': Sett.cl_min, 'Maximum cluster': Sett.cl_max}
                 if Sett.inclusion > 0:
                     if not Sett.cl_incl_type:
                         inclmsg = f'Smaller than {Sett.cl_inclusion}'
                     else:
                         inclmsg = f'Greater than {Sett.cl_inclusion}'
-                    clustD.update({'Cell inclusion': inclmsg})
-                keys = sorted(list(clustD.keys()))
-                file.write(', '.join([f"{key}: {clustD.get(key)}" for key in keys]))
+                    cluster_data.update({'Cell inclusion': inclmsg})
+                keys = sorted(list(cluster_data.keys()))
+                file.write(', '.join([f"{key}: {cluster_data.get(key)}" for key in keys]))
                 file.write("\n")
 
         if Sett.statistics:  # Statistics settings

@@ -16,7 +16,7 @@ import seaborn as sns
 import pandas as pd
 
 # LAM modules
-from src.settings import settings as Sett
+from src.settings import Settings as Sett
 import src.logger as lg
 
 LAM_logger = None
@@ -27,14 +27,14 @@ def bivariate_kde(plotter, **in_kws):
     kws = in_kws.get('plot_kws')
     data = plotter.data.drop('Channel', axis=1)
     if plotter.sec_data is not None:
-        plot_data = data.merge(plotter.sec_data, how='outer', on=['Sample Group', 'Sample', 'Linear Position'])
-    else:
-        plot_data = data
-    g = sns.FacetGrid(data=plot_data, row=kws.get('row'), col=kws.get('col'), hue="Sample Group", sharex=False,
-                      sharey=False, height=5)
+        data = data.merge(plotter.sec_data, how='outer', on=['Sample Group', 'Sample', 'Linear Position'])
+    # Create plot grid
+    g = sns.FacetGrid(data=data, row=kws.get('row'), col=kws.get('col'), hue="Sample Group", sharex=False,
+                      sharey=False, height=5, aspect=1)
     with warnings.catch_warnings():
         warnings.simplefilter('ignore', category=UserWarning)
         try:
+            # Create plots
             g = g.map(sns.kdeplot, 'Value_y', 'Value_x', shade_lowest=False, shade=False, linewidths=2.5, alpha=0.6)
         except np.linalg.LinAlgError:
             msg = '-> Confirm that all samples have proper channel data'
@@ -90,11 +90,11 @@ def cluster_positions(plotter, **kws):
     p_kws = dict(linewidth=0.1, edgecolor='dimgrey')
 
     # Create unique color for each cluster
-    IDs = pd.unique(plotter.data.ClusterID)
-    colors = sns.color_palette("hls", len(IDs))
+    identifiers = pd.unique(plotter.data.ClusterID)
+    colors = sns.color_palette("hls", len(identifiers))
     shuffle(colors)
     palette = {}
-    for ind, ID in enumerate(IDs):
+    for ind, ID in enumerate(identifiers):
         palette.update({ID: colors[ind]})
     # Get non-clustered cells for background plotting
     b_data = kws.get('b_data')
@@ -170,14 +170,14 @@ def lines(plotter, **kws):
     return g
 
 
-def skeleton_plot(savepath, samplename, binaryArray, skeleton):
+def skeleton_plot(savepath, samplename, binary_array, skeleton):
     sett_dict = {'Type': 'Skeleton', 'Simplif.': Sett.simplifyTol, 'Resize': Sett.SkeletonResize,
                  'Distance': Sett.find_dist, 'Dilation': Sett.BDiter, 'Smooth': Sett.SigmaGauss}
     sett_string = '  |  '.join(["{} = {}".format(k, v) for k, v in sett_dict.items()])
     figskel, axes = plt.subplots(nrows=1, ncols=2, figsize=(15, 6), sharex='row', sharey='row')
     ax = axes.ravel()
     # Plot of binary array
-    ax[0].imshow(binaryArray)
+    ax[0].imshow(binary_array)
     ax[0].axis('off')
     ax[0].set_title('modified', fontsize=14)
     # Plot of skeletonized binary array

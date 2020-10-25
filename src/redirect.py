@@ -10,10 +10,10 @@ import tkinter as tk
 import sys
 
 # LAM module
-import src.settings as Sett
+from src.settings import Settings as Sett
 
 
-class text_window(tk.Toplevel):
+class TextWindow:
     """Container for printing output of exec."""
 
     index = 1.0
@@ -68,7 +68,7 @@ class StdoutRedirector(IORedirector):
 
     def write(self, string):
         """Write to stdout."""
-        self.text_area.insert(text_window.index, string)
+        self.text_area.insert(TextWindow.index, string)
         self.text_area.update_idletasks()
-        text_window.index += 1.0
+        TextWindow.index += 1.0
         self.text_area.see("end")

@@ -23,7 +23,7 @@ import tkinter as tk
 import tkinter.simpledialog as tks
 
 # LAM modules
-from src.settings import settings as Sett, store
+from src.settings import Settings as Sett, store
 import src.logger as lg
 import src.system as system
 
@@ -36,7 +36,7 @@ def detect_borders(paths, all_samples, palette, anchor, variables, scoring, thre
 
     Args:
     ----
-        paths - LAM system.paths-object that contains directory paths
+        paths - LAM system.Paths-object that contains directory paths
         all_samples - Paths to sample folders
         palette - Color palette dict with sample groups as keys
         anchor - Anchoring bin of the samples in the full data matrix
@@ -201,6 +201,7 @@ class GetSampleBorders:
 
         # Find data of border detection channel
         filepath = samplepath.joinpath(f'{channel}.csv')
+        data = None
         try:
             data = pd.read_csv(filepath, index_col=False)
             self.data = data.loc[:, id_cols + self.var_cols]
@@ -219,10 +220,10 @@ class GetSampleBorders:
         self.anchor = anchor * 2
         self.var_data = pd.DataFrame()
 
-    def __call__(self, Borders, dirpath):
+    def __call__(self, borders, dirpath):
         """Score sample."""
         # Collect variables and calculate diffs and stds
-        self.get_variables(Borders)
+        self.get_variables(borders)
 
         # Normalize all variables between 0 and 1
         normalized = self.normalize_data()
@@ -233,29 +234,15 @@ class GetSampleBorders:
 
         # Score the deviations
         scores = self.score_data(devs)
-        sum_score = self.get_sum_score(scores)
+        sum_score = get_sum_score(scores)
 
         # Create plots if needed
         if Sett.plot_samples & Sett.Create_Border_Plots & Sett.Create_Plots:
             self.sample_plot(normalized, curve, scores, sum_score, dirpath)
 
         # Insert scores and sample's start index to full data set
-        Borders.scores.loc[scores.index, self.name] = sum_score
-        Borders.sample_starts.at[self.name] = self.ind_start
-
-    def get_sum_score(self, scores):
-        """Find the summed score of the detection variables."""
-        # Smooth raw scores and the sum for total
-        s_sum = smooth_data(scores, win=7, tau=10).sum(axis=1)
-        # trim zeros from array ends
-        trimmed_sum = np.trim_zeros(s_sum)
-        # Get bin-to-bin score differential and drop outliers
-        diffs = np.diff(trimmed_sum)
-        diffs = drop_outlier(pd.Series(diffs, index=trimmed_sum.index[1:]))
-        # Normalize with end points dropped (they have highly variant values)
-        norm_diffs = norm_func(diffs[1:-1])
-        sum_score = pd.Series(norm_diffs, index=trimmed_sum.index[2:-1])
-        return sum_score
+        borders.scores.loc[scores.index, self.name] = sum_score
+        borders.sample_starts.at[self.name] = self.ind_start
 
     def score_data(self, devs):
         """Score deciation values based on weights."""
@@ -320,11 +307,11 @@ class GetSampleBorders:
         plt.savefig(dirpath.joinpath(f'{self.name}.{Sett.saveformat}'))
         plt.close()
 
-    def get_variables(self, Borders):
+    def get_variables(self, borders):
         """Collect needed variables and calculate required characteristics."""
         # Get sample's width
-        width = self.get_width(Borders.width_data)
-        self.var_data = self.var_data.assign(width=width, width_diff=self.get_diff(width))
+        width = self.get_width(borders.width_data)
+        self.var_data = self.var_data.assign(width=width, width_diff=get_diff(width))
 
         # Get sample's start index in the full dataset (for determining border locations in the sample's own indexing).
         self.ind_start = self.var_data.index[0]
@@ -337,7 +324,7 @@ class GetSampleBorders:
         if 'Count' in self.scoring.keys():
             col = {'Count': self.get_count()}
             if 'Count_diff' in self.scoring.keys():
-                col.update({'Count_diff': self.get_diff(col.get('Count'))})
+                col.update({'Count_diff': get_diff(col.get('Count'))})
             self.var_data = self.var_data.assign(**col)
 
         # Get variable averages and related:
@@ -346,7 +333,7 @@ class GetSampleBorders:
             if f'{var}_std' in self.scoring.keys():
                 col.update({f'{var}_std': self.get_std(var)})
             if f'{var}_diff' in self.scoring.keys():
-                col.update({f'{var}_diff': self.get_diff(col.get(var))})
+                col.update({f'{var}_diff': get_diff(col.get(var))})
             self.var_data = self.var_data.assign(**col)
 
         # Keep only necessary variables in DataFrame
@@ -360,13 +347,6 @@ class GetSampleBorders:
         counts = self.data["binning"].value_counts().sort_index()
         counts.index = self.var_data.index
         return counts
-
-    def get_diff(self, data):
-        """Calculate bin-to-bin differences"""
-        diff = data.diff()[1:]
-        # Shift data by one index position to match locations
-        diff.index = diff.index - 1
-        return diff
 
     def get_std(self, var):
         """Calculate standard deviations."""
@@ -394,7 +374,7 @@ class GetSampleBorders:
         return normalized
 
 
-class PeakDialog(tks.Dialog):
+class PeakDialog:
     """Create user input-window for peak plotting."""
 
     def __init__(self, data=None, master=None):
@@ -487,9 +467,16 @@ def detect_peaks(score_arr, x_dist=6, thresh=0.15, width=1):
 
         # Add groups data to full peak data
         all_peaks = all_peaks.append(pd.DataFrame(peak_dict), ignore_index=True)
-        # all_peaks = all_peaks.append(pd.DataFrame(npeak_dict),
-        #                              ignore_index=True)
+        # all_peaks = all_peaks.append(pd.DataFrame(npeak_dict), ignore_index=True)
     return all_peaks
+
+
+def get_diff(data):
+    """Calculate bin-to-bin differences"""
+    diff = data.diff()[1:]
+    # Shift data by one index position to match locations
+    diff.index = diff.index - 1
+    return diff
 
 
 def get_group_total(data):
@@ -506,6 +493,21 @@ def get_group_total(data):
     # Add identifier columns, i.e. groups and bins
     s_sums = s_sums.assign(group=s_sums.index.get_level_values(0), variable=s_sums.index.get_level_values(1))
     return s_sums
+
+
+def get_sum_score(scores):
+    """Find the summed score of the detection variables."""
+    # Smooth raw scores and the sum for total
+    s_sum = smooth_data(scores, win=7, tau=10).sum(axis=1)
+    # trim zeros from array ends
+    trimmed_sum = np.trim_zeros(s_sum)
+    # Get bin-to-bin score differential and drop outliers
+    diffs = np.diff(trimmed_sum)
+    diffs = drop_outlier(pd.Series(diffs, index=trimmed_sum.index[1:]))
+    # Normalize with end points dropped (they have highly variant values)
+    norm_diffs = norm_func(diffs[1:-1])
+    sum_score = pd.Series(norm_diffs, index=trimmed_sum.index[2:-1])
+    return sum_score
 
 
 def drop_outlier(arr):
@@ -611,7 +613,7 @@ def get_fit(data, name='c', id_var=None):
     return curve
 
 
-def norm_func(arr):
+def norm_func(arr: pd.Series) -> pd.Series:
     """Normalize array between 0 and 1."""
     return (arr-np.nanmin(arr))/(np.nanmax(arr)-np.nanmin(arr))
 

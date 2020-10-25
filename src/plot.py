@@ -17,7 +17,7 @@ import seaborn as sns
 import pandas as pd
 
 # LAM modules
-from src.settings import settings as Sett, store
+from src.settings import Settings as Sett, store
 import src.logger as lg
 import src.system as system
 import src.plotfuncs as pfunc
@@ -29,7 +29,7 @@ class MakePlot:
     """Create decorated plots."""
 
     # Base keywords utilized in plots.
-    base_kws = {'hue': 'Sample Group', 'row': 'Channel', 'col': 'Sample Group', 'height': 3, 'aspect': 3,
+    base_kws = {'hue': 'Sample Group', 'row': 'Channel', 'col': 'Sample Group', 'height': 3, 'aspect': 2.5,
                 'flier_size': 2, 'title_y': 0.95, 'sharex': False, 'sharey': False, 'gridspec': {'hspace': 0.45},
                 'xlabel': 'Linear Position', 'ylabel': 'Feature Count'}
     # Colors for fills
@@ -56,14 +56,17 @@ class MakePlot:
             self.g = func(self, **plot_kws)
         if self.plot_error:
             msg = "Plot not saved"
-            print("WARNING: {}".format(msg))
+            print("INFO: {}".format(msg))
             lg.logprint(LAM_logger, msg, 'w')
             return
         # Adjust plot sizes so that everything fits properly
+        fig = plt.gcf()
         if 'adjust' in kws.keys():
-            plt.subplots_adjust(top=kws['adjust'].get('top'), bottom=kws['adjust'].get('bottom'))
+            fig.subplots_adjust(top=kws['adjust'].get('top'), bottom=kws['adjust'].get('bottom'))
+            if 'hspace' in kws['adjust'].keys():
+                fig.subplots_adjust(hspace=kws['adjust'].get('hspace'))
         else:
-            plt.subplots_adjust(top=0.85, bottom=0.2, hspace=0.75)
+            fig.subplots_adjust(top=0.85, bottom=0.2, hspace=0.75)
         self.add_elements(*args, **plot_kws)
         self.save_plot()
 
@@ -91,10 +94,10 @@ class MakePlot:
         else:
             test = False
         if 'peaks' in args and Sett.add_peaks and test:
-            self.plot_peaks(**kws)
+            self.plot_peaks()
 
         # Make labels visible even when sharing axes
-        if (kws.get('sharey') == 'row' or kws.get('sharex') == 'col'):
+        if kws.get('sharey') == 'row' or kws.get('sharex') == 'col':
             self.visible_labels()
 
     def centerline(self):
@@ -145,8 +148,10 @@ class MakePlot:
             if first:
                 return
 
-    def plot_peaks(self, **kws):
+    def plot_peaks(self):
         """Add found border regions to plots."""
+        peaks = None
+
         # Select only peaks that belong into groups being plotted
         if 'Sample Group' in self.data.columns:
             groups = self.data.loc[:, 'Sample Group'].unique()
@@ -166,21 +171,6 @@ class MakePlot:
                 # peak location line with prominence
                 ax.vlines(x=loc, ymin=vmin, ymax=vmax, color=color, alpha=0.5, linewidth=1.5, zorder=0,
                           linestyle='dashed',)
-
-    def plot_significance(self, ix, row, ax, yaxis, yheight, fill=Sett.fill, stars=Sett.stars):
-        """Add significance stars or color fills to plots."""
-        # If both hypothesis rejections have same value, continue
-        if row[3] == row[6]:
-            return
-        xaxis = [ix-0.43, ix+0.43]
-        if row[3] is True:  # ctrl is greater
-            p_str, color = significance_marker(row[1], MakePlot.LScolors)
-        elif row[6] is True:  # ctrl is lesser
-            p_str, color = significance_marker(row[4], MakePlot.GRcolors)
-        if fill:
-            ax.fill_between(xaxis, yaxis, color=color, alpha=0.35, zorder=0)
-        if stars:
-            ax.annotate(p_str, (ix, yheight), fontsize=8, ha='center')
 
     def set_title(self, **kws):
         """Set plot title."""
@@ -202,8 +192,8 @@ class MakePlot:
         ax2.plot((xmin, xtop), (0, 0), linestyle='dashed', color='grey', linewidth=0.85, **lkws)
         # Find top of original y-axis and create a buffer for twin to
         # create a prettier plot
-        botAdd = 2.75*-Sett.ylim
-        ax2.set_ylim(bottom=botAdd, top=Sett.ylim)
+        bottom_add = 2.75*-Sett.ylim
+        ax2.set_ylim(bottom=bottom_add, top=Sett.ylim)
         ax2.set_yticks(np.arange(0, Sett.ylim, 10))
         ax2.set_yticklabels(np.arange(0, Sett.ylim, 10))
         ax2.yaxis.set_label_coords(1.04, 0.85)
@@ -211,20 +201,20 @@ class MakePlot:
         # Creation of -log2 P-value axis and line plot
         if Sett.negLog2:
             Sett.stars = False  # Force stars to be False when plotting neglog
-            Y = stats.iloc[:, 7]
-            X = Y.index.tolist()
+            y_val = stats.iloc[:, 7]
+            x_val = y_val.index.tolist()
             # Find locations where the log line should be drawn
-            ind = Y[Y.notnull()].index
-            logvals = pd.Series(np.zeros(Y.shape[0]), index=Y.index)
+            ind = y_val[y_val.notnull()].index
+            logvals = pd.Series(np.zeros(y_val.shape[0]), index=y_val.index)
             with warnings.catch_warnings():
                 warnings.simplefilter('ignore', category=RuntimeWarning)
-                logvals.loc[ind] = np.log2(Y[ind].astype(np.float64))
+                logvals.loc[ind] = np.log2(y_val[ind].astype(np.float64))
             # Create twin axis with -log2 P-values
-            ax2.plot(X, np.negative(logvals), color='dimgrey', linewidth=1.5, **lkws)
+            ax2.plot(x_val, np.negative(logvals), color='dimgrey', linewidth=1.5, **lkws)
             ax2.set_ylabel('P value\n(-log2)')
         # Create significance stars and color fills
         for index, row in stats.iterrows():
-            self.plot_significance(index, row, ax2, yaxis, yheight=0)
+            plot_significance(index, row, ax2, yaxis, yheight=0)
         # Add info on sliding window to plot
         if 'windowed' in kws:
             comment = "Window: lead {}, trail {}".format(Sett.lead, Sett.trail)
@@ -241,29 +231,28 @@ class MakePlot:
             try:
                 rejects = row.iloc[row.index.get_level_values(1).str.contains('Reject')].where(row).dropna()
             except ValueError:
-                print(f" --> {row.name}: Missing statistics")
                 continue
-            rejectN = np.count_nonzero(rejects.to_numpy())
+            reject_num = np.count_nonzero(rejects.to_numpy())
             ax.set_ylim(bottom=0)
-            if rejectN > 0:  # If any rejected H0
+            if reject_num > 0:  # If any rejected H0
                 # Raise y-limit of axis to fit significance plots
                 __, ytop = ax.get_ylim()
                 tytop = ytop*1.3
                 ax.set_ylim(top=tytop)
                 # Find heights for significance lines
-                heights = np.linspace(ytop, ytop*1.15, rejectN)
+                heights = np.linspace(ytop, ytop*1.15, reject_num)
                 # Loop groups with rejected H0
                 for i, grp in enumerate(rejects.index.get_level_values(0)):
-                    y = heights[i]  # Get height for the group's line
+                    y_height = heights[i]  # Get height for the group's line
                     grp_x = order.index(grp)  # Get x-axis location of group
                     line = sorted([grp_x, ctrl_x])
                     # Plot line
-                    ax.hlines(y=y, xmin=line[0], xmax=line[1], color='dimgrey')
+                    ax.hlines(y=y_height, xmin=line[0], xmax=line[1], color='dimgrey')
                     # Locate P-value and get significance stars
-                    Pvalue = row.loc[(grp, 'P Two-sided')]
-                    p_str, _ = significance_marker(Pvalue, vert=True)
+                    p_value = row.loc[(grp, 'P Two-sided')]
+                    p_str, _ = significance_marker(p_value, vert=True)
                     # Define plot location for stars and plot
-                    ax.annotate(p_str, (line[0]+.5, y), ha='center')
+                    ax.annotate(p_str, (line[0]+.5, y_height), ha='center')
 
     def save_plot(self):
         """Save created plot."""
@@ -287,7 +276,7 @@ class MakePlot:
         plt.setp(self.g.axes, xticks=xticks * tick_mp, xticklabels=xticks)
 
 
-class plotting:
+class Plotting:
     """Make operations for different plots."""
     handle_kws = {'IDs': ['Channel', 'Sample Group'],
                   'melt': {'id_vars': ['Sample Group', 'Channel'],
@@ -297,7 +286,7 @@ class plotting:
                   'drop_grouper': 'Sample Group'}
 
     def __init__(self, samplegroups, **kws):
-        self.kws = plotting.handle_kws.copy()
+        self.kws = Plotting.handle_kws.copy()
         self.kws.update(kws)
         self.sgroups = samplegroups
 
@@ -318,7 +307,7 @@ class plotting:
         for channel in Sett.vs_channels:
             paths = [p for p in add_paths if channel == str(p.name).split('_')[1]]
             if not paths:
-                print("-> No data found for {}".format(channel))
+                print(f"-> No data found for {channel}")
                 continue
             handle = system.DataHandler(self.sgroups, paths, savepath)
             add_data = handle.get_data('drop_outlier', **new_kws)
@@ -331,17 +320,17 @@ class plotting:
             grp, grp2 = grps
             data = grouped.get_group(grp)
             data2 = grouped.get_group(grp2)
-            print("    {} vs. {}  ...".format(grp, grp2))
-            f_tit = 'Versus_Add {} Data - Add {} Data Matrix'.format(grp, grp2)
+            print(f"    {grp} vs. {grp2}  ...")
+            f_title = f'Versus_Add {grp} Data - Add {grp2} Data Matrix'
             # Take only data types present in both channels:
             diff = set(data.Type.unique()).symmetric_difference(set(data2.Type.unique()))
-            p_d = data[~data.Type.isin(diff)].index
-            p_d2 = data2[~data2.Type.isin(diff)].index
+            data_ind = data[~data.Type.isin(diff)].index
+            data2_ind = data2[~data2.Type.isin(diff)].index
             # Define identifier columns that are in plottable format
-            data = data.assign(Type_Y=data['Channel'] + '-' + data['Type'])
-            data2 = data2.assign(Type_X=data2['Channel'] + '-' + data2['Type'])
+            data = data.assign(Type_Y=data['Channel'] + '_' + data['Type'])
+            data2 = data2.assign(Type_X=data['Channel'] + '_' + data['Type'])
             # Make plot
-            plotter = MakePlot(data.loc[p_d, :], handle, f_tit, sec_data=data2.loc[p_d2, :])
+            plotter = MakePlot(data.loc[data_ind, :], handle, f_title, sec_data=data2.loc[data2_ind, :])
             plotter(pfunc.bivariate_kde, 'title', 'legend', 'no_grid', 'labels', **new_kws)
 
     def add_data(self):
@@ -400,7 +389,7 @@ class plotting:
 
     def channels(self):
         """Plot channel line plots."""
-        new_kws = merge_kws(self.kws, {'sharey': 'row', 'col': None})
+        new_kws = merge_kws(self.kws, {'sharey': 'row', 'col': None, 'adjust': {'hspace': 3}})
 
         # Collect data:
         handle = system.DataHandler(self.sgroups, self.sgroups._chanPaths)
@@ -474,7 +463,8 @@ class plotting:
 
         new_kws = remove_from_kws(self.kws, 'melt')
         new_kws.update({'IDs': ['Channel', 'Sample Group', 'Sample'], 'col': None, 'hue': None,
-                        'xlabel': 'Linear Position', 'ylabel': 'Clustered Cells'})
+                        'xlabel': 'Linear Position', 'ylabel': 'Clustered Cells',
+                        'adjust': {'top': 0.8, 'bottom': 0.2}})
 
         # Get and plot heatmap with samples
         handle = system.DataHandler(self.sgroups, paths, savepath)
@@ -548,8 +538,8 @@ class plotting:
     def heatmaps(self):
         """Create heatmaps of channel data."""
         # Get and plot _sample group averages_
-        HMpaths = self.sgroups.paths.datadir.glob("ChanAvg_*")
-        handle = system.DataHandler(self.sgroups, HMpaths)
+        hm_paths = self.sgroups.paths.datadir.glob("ChanAvg_*")
+        handle = system.DataHandler(self.sgroups, hm_paths)
         new_kws = remove_from_kws(self.kws, 'melt')
         new_kws.update({'IDs': ['Channel', 'Sample Group']})
         all_data = handle.get_data(array='Sample Group', **new_kws)
@@ -560,8 +550,8 @@ class plotting:
         plotter(pfunc.heatmap, 'centerline', 'ticks', 'title', 'peaks', **p_kws)
 
         # Get and plot heatmap with _samples_
-        HMpaths = self.sgroups.paths.datadir.glob("Norm_*")
-        handle = system.DataHandler(self.sgroups, HMpaths)
+        hm_paths = self.sgroups.paths.datadir.glob("Norm_*")
+        handle = system.DataHandler(self.sgroups, hm_paths)
         new_kws.update({'IDs': ['Channel', 'Sample']})
         all_data = handle.get_data(array=False, **new_kws)
         all_data.index = all_data['Sample'].tolist()
@@ -596,29 +586,29 @@ class plotting:
                  'ylabel': 'collect', 'xlabel': 'Sample Group', 'gridspec': {'wspace': 0.25}}
         plotter(pfunc.violin, 'title', 'total_stats', 'labels', 'legend', **p_kws)
 
-    def stat_versus(self, Stats, path):
+    def stat_versus(self, stats, path):
         """Plot statistics of group versus group for all variables."""
         # Restructure data to be plottable:
-        ctrl_data = Stats.ctrl_data.T
-        test_data = Stats.test_data.T
+        ctrl_data = stats.ctrl_data.T
+        test_data = stats.test_data.T
         if Sett.Drop_Outliers:  # Drop outliers
             ctrl_data = system.drop_outliers(ctrl_data, raw=True)
             test_data = system.drop_outliers(test_data, raw=True)
         # Add identifier
-        ctrl_data.loc[:, 'Sample Group'] = Stats.ctrl_grp
-        test_data.loc[:, 'Sample Group'] = Stats.test_grp
+        ctrl_data.loc[:, 'Sample Group'] = stats.ctrl_grp
+        test_data.loc[:, 'Sample Group'] = stats.test_grp
         # Combine data in to one frame and melt it to long format
         plot_data = pd.concat([ctrl_data, test_data], ignore_index=True)
         plot_data = plot_data.melt(id_vars=['Sample Group'], var_name='Linear Position', value_name='Value')
         # Initialize plotting:
-        savepath = Stats.plot_dir
+        savepath = stats.plot_dir
         handle = system.DataHandler(self.sgroups, path, savepath)
         # Give title
         data_name = str(path.stem).split('_')[1:]
         titlep = '-'.join(data_name)
-        f_title = "{} = {}".format(Stats.title, titlep)
+        f_title = "{} = {}".format(stats.title, titlep)
         # Plot variable
-        plotter = MakePlot(plot_data, handle, f_title, sec_data=Stats)
+        plotter = MakePlot(plot_data, handle, f_title, sec_data=stats)
         ylabel = get_unit(data_name[-1])
         p_kws = {'col': None, 'row': None, 'ylabel': ylabel, 'label_first_only': True, 'gridspec': {'bottom': 0.2},
                  'melt': {'id_vars': ['Sample Group'], 'var_name': 'Linear Position', 'value_name': 'Value'}}
@@ -673,19 +663,21 @@ def identifiers(data: pd.DataFrame, path, ids: list) -> pd.DataFrame:
         data.loc['Sample', :] = data.columns
     if 'Type' in ids:
         name = str(path.stem).split('_')[2:]
-        data.loc['Type', :] = name[0]
+        data.loc['Type', :] = '_'.join(name)
     return data
 
 
 def get_unit(string):
     """Get unit of variable."""
     # If string is a LAM created value name:
-    if string in "Distance Means":
+    if string == "Distance Means":
         return "Units (coord system)"
+    if '_' in string:
+        var_strings = string.split('_')
+        chan = var_strings[0]
+        string = var_strings[1]
     sub_str = string.split('-')
-    if len(sub_str) == 3:
-        chan, key, key_c = sub_str
-    elif len(sub_str) == 2:
+    if len(sub_str) == 2:
         key, key_c = sub_str
     else:
         key = sub_str[0]
@@ -697,11 +689,11 @@ def get_unit(string):
     # Otherwise, build label from the sub-units
     label = Sett.AddData.get(key)[1]
     if 'chan' in locals():
-        label = '{}, '.format(chan) + label
+        label = f'{chan}, {label}'
     if 'key_c' in locals():
         if Sett.replaceID and key_c in Sett.channelID.keys():
             key_c = Sett.channelID.get(key_c)
-        label = label + '-{}'.format(key_c)
+        label = label + f' {key_c}'
     return label
 
 
@@ -744,3 +736,21 @@ def significance_marker(value, colors=MakePlot.GRcolors, vert=False):
     else:
         ret_str = '\n'.join(p_str)
     return ret_str, color
+
+
+def plot_significance(index, row, ax, yaxis, yheight, fill=Sett.fill, stars=Sett.stars):
+    """Add significance stars or color fills to plots."""
+    color, p_str = None, None
+
+    # If both hypothesis rejections have same value, continue
+    if row[3] == row[6]:
+        return
+    xaxis = [index-0.43, index+0.43]
+    if row[3] is True:  # ctrl is greater
+        p_str, color = significance_marker(row[1], MakePlot.LScolors)
+    elif row[6] is True:  # ctrl is lesser
+        p_str, color = significance_marker(row[4], MakePlot.GRcolors)
+    if fill:
+        ax.fill_between(xaxis, yaxis, color=color, alpha=0.35, zorder=0)
+    if stars:
+        ax.annotate(p_str, (index, yheight), fontsize=8, ha='center')
