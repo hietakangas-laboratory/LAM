@@ -32,6 +32,10 @@ You can then install LAM and dependencies on your environment with:
     python install <path\to\LAM-master\setup.py>
     E.g. python install C:\User\LAM-master\setup.py
 
+Windows-users may need to install Shapely>=1.7.0 from a pre-compiled wheel in order
+to properly link GEOS and cython.
+Wheel can be found here: https://www.lfd.uci.edu/~gohlke/pythonlibs/#shapely
+
 
 USAGE:
 -----
