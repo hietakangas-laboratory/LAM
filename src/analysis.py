@@ -448,7 +448,7 @@ class Sample(Group):
         data = None
 
         # Listing of paths of channels on which clusters are to be found
-        cluster_chans = [p for p in self.channelPaths for t in Sett.Cluster_Channels if t.lower() == p.stem.lower()]
+        cluster_chans = [p for p in self.channelPaths for t in Sett.cluster_channels if t.lower() == p.stem.lower()]
         for path in cluster_chans:  # Loop paths, read file, and find clusters
             try:
                 data = system.read_data(path, header=0)

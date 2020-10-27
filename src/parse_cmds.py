@@ -113,8 +113,8 @@ def change_settings(parser):
 
     # Defining of channels that clustering is performed on
     if parser.cluster_channels is not None:
-        Sett.Cluster_Channels = parser.Cluster_Channels
-        changed_settings.update({'Cluster channels': Sett.Cluster_Channels})
+        Sett.cluster_channels = parser.cluster_channels
+        changed_settings.update({'Cluster channels': Sett.cluster_channels})
 
     # Maximal distance of cells that are considered a cluster
     if parser.cluster_distance is not None:

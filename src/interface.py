@@ -219,8 +219,8 @@ class BaseGUI:
         dist_lbl.grid(row=2, column=4, columnspan=2)
         # CLUSTERING settings
         cl_chanlbl = tk.Label(self.distf, text="Channels:")
-        cl_ch_in = tk.Entry(self.distf, text=self.handle('Cluster_Channels'),
-                            textvariable=self.handle('Cluster_Channels'), bd=2)
+        cl_ch_in = tk.Entry(self.distf, text=self.handle('cluster_channels'),
+                            textvariable=self.handle('cluster_channels'), bd=2)
         cl_chanlbl.grid(row=3, column=0, columnspan=2)
         cl_ch_in.grid(row=3, column=2, columnspan=2)
 
@@ -442,8 +442,8 @@ class BaseGUI:
         self.detect_chans()
         # If needed, change settings that have high risk of interfering
         if not options['process_counts']:
-            ops = ('measure_width', 'useMP', 'project')
-            options.update({k: False for k in ops})
+            processing_options = ('measure_width', 'useMP', 'project')
+            options.update({k: False for k in processing_options})
         # SAVE SETTING
         change_settings(options)
         # CREATE LOGGER
@@ -910,15 +910,15 @@ class SettingHandler:
         """Transform to tk variable and get reference."""
         if self.vars.at[variable_name, 'check']:
             return self.vars.at[variable_name, 'ref']
-        vref = get_ref(variable_name)
-        self.vars.loc[variable_name, :] = [True, vref]
+        variable_ref = get_ref(variable_name)
+        self.vars.loc[variable_name, :] = [True, variable_ref]
         return self.vars.at[variable_name, 'ref']
 
     def translate(self):
         """Translate tk variables to original format."""
         mods = self.vars.loc[self.vars.check, 'ref'].to_dict()
         for key, value in mods.items():
-            if key in ('Cluster_Channels', 'distance_channels', 'vs_channels', 'vs_adds'):
+            if key in ('cluster_channels', 'distance_channels', 'vs_channels', 'vs_adds'):
                 var = mods[key].get().split(',')
                 mods[key] = [v.strip() for v in var]
             elif isinstance(value, dict):

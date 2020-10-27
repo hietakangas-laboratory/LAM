@@ -134,7 +134,7 @@ class Settings:
 
     # Whether to compute clusters
     find_clusters = False
-    Cluster_Channels = ["GFP"]  # , "Pros"]
+    cluster_channels = ["GFP"]  # , "Pros"]
     cl_max_dist = 10         # Radius around a cell
     cl_inclusion = 0    # Set to zero if not wanted.
     cl_incl_type = ""       # Same as above in feature-to-feature distances

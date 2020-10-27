@@ -198,7 +198,7 @@ def print_settings():
 
             if Sett.find_clusters:  # Cluster settings
                 file.write("-Clusters-\n")
-                cluster_data = {'Channels': Sett.Cluster_Channels, 'Maximum distance': Sett.cl_max_dist,
+                cluster_data = {'Channels': Sett.cluster_channels, 'Maximum distance': Sett.cl_max_dist,
                                 'Minimum cluster': Sett.cl_min, 'Maximum cluster': Sett.cl_max}
                 if Sett.inclusion > 0:
                     if not Sett.cl_incl_type:
