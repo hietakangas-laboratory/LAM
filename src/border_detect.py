@@ -20,7 +20,6 @@ from scipy.signal import find_peaks, peak_prominences
 import warnings
 
 import tkinter as tk
-import tkinter.simpledialog as tks
 
 # LAM modules
 from src.settings import Settings as Sett, store
@@ -340,7 +339,7 @@ class GetSampleBorders:
         self.var_data = self.var_data.loc[:, Sett.scoring_vars.keys()]
 
         # Drop outliers (>3 SD)
-        self.var_data = self.var_data.apply(drop_outlier)
+        # self.var_data = self.var_data.apply(drop_outlier)
 
     def get_count(self):
         """Count binned features."""
@@ -503,14 +502,14 @@ def get_sum_score(scores):
     trimmed_sum = np.trim_zeros(s_sum)
     # Get bin-to-bin score differential and drop outliers
     diffs = np.diff(trimmed_sum)
-    diffs = drop_outlier(pd.Series(diffs, index=trimmed_sum.index[1:]))
+    # diffs = drop_outlier(pd.Series(diffs, index=trimmed_sum.index[1:]))
     # Normalize with end points dropped (they have highly variant values)
     norm_diffs = norm_func(diffs[1:-1])
     sum_score = pd.Series(norm_diffs, index=trimmed_sum.index[2:-1])
     return sum_score
 
 
-def drop_outlier(arr):
+def drop_outlier(arr):  # NOT USED
     """Drop bins with outlying values."""
     with warnings.catch_warnings():  # Catch warning from empty bins
         warnings.simplefilter('ignore', category=RuntimeWarning)
@@ -661,6 +660,7 @@ def test_channel(samplepaths, border_channel):
 
     not_found = 0  # Number of samples with no data
     samples = []
+
     for path in samplepaths:  # Test all samples
 
         # If file found
@@ -698,7 +698,8 @@ def ask_new_channel(border_channel):
     print('\a')
 
     while flag:  # Ask input until satisfied
-        dlg = f'Current channel is {border_channel}. Change channel? [y/n]'
+        dlg = f'Border detection data not found.\nCurrent border detection channel is {border_channel}.\n'\
+              f'Change channel? [y/n]'
         ans = system.ask_user(dlg)  # Ask whether to change channel
         if ans in ('Y', 'y'):
             dlg = "Give name of new border detection channel: "
@@ -716,14 +717,21 @@ def ask_new_channel(border_channel):
 
 def change_keys(old_channel, new_channel):
     """Change border detection variables between two channels."""
-    old = f'_{old_channel}'
-    new = f'_{new_channel}'
-    # Change column names
-    Sett.border_vars = [col.replace(old, new) for col in Sett.border_vars]
-    items = list(Sett.scoring_vars.items())
+
+    # Change variable column names
+    new_vars = []
+    for variable in Sett.border_vars:
+        parts = variable.split('_')
+        new_parts = [part.replace(old_channel, new_channel) if part == old_channel else part for part in parts]
+        new_vars.append('_'.join(new_parts))
+    Sett.border_vars = new_vars
+
     # Update scoring dictionary
+    items = list(Sett.scoring_vars.items())
     for key, value in items:
-        if old in key:
-            new_key = key.replace(old, new)
+        parts = key.split('_')
+        if old_channel in parts:
+            new_parts = [part.replace(old_channel, new_channel) if part == old_channel else part for part in parts]
+            new_key = '_'.join(new_parts)
             Sett.scoring_vars.update({new_key: value})
             del Sett.scoring_vars[key]
