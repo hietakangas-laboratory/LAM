@@ -120,7 +120,7 @@ class GetSample:
             dir_path = [self.channelpaths[i] for i, s in enumerate(self.channelpaths)
                         if namerreg.search(str(s))][0]
             vect_path = next(dir_path.glob('*Position.csv'))
-            vect_data = system.read_data(vect_path)  # Read data
+            vect_data = system.read_data(vect_path, header=Sett.header_row)  # Read data
         except (FileNotFoundError, IndexError):  # If data file not found
             msg = 'No valid datafile for vector creation.'
             if LAM_logger is not None:
@@ -359,7 +359,7 @@ class GetSample:
                 mp_dir_path = next(self.channelpaths.pop(i) for i, s in enumerate(self.channelpaths) if
                                    str('_' + mp_name + '_') in str(s))
                 mp_path = next(mp_dir_path.glob("*Position.csv"))
-                mp_data = system.read_data(mp_path, test=False)
+                mp_data = system.read_data(mp_path, header=Sett.header_row, test=False)
                 mp_data = mp_data.loc[:, ['Position X', 'Position Y']]
                 if not mp_data.empty:
                     mp_bin = self.project_mps(mp_data, self.vector, datadir, filename="MPs.csv")
@@ -511,7 +511,7 @@ class GetChannel:
                     continue
                 if paths[0] == self.pospath and not any(self.data.columns.str.contains(namer)):
                     print(f"'{key}' not in {self.pospath.name} of {self.sample.name} on channel {self.name}")
-                temp_data = system.read_data(str(paths[0]))
+                temp_data = system.read_data(str(paths[0]), header=Sett.header_row)
                 cols = temp_data.columns.map(lambda x, namer=namer: bool(re.match(namer, x)) or x == 'ID')
                 temp_data = temp_data.loc[:, cols]
                 add_data = pd.merge(add_data, temp_data, on='ID')
@@ -521,7 +521,7 @@ class GetChannel:
                     strings = str(path.stem).split(f'{values[0]}_')
                     id_string = strings[1].split('_')[0]
                     # Locate columns
-                    temp_data = system.read_data(str(path))
+                    temp_data = system.read_data(str(path), header=Sett.header_row)
                     temp_data = temp_data.loc[:, [key, 'ID']]
                     for col in [c for c in temp_data.columns if c != 'ID']:
                         rename = str(col + '_' + id_string)
