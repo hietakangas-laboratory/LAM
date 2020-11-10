@@ -267,7 +267,7 @@ def save_to_file(data, directory, filename, append=True, w_index=False):
             data.to_frame().to_csv(str(path), index=w_index)
 
 
-def start(test_vectors=True):
+def start(test_vectors=True, only_vectors=False):
     """Check that everything is OK when starting a run."""
     # If workdir variable isn't pathlib.Path, make it so
     if not isinstance(Sett.workdir, pl.Path):
@@ -280,7 +280,7 @@ def start(test_vectors=True):
         raise SystemExit
 
     # Otherwise create paths and directories
-    paths = Paths(Sett.workdir, only_vectors=True)
+    paths = Paths(Sett.workdir, only_vectors=only_vectors)
 
     if not test_vectors:
         return paths

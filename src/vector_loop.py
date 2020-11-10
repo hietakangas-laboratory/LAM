@@ -114,15 +114,15 @@ class VectorWin:
         options['workdir'] = pl.Path(options['workdir'])
         # Adjust settings with the translated variables
         change_settings(options)
-        # Get necessary paths for vector creation
-        PATHS = system.start(test_vectors=False)
+        # Get necessary system_paths for vector creation
+        system_paths = system.start(test_vectors=False, only_vectors=True)
         process.check_resize_step(Sett.SkeletonResize)  # Test resize setting
         print_settings()  # Print used creation settings
         # Loop all samples that don't have a valid vector
         for sample in self.sample_vars:
             path = Sett.workdir.joinpath(sample[0])  # Sample's data path
             # Collect sample data:
-            sample = process.GetSample(path, PATHS)
+            sample = process.GetSample(path, system_paths)
             print("{}  ...".format(sample.name))
             sample.vect_data = sample.get_vect_data(Sett.vectChannel)
             if sample.vect_data is None:
@@ -134,8 +134,8 @@ class VectorWin:
                 sample.create_median()
         print("Creation loop done. Select samples to keep.\n")
         # Creation of vector plot of all samples
-        sample_dirs = [p for p in PATHS.samplesdir.iterdir() if p.is_dir()]
-        pfunc.create_vector_plots(Sett.workdir, PATHS.samplesdir, sample_dirs)
+        sample_dirs = [p for p in system_paths.samplesdir.iterdir() if p.is_dir()]
+        pfunc.create_vector_plots(Sett.workdir, system_paths.samplesdir, sample_dirs)
 
     def keep_vectors(self):
         """Remove selected samples from creation loop and refresh table."""

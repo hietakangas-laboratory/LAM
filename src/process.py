@@ -418,11 +418,11 @@ class GetSample:
         data["DistBin"] = pd.cut(data["NormDist"], labels=labels, bins=edges, include_lowest=True).astype('int')
 
         # Assign data to DF and save the dataframe:
-        data["VectPoint"] = [(p.x, p.y) for p in proj_points]
+        data["VectPoint"] = [(round(p.x, 3), round(p.y, 3)) for p in proj_points]
         data["ProjDist"] = proj_dist
         self.data = data
         self.test_projection(channel.name)
-        channel_string = '{}.csv'.format(channel.name)
+        channel_string = f'{channel.name}.csv'
         system.save_to_file(data, self.sampledir, channel_string, append=False)
         return data
 
@@ -430,7 +430,7 @@ class GetSample:
         """Gather projected features and find bin counts."""
         counts = np.bincount(self.data['DistBin'], minlength=Sett.projBins)
         counts = pd.Series(np.nan_to_num(counts), name=self.name)
-        channel_string = 'All_{}.csv'.format(channel_name)
+        channel_string = f'All_{channel_name}.csv'
         system.save_to_file(counts, datadir, channel_string)
         if channel_name == Sett.vectChannel:
             test_count_projection(counts)
@@ -909,7 +909,7 @@ def vector_test(path):
 
 
 def test_count_projection(counts):
-    if (counts == 0).sum() > counts.size / 2:
+    if (counts == 0).sum() > counts.size / 3:
         print('   WARNING: Uneven projection <- vector may be faulty!')
 
 
