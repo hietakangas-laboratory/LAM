@@ -25,7 +25,7 @@ from skimage.transform import resize as resize_arr
 from skimage.measure import find_contours
 
 # LAM modules
-from src.settings import store, Settings as Sett
+from src.settings import Store, Settings as Sett
 import src.plotfuncs as pfunc
 import src.logger as lg
 import src.system as system
@@ -36,17 +36,17 @@ LAM_logger = None
 class GetSample:
     """Collect sample data and process for analysis."""
 
-    def __init__(self, sample_path: pl.Path, paths: system.Paths, process=True, project=False):
+    def __init__(self, sample_path: pl.Path, paths: system.Paths, process=True, projection=False):
         self.name = sample_path.stem
         self.sampledir = paths.samplesdir.joinpath(self.name)
         self.group = self.name.split('_')[0]
         # Add sample and group to storing variables
-        if self.name not in store.samples:
-            store.samples.append(self.name)
-            store.samples = sorted(store.samples)
-        if self.group not in store.samplegroups:
-            store.samplegroups.append(self.group)
-            store.samplegroups = sorted(store.samplegroups)
+        if self.name not in Store.samples:
+            Store.samples.append(self.name)
+            Store.samples = sorted(Store.samples)
+        if self.group not in Store.samplegroups:
+            Store.samplegroups.append(self.group)
+            Store.samplegroups = sorted(Store.samplegroups)
         # Make folder for storing data and find data-containing files
         if self.sampledir.exists() is False:
             pl.Path.mkdir(self.sampledir)
@@ -58,11 +58,11 @@ class GetSample:
         self.vector = None
         self.vector_length = None
 
-        if process is False and project is True:
+        if process is False and projection is True:
             for channel in self.channels:  # Store all found channel names
-                if (channel.lower() not in [c.lower() for c in store.channels] and
+                if (channel.lower() not in [c.lower() for c in Store.channels] and
                         channel.lower() != Sett.MPname.lower()):
-                    store.channels.append(channel)
+                    Store.channels.append(channel)
             self.find_sample_vector(paths.datadir)
 
     def find_sample_vector(self, path):  # path = data directory
@@ -462,15 +462,15 @@ class GetChannel:
         self.data = self.read_channel(self.pospath)
         self.read_additional(data_keys)
         if 'ClusterID' in self.data.columns:
-            store.clusterPaths.append(self.path)
+            Store.clusterPaths.append(self.path)
 
     def read_channel(self, path):
         """Read channel data into a dataframe."""
         try:
             data = system.read_data(str(path), header=Sett.header_row)
             channel = self.name
-            if channel.lower() not in [c.lower() for c in store.channels] and channel.lower() != Sett.MPname.lower():
-                store.channels.append(self.name)
+            if channel.lower() not in [c.lower() for c in Store.channels] and channel.lower() != Sett.MPname.lower():
+                Store.channels.append(self.name)
             return data
         except ValueError:
             lg.logprint(LAM_logger, 'Cannot read channel path {}'.format(path),
@@ -672,11 +672,11 @@ class DefineWidths:
     def average_width(self, datadir):
         """Calculate width based on feature distance and side."""
 
-        def _get_approx_width(data):
+        def _get_approx_width(sub_data):
             """Approximate sample's width at bin."""
             width = 0
             for val in [-1, 1]:
-                distances = data.loc[(data.hand == val)].ProjDist
+                distances = sub_data.loc[(sub_data.hand == val)].ProjDist
                 if not distances.empty:
                     temp = distances.groupby(pd.qcut(distances, 10, duplicates='drop')).mean()
                     if not temp.empty:
@@ -723,8 +723,8 @@ def find_existing(paths: system.Paths):
     msg = 'Collecting pre-existing data.'
     print(msg)
     lg.logprint(LAM_logger, msg, 'i')
-    mps = pd.DataFrame(columns=store.samples)
-    for smpl in store.samples:
+    mps = pd.DataFrame(columns=Store.samples)
+    for smpl in Store.samples:
         smplpath = paths.samplesdir.joinpath(smpl)
         # FIND MP
         if Sett.useMP:
@@ -755,7 +755,7 @@ def find_existing(paths: system.Paths):
     mps.to_csv(paths.datadir.joinpath('MPs.csv'))
     samples = mps.columns.tolist()
     groups = set({s.casefold(): s.split('_')[0] for s in samples}.values())
-    store.samplegroups = sorted(groups)
+    Store.samplegroups = sorted(groups)
 
 
 def get_counts(paths):
@@ -774,7 +774,7 @@ def get_counts(paths):
     # Find the smallest and largest anchor bin-number of the dataset
     mp_max, mp_min = mps.max(axis=1).values[0], mps.min(axis=1).values[0]
     # Store the bin number of the row onto which samples are anchored to
-    store.center = mp_max
+    Store.center = mp_max
     # Find the size of needed dataframe, i.e. so that all anchored samples fit
     mp_diff = mp_max - mp_min
 
@@ -787,14 +787,14 @@ def get_counts(paths):
             print('WARNING: {}'.format(msg))
             lg.logprint(LAM_logger, msg, 'w')
         groups = set({s.casefold(): s.split('_')[0] for s in samples}.values())
-        store.samplegroups = sorted(groups)
-        store.channels = [c.stem.split('_')[1] for c in paths.datadir.glob("All_*.csv")]
+        Store.samplegroups = sorted(groups)
+        Store.channels = [c.stem.split('_')[1] for c in paths.datadir.glob("All_*.csv")]
         try:  # If required lengths of matrices haven't been defined because
             # Process and Count are both False, get the sizes from files.
             chan = Sett.vectChannel
             path = paths.datadir.joinpath("Norm_{}.csv".format(chan))
             temp = system.read_data(path, test=False, header=0)
-            store.totalLength = temp.shape[0]  # Length of anchored matrices
+            Store.totalLength = temp.shape[0]  # Length of anchored matrices
             path = paths.datadir.joinpath("All_{}.csv".format(chan))
             temp = system.read_data(path, test=False, header=0)
             Sett.projBins = temp.shape[0]
@@ -805,7 +805,7 @@ def get_counts(paths):
         return
 
     # The total length of needed matrix when using 'Count'
-    store.totalLength = int(Sett.projBins + mp_diff)
+    Store.totalLength = int(Sett.projBins + mp_diff)
 
     # Counting and anchoring of data:
     if Sett.process_counts:
@@ -818,18 +818,18 @@ def get_counts(paths):
             print('  {}  ...'.format(name))
             # Anchor sample's data to the full data matrix
             ch_counts = Normalize(path)
-            ch_counts.starts, norm_counts = ch_counts.normalize_samples(mps, store.totalLength, store.center)
+            ch_counts.starts, norm_counts = ch_counts.normalize_samples(mps, Store.totalLength, Store.center)
             # Get average bin counts
             ch_counts.averages(norm_counts)
             # Get averages of additional data per bin
-            ch_counts.avg_add_data(paths, Sett.AddData, store.totalLength)
+            ch_counts.avg_add_data(paths, Sett.AddData, Store.totalLength)
 
         # Approximate width of sample
         if Sett.measure_width:
             print('  Width  ...')
             width_path = paths.datadir.joinpath('Sample_widths.csv')
             width_counts = Normalize(width_path)
-            _, _ = width_counts.normalize_samples(mps * 2, store.totalLength * 2, store.center * 2,
+            _, _ = width_counts.normalize_samples(mps * 2, Store.totalLength * 2, Store.center * 2,
                                                   name='Sample_widths_norm')
         lg.logprint(LAM_logger, 'Channels normalized.', 'i')
 
@@ -841,7 +841,7 @@ def project(paths):
     # Loop through all directories in the root directory
     for path in [p for p in Sett.workdir.iterdir() if p.is_dir() and p.stem != 'Analysis Data']:
         # Initialize sample variables
-        sample = GetSample(path, paths, process=False, project=True)
+        sample = GetSample(path, paths, process=False, projection=True)
         print(f"  {sample.name}  ...")
         # Find anchoring point of the sample
         sample.MP = sample.get_mps(Sett.MPname, Sett.useMP, paths.datadir)

@@ -23,7 +23,7 @@ import src.logger as lg
 import src.process as process
 import src.system as system
 from src.plot import Plotting
-from src.settings import store, Settings as Sett
+from src.settings import Store, Settings as Sett
 from src.statsMWW import VersusStats, TotalStats
 
 LAM_logger = None
@@ -33,12 +33,12 @@ class Samplegroups:
     """Holds and handles all sample groups, i.e. every sample of analysis."""
 
     # Initiation of variables shared by all samples.
-    _groups, _chanPaths, _samplePaths, _addData = [], [], [], []
+    _groups, _chanPaths, sample_paths, _addData = [], [], [], []
     paths = pl.Path('./')
-    _grpPalette = {}
-    _AllMPs = None
-    _length = 0
-    _center = None
+    grp_palette = {}
+    sample_mps = None
+    bin_length = 0
+    center_bin = None
 
     def __init__(self, paths=None, child=False):
         if child:
@@ -46,29 +46,29 @@ class Samplegroups:
 
         # Creation of variables related to all samples, that are later passed
         # on to child classes.
-        Samplegroups._groups = sorted(store.samplegroups)
+        Samplegroups._groups = sorted(Store.samplegroups)
         Samplegroups._chanPaths = list(paths.datadir.glob('Norm_*'))
-        Samplegroups._samplePaths = [p for p in paths.samplesdir.iterdir() if p.is_dir()]
+        Samplegroups.sample_paths = [p for p in paths.samplesdir.iterdir() if p.is_dir()]
         Samplegroups._addData = list(paths.datadir.glob('Avg_*'))
 
         # Data and other usable directories
         Samplegroups.paths = paths
 
         # Total length of needed data matrix of all anchored samples
-        Samplegroups._length = store.totalLength
+        Samplegroups.bin_length = Store.totalLength
 
         # Get MPs of all samples
         mp_path = paths.datadir.joinpath('MPs.csv')
-        Samplegroups._AllMPs = system.read_data(mp_path, header=0, test=False)
+        Samplegroups.sample_mps = system.read_data(mp_path, header=0, test=False)
 
         # If anchor point index is defined, find the start index of samples
-        if store.center is not None:
-            Samplegroups._center = store.center
+        if Store.center is not None:
+            Samplegroups.center_bin = Store.center
 
         # Assign color for each sample group
         groupcolors = sns.xkcd_palette(Sett.palette_colors)
         for i, grp in enumerate(Samplegroups._groups):
-            Samplegroups._grpPalette.update({grp: groupcolors[i]})
+            Samplegroups.grp_palette.update({grp: groupcolors[i]})
 
         lg.logprint(LAM_logger, 'Sample groups established.', 'i')
 
@@ -174,7 +174,7 @@ class Samplegroups:
 
         # Finding the name of the data under analysis from its filepath
         name = '_'.join(str(path.stem).split('_')[name_sep:])
-        center = self._center  # Getting the bin to which samples are centered
+        center = self.center_bin  # Getting the bin to which samples are centered
         return read_data, name, center
 
     def get_clusters(self):
@@ -328,7 +328,7 @@ class Samplegroups:
         system.save_to_file(full_df, datadir, 'Total Counts.csv', append=False, w_index=True)
 
         # Find totals of additional data
-        for channel in [c for c in store.channels if c not in ['MP', 'R45', Sett.MPname]]:
+        for channel in [c for c in Store.channels if c not in ['MP', 'R45', Sett.MPname]]:
             full_df = pd.DataFrame()
 
             for path in datadir.glob('Avg_{}_*'.format(channel)):
@@ -395,11 +395,11 @@ class Group(Samplegroups):
 
         # When first initialized, create variables inherited by samples:
         if not child:
-            self.color = self._grpPalette.get(self.group)
+            self.color = self.grp_palette.get(self.group)
             namerreg = re.compile("^{}".format(self.namer), re.I)
-            self.groupPaths = [p for p in self._samplePaths if namerreg.search(p.name)]
-            inds = self._AllMPs.columns.str.contains(self.namer)
-            self.MPs = self._AllMPs.loc[:, inds]
+            self.groupPaths = [p for p in self.sample_paths if namerreg.search(p.name)]
+            inds = self.sample_mps.columns.str.contains(self.namer)
+            self.MPs = self.sample_mps.loc[:, inds]
 
 
 class Sample(Group):
@@ -435,7 +435,7 @@ class Sample(Group):
         system.save_to_file(binned_counts, self.paths.datadir, filename)
 
         # Relate the counts to context, i.e. anchor them at the MP
-        insert, _ = process.relate_data(binned_counts, self.MP, self._center, self._length)
+        insert, _ = process.relate_data(binned_counts, self.MP, self.center_bin, self.bin_length)
 
         # Save the data
         counts_series = pd.Series(data=insert, name=self.name)
@@ -579,27 +579,19 @@ class Sample(Group):
         if not clusters:  # Finding nearest distances
             new_data, means, filename = _find_nearest()
             means_series = pd.Series(means, name=self.name)
-            insert, _ = process.relate_data(means_series, self.MP, self._center, self._length)
+            insert, _ = process.relate_data(means_series, self.MP, self.center_bin, self.bin_length)
             means_insert = pd.Series(data=insert, name=self.name)
             system.save_to_file(means_insert, self.paths.datadir, filename)
 
         else:  # Finding clusters
+            if not xy_pos.empty:
+                all_cl = _find_clusters()
+            else:
+                all_cl = False
 
-            # DBSCAN TEST
-            # from sklearn.cluster import DBSCAN
-            # model = DBSCAN(eps=Sett.cl_max_dist, min_samples=Sett.cl_min)
-            # clusters = model.fit(xy_pos.loc[:, ['x', 'y', 'z']].values)
-            # cl_labels = pd.Series(clusters.labels_).replace(-1, np.nan)
-            # DBSCAN END TEST
-
-            all_cl = _find_clusters()
             # Create dataframe for storing the obtained data
             cl_data = pd.DataFrame(index=data.index, columns=['ID', 'ClusterID'])
             cl_data = cl_data.assign(ID=data.ID)  # Copy ID column
-
-            # DBSCAN
-            # cl_data.loc[cl_data.ID == xy_pos.ID, 'ClusterID'] = cl_labels
-            # DBSCAN END
 
             # Give name from a continuous range to each of the found clusters
             # and add it to cell-specific data (for each belonging cell).
@@ -610,6 +602,7 @@ class Sample(Group):
             else:
                 print(f"-> No clusters found for {self.name}.")
                 cl_data.loc[:, 'ClusterID'] = np.nan
+
             # Merge obtained data with the original data
             new_data = data.merge(cl_data, how='outer', copy=False, on=['ID'])
             self.count_clusters(new_data, data.name)
@@ -706,13 +699,13 @@ def subset_data(data, compare, vol_incl, sample):
 def test_control():
     """Assert that control group exists, and if not, handle it."""
     # If control group is not found:
-    if Sett.cntrlGroup in store.samplegroups:
+    if Sett.cntrlGroup in Store.samplegroups:
         return True
     lg.logprint(LAM_logger, 'Set control group not found', 'c')
 
     # Test if entry is due to capitalization error:
     namer = re.compile(r"{}$".format(re.escape(Sett.cntrlGroup)), re.I)
-    for group in store.samplegroups:
+    for group in Store.samplegroups:
         if re.match(namer, group):  # If different capitalization:
             msg = "Control group-setting is case-sensitive!"
             print(f"WARNING: {msg}")
@@ -742,16 +735,16 @@ def ask_control():
     # Print groups and demand input for control:
     while flag:
         print('Found groups:')
-        for i, grp in enumerate(sorted(store.samplegroups)):
+        for i, grp in enumerate(sorted(Store.samplegroups)):
             print('{}: {}'.format(i, grp))
         msg = "Select the number of control group: "
         print('\a')
         ans = system.ask_user(msg, dlgtype='integer')
         if ans is None:
             raise KeyboardInterrupt
-        if 0 <= ans <= len(store.samplegroups):
+        if 0 <= ans <= len(Store.samplegroups):
             # Change control based on input
-            Sett.cntrlGroup = sorted(store.samplegroups)[ans]
+            Sett.cntrlGroup = sorted(Store.samplegroups)[ans]
             print(f"Control group set as '{Sett.cntrlGroup}'.\n")
             flag = 0
         else:

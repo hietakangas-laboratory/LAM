@@ -21,15 +21,15 @@ command:
 
 If you do not have Python in your system environment variables, you will also need
 to give the full path to your python.exe,
-    e.g. c:\Program Files\Python38\python install setup.py
+    e.g. c:\Program Files\Python38\python setup.py install
 
 Then activate the virtual environment with:
      Linux: 	source <yourenvname>/bin/activate
      Windows: 	<yourenvname>\Scripts\activate
 
 You can then install LAM and dependencies on your environment with:
-    python install <path\to\LAM-master\setup.py>
-    E.g. python install C:\User\LAM-master\setup.py
+    python <path\to\LAM-master\setup.py> install
+    E.g. python C:\User\LAM-master\setup.py install
 
 Windows-users may need to install Shapely>=1.7.0 from a pre-compiled wheel in order
 to properly link GEOS and cython.
@@ -82,7 +82,7 @@ import sys
 import pathlib as pl
 
 # LAM module
-from src.settings import store, Settings as Sett
+from src.settings import Store, Settings as Sett
 import src.parse_cmds as pc
 import src.system as system
 import src.analysis as analysis
@@ -121,7 +121,7 @@ def main(gui_root=None):
     process.get_counts(system_paths)
 
     # Storing of descriptive data of analysis, i.e. channels/samples/groups
-    system_paths.save_AnalysisInfo(store.samples, store.samplegroups, store.channels)
+    system_paths.save_analysis_info(Store.samples, Store.samplegroups, Store.channels)
 
     # Create object to hold samplegroup info
     sample_groups = analysis.Samplegroups(system_paths)
@@ -140,9 +140,9 @@ def main(gui_root=None):
 
     # Find border regions
     if Sett.border_detection:
-        conf = bd.test_channel(sample_groups._samplePaths, Sett.border_channel)
+        conf = bd.test_channel(sample_groups.sample_paths, Sett.border_channel)
         if conf:
-            bd.detect_borders(system_paths, sample_groups._samplePaths, sample_groups._grpPalette, store.center,
+            bd.detect_borders(system_paths, sample_groups.sample_paths, sample_groups.grp_palette, Store.center,
                               Sett.border_vars, Sett.scoring_vars, Sett.peak_thresh, Sett.border_channel)
 
     # Get and select border data if needed:
@@ -174,7 +174,7 @@ def main_catch_exit(LAM_logger=None, gui_root=None):
         lg.close_loggers()
         print('\nCOMPLETED\n')
 
-    # Catch and log possible exits from the analysis
+    # Catch and log possible exits from the analysis:
     except KeyboardInterrupt:
         lg.logprint(LAM_logger, 'STOPPED: keyboard interrupt', 'e')
         print("STOPPED: Keyboard interrupt by user.\n")

@@ -17,7 +17,7 @@ import seaborn as sns
 import pandas as pd
 
 # LAM modules
-from src.settings import Settings as Sett, store
+from src.settings import Settings as Sett, Store
 import src.logger as lg
 import src.system as system
 import src.plotfuncs as pfunc
@@ -59,6 +59,7 @@ class MakePlot:
             print("INFO: {}".format(msg))
             lg.logprint(LAM_logger, msg, 'w')
             return
+
         # Adjust plot sizes so that everything fits properly
         fig = plt.gcf()
         if 'adjust' in kws.keys():
@@ -89,8 +90,8 @@ class MakePlot:
             self.stats_total(**kws)
 
         # Add detected peaks to plots:
-        if isinstance(store.border_peaks, pd.DataFrame):
-            test = not store.border_peaks.empty
+        if isinstance(Store.border_peaks, pd.DataFrame):
+            test = not Store.border_peaks.empty
         else:
             test = False
         if 'peaks' in args and Sett.add_peaks and test:
@@ -155,10 +156,10 @@ class MakePlot:
         # Select only peaks that belong into groups being plotted
         if 'Sample Group' in self.data.columns:
             groups = self.data.loc[:, 'Sample Group'].unique()
-            if isinstance(store.border_peaks, pd.DataFrame):
-                peaks = store.border_peaks[store.border_peaks.group.isin(groups)]
+            if isinstance(Store.border_peaks, pd.DataFrame):
+                peaks = Store.border_peaks[Store.border_peaks.group.isin(groups)]
         else:
-            peaks = store.border_peaks
+            peaks = Store.border_peaks
         # Add peaks to each plot in figure
         for ax in self.g.axes.flat:
             vmin, vtop = ax.get_ylim()
@@ -431,13 +432,13 @@ class Plotting:
 
         # SAMPLE-SPECIFIC POSITION PLOTS:
         # Find all cluster data files for each sample
-        chan_paths = [c for p in self.sgroups._samplePaths for c in
+        chan_paths = [c for p in self.sgroups.sample_paths for c in
                       p.glob('*.csv') if c.stem in cl_chans]
         cols = ['Position X', 'Position Y', 'ClusterID']
         kws = {'ylabel': 'Y', 'xlabel': 'X', 'height': 5, 'adjust': {'top': 0.65, 'bottom': 0.2}}
         new_kws = merge_kws(self.kws, kws)
         # Find all channel paths relevant to cluster channels
-        for sample in store.samples:
+        for sample in Store.samples:
             smpl_paths = [p for p in chan_paths if p.parent.name == sample]
             handle = system.DataHandler(self.sgroups, smpl_paths, savepath)
             all_data = handle.get_sample_data(cols, 'no_var')
@@ -520,10 +521,10 @@ class Plotting:
         new_kws.update({'drop_grouper': ['Sample Group', 'Type'], 'row': 'Type', 'col': None,
                         'melt': {'id_vars': ['Sample Group', 'Channel', 'DistBin'], 'var_name': 'Type',
                                  'value_name': 'Value'}})
-        paths = [p for s in self.sgroups._samplePaths for p in s.glob('*.csv')
+        paths = [p for s in self.sgroups.sample_paths for p in s.glob('*.csv')
                  if p.stem not in ['Vector', 'MPs', 'MP', Sett.MPname]]
         # Collect and plot each channel separately:
-        for channel in store.channels:
+        for channel in Store.channels:
             print("     {}  ...".format(channel))
             ch_paths = [p for p in paths if p.stem == channel]
             handle = system.DataHandler(self.sgroups, ch_paths)
@@ -683,7 +684,7 @@ def get_unit(string):
         key = sub_str[0]
     # If not user defined value:
     if key not in Sett.AddData.keys():
-        if key in store.channels:
+        if key in Store.channels:
             return '{} Count'.format(string)
         return 'Value'
     # Otherwise, build label from the sub-units

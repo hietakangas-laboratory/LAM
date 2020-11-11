@@ -527,9 +527,9 @@ class BaseGUI:
         # Set new text variables to be shown
         self.det_groups.set(grpstring.get())
         self.det_chans.set(chanstring.get())
-        from src.settings import store
-        store.samplegroups = list(det_groups)
-        store.channels = [c for c in det_chans if c.lower() != self.handle('MPname').get().lower()]
+        from src.settings import Store
+        Store.samplegroups = list(det_groups)
+        Store.channels = [c for c in det_chans if c.lower() != self.handle('MPname').get().lower()]
 
     def vector_creation(self):
         self.run_b.configure(state='disable')

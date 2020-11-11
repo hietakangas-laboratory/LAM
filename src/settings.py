@@ -242,7 +242,7 @@ class Settings:
     non_stdout = False  # Redirect stdout to a window when using executable
 
 
-class store:
+class Store:
     """
     Store important variables for the analysis.
 

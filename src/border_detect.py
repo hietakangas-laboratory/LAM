@@ -22,7 +22,7 @@ import warnings
 import tkinter as tk
 
 # LAM modules
-from src.settings import Settings as Sett, store
+from src.settings import Settings as Sett, Store
 import src.logger as lg
 import src.system as system
 
@@ -622,18 +622,18 @@ def ask_peaks(peaks, gui_root):
 
     if gui_root is not None:  # If GUI, make input window
         win = PeakDialog(data=peaks, master=gui_root)
-        store.border_peaks = peaks.loc[win.bools, :]
+        Store.border_peaks = peaks.loc[win.bools, :]
 
     else:  # Otherwise ask for written input
         print('\aDetected peaks:')
         print(peaks)
         ans = input('\nGive indices of peaks to DROP (e.g. 1, 2): ')
         if ans == '':
-            store.border_peaks = peaks
+            Store.border_peaks = peaks
         else:
             nums = [int(v) for v in ans.split(',')]
             if nums:
-                store.border_peaks = peaks.loc[peaks.index.difference(nums), :]
+                Store.border_peaks = peaks.loc[peaks.index.difference(nums), :]
 
 
 def peak_selection(datadir, gui_root=None):
@@ -648,11 +648,11 @@ def peak_selection(datadir, gui_root=None):
         return
 
     if Sett.force_dialog:
-        store.border_peaks = peaks
+        Store.border_peaks = peaks
     elif Sett.select_peaks:  # Ask for subset of peaks if needed
         ask_peaks(peaks, gui_root)
     else:
-        store.border_peaks = peaks
+        Store.border_peaks = peaks
 
 
 def test_channel(samplepaths, border_channel):

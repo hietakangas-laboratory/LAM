@@ -21,7 +21,7 @@ import numpy as np
 # LAM modules
 import src.logger as lg
 import src.plot as plot
-from src.settings import store, Settings as Sett
+from src.settings import Store, Settings as Sett
 
 LAM_logger = None
 
@@ -74,7 +74,7 @@ class Paths:
                     else:
                         print('Command not understood.')
 
-    def save_AnalysisInfo(self, samples, groups, channels):
+    def save_analysis_info(self, samples, groups, channels):
         """For saving information of all analyzed samples."""
         with open(str(self.outputdir.joinpath('Analysis_info.txt')), 'w') as f:
             f.write('GROUPS:\t')
@@ -98,10 +98,10 @@ class DataHandler:
             self.savepath = samplegroups.paths.plotdir
         else:
             self.savepath = savepath
-        self.palette = samplegroups._grpPalette
-        self.center = samplegroups._center
-        self.total_length = samplegroups._length
-        self.MPs = samplegroups._AllMPs
+        self.palette = samplegroups.grp_palette
+        self.center = samplegroups.center_bin
+        self.total_length = samplegroups.bin_length
+        self.MPs = samplegroups.sample_mps
         self.paths = in_paths
 
     def get_data(self, *args, **kws):
@@ -302,7 +302,7 @@ def start(test_vectors=True, only_vectors=False):
             raise SystemExit
 
     # Find and store all sample names
-    store.samples = [p.name for p in paths.samplesdir.iterdir() if p.is_dir()]
+    Store.samples = [p.name for p in paths.samplesdir.iterdir() if p.is_dir()]
     return paths
 
 

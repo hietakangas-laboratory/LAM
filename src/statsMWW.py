@@ -51,14 +51,21 @@ class VersusStats:
         cols = data.any().index
         valid_data = data.loc[:, cols]
         valid_grp_n = cols.map(lambda x: str(x).split('_')[0]).unique().size
+
         if not valid_data.any().any() or valid_grp_n < 2:
-            print(f"WARNING: {self.channel} - Insufficient data, skipped.")
             self.error = True
 
         # Find group-specific data
         grp_data = valid_data.T.groupby(lambda x: str(x).split('_')[0])
-        self.ctrl_data = grp_data.get_group(self.ctrl_grp).T
-        self.test_data = grp_data.get_group(self.test_grp).T
+        try:
+            self.ctrl_data = grp_data.get_group(self.ctrl_grp).T
+            self.test_data = grp_data.get_group(self.test_grp).T
+        except KeyError:  # If sample group not found, i.e. no sample has data
+            self.error = True
+
+        if self.error:
+            print(f"WARNING: {self.channel} - Insufficient data, skipped.")
+
         stat_cols = ['U Score', 'Corr. Greater', 'P Greater', 'Reject Greater', 'Corr. Lesser', 'P Lesser',
                      'Reject Lesser', 'Corr. Two-sided', 'P Two-sided', 'Reject Two-sided']
         stat_data = pd.DataFrame(index=data.index, columns=stat_cols)
