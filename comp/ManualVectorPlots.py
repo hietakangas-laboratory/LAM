@@ -27,7 +27,7 @@ import numpy as np
 
 
 # Path to analysis directory
-analysis_dir = pl.Path(r'E:\Code_folder\DSS - Copy')
+analysis_dir = pl.Path(r'C:')
 base_channel = 'DAPI'
 channel_data_header = 2
 
