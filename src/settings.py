@@ -223,21 +223,11 @@ class Settings:
     # raw, rgba, svg, svgz, tif, tiff.
     saveformat = "pdf"
 
-    # Changing seaborn style and context may break plots
-    seaborn_style = 'ticks'   # Different styles of plots, e.g. background
-    # Available styles #
-    # write to the console the following lines
-    # 1.    import matplotlib.style as style
-    # 2.    style.available
-
-    seaborn_context = 'talk'  # Defines plot object sizes, i.e. text
-    # size order small to large: 'paper', 'talk', 'poster'
-
     # Define colors used for sample groups
     # (xkcd colors: 'https://xkcd.com/color/rgb/')
-    palette_colors = ['orange yellow', 'aqua marine', 'tomato', 'dark lime', 'tan brown', 'red violet', 'dusty green',
-                      'sandy brown', 'dusky purple', 'purply pink', 'blood', 'soft blue', 'brown grey', 'deep lavender',
-                      'pine']
+    palette_colors = ['soft blue', 'goldenrod', 'moss green', 'faded red', 'turquoise', 'dusky pink', 'aqua marine',
+                      'tan brown', 'red violet', 'blood', 'brown grey',  'dark lime', 'sandy brown', 'pine',
+                      'purply pink']
 
     non_stdout = False  # Redirect stdout to a window when using executable
 
