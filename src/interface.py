@@ -514,7 +514,7 @@ class BaseGUI:
                     channel = str(channelpath.name).split('_')[-2]
                     det_chans.add(channel)
             except (IndexError, TypeError):
-                pass
+                print("Warning: Cannot determine groups and/or channels.")
         # Change text variables to contain new groups and channels
         if det_chans:
             chanstring = tk.StringVar(value=f"Detected channels: {', '.join(sorted(det_chans))}")

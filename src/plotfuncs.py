@@ -167,6 +167,8 @@ def lines(plotter, **kws):
                                  y=data.loc[:, melt_kws.get('value_name')], ci='sd', err_style='band',
                                  hue=kws.get('hue'), dashes=False, alpha=1, palette=plotter.handle.palette,
                                  err_kws=err_dict))
+    # for ax in g.axes.flat:
+    #     ax.set_ylim(100, 300)
     return g
 
 

@@ -177,7 +177,7 @@ class Settings:
     ylim = 35  # negative log2 y-limit
 
     # The name of the control group that the statistics are run against.
-    cntrlGroup = "starv"
+    cntrlGroup = "ctrl"
 
     observations = True  # Plot individual observations. DEPRECATED!
 
