@@ -768,11 +768,11 @@ def get_widths(samplesdir, datadir):
         dreg = re.compile(f'^{Sett.vectChannel}.csv', re.I)  # channel data
 
         try:  # Match terms to found paths
-            vect_path = [p for p in files if vreg.match(p.name)]
-            data_path = [p for p in files if dreg.match(p.name)]
+            vect_paths = [p for p in files if vreg.match(p.name)]
+            data_paths = [p for p in files if dreg.match(p.name)]
             # Read found paths
-            vector_data = system.read_data(vect_path[0], header=0, test=False)
-            data = system.read_data(data_path[0], header=0)
+            vector_data = system.read_vector(vect_paths)
+            data = system.read_data(data_paths[0], header=0)
 
         # Error handling
         except (StopIteration, IndexError):

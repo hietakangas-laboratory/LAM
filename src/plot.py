@@ -502,7 +502,7 @@ class Plotting:
         """Create distributions of all variables."""
         # Channels:
         m_kws = {'IDs': ['Sample Group', 'Channel'], 'title_y': 0.97,
-                 'ylabel': 'Density', 'xlabel': 'Feature Count', 'row': 'Channel', 'col': None, 'aspect': 1.5,
+                 'ylabel': 'Density', 'xlabel': None, 'row': 'Channel', 'col': None, 'aspect': 1.5,
                  'melt': {'id_vars': ['Sample Group', 'Channel'], 'var_name': 'Linear Position', 'value_name': 'Value'},
                  'drop_grouper': ['Sample Group', 'Channel'],
                  'gridspec': {'top': 0.92, 'left': 0.15, 'right': 0.8, 'hspace': 0.6}}

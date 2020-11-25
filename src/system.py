@@ -14,9 +14,10 @@ from tkinter import simpledialog as sd
 import warnings
 
 # Other packages
+import numpy as np
 import pandas as pd
 import pathlib as pl
-import numpy as np
+import shapely.geometry as gm
 
 # LAM modules
 import src.logger as lg
@@ -396,3 +397,21 @@ def ask_user(dlg, dlgtype='string', use_gui=Sett.GUI):
     else:
         ans = input(dlg)
     return ans
+
+
+def read_vector(vector_paths):
+    """Read vector and transform to LineString."""
+
+    # Read depending on file type
+    path = [path for path in vector_paths if path.suffix == '.txt']
+    if path:
+        vector_df = pd.read_csv(path[0], sep="\t", header=None)
+        vector_df.columns = ["X", "Y"]
+    else:
+        vector_df = pd.read_csv(vector_paths[0])
+
+    # Reformat data and change to LineString
+    vector_coords = list(zip(vector_df.loc[:, 'X'].astype('float'),
+                    vector_df.loc[:, 'Y'].astype('float')))
+    vector = gm.LineString(vector_coords)
+    return vector

@@ -119,8 +119,8 @@ def distribution(plotter, **kws):
         discrete = True
     try:
         g = sns.displot(data=data, x='Value', hue=kws.get('hue'), col=kws.get('col'), row=kws.get('row'), alpha=0.4,
-                        stat="density", palette=plotter.handle.palette, kde=True, height=2.5, aspect=2.25,
-                        row_order=row_order, common_norm=False, discrete=discrete, common_bins=False,
+                        stat="probability", palette=plotter.handle.palette, kde=True, height=2.5, aspect=2.25,
+                        row_order=row_order, common_norm=False, discrete=discrete, common_bins=True, element='bars',
                         facet_kws={'legend_out': True, 'sharex': False, 'sharey': False,
                                    'gridspec_kws': kws.get('gridspec')})
     except np.linalg.LinAlgError:
@@ -133,6 +133,7 @@ def distribution(plotter, **kws):
     for ind, ax in enumerate(g.axes.flat):
         xmax = data.loc[(data.loc[:, kws.get('row')] == row_order[ind]), 'Value'].max()
         ax.set_xlim(left=0, right=xmax*1.2)
+        ax.set_xlabel('')
     return g
 
 

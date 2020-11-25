@@ -48,7 +48,7 @@ class GetSample:
             Store.samplegroups.append(self.group)
             Store.samplegroups = sorted(Store.samplegroups)
         # Make folder for storing data and find data-containing files
-        if self.sampledir.exists() is False:
+        if not self.sampledir.exists():
             pl.Path.mkdir(self.sampledir)
         self.channelpaths = list([p for p in sample_path.iterdir() if p.is_dir()])
         self.channels = [str(p).split('_')[(-2)] for p in self.channelpaths]
@@ -69,45 +69,19 @@ class GetSample:
         """Find sample's vector data."""
         try:  # Find sample's vector file
             paths = list(self.sampledir.glob('Vector.*'))
-            if len(paths) > 1:  # If multiple vector files found
-                try:  # Prioritize txt before csv
-                    vectorp = [p for p in paths if p.suffix == '.txt'][0]
-                except IndexError:
-                    vectorp = paths[0]
-            else:
-                vectorp = paths[0]
-            # Read file
-            if vectorp.suffix == ".txt":
-                # If vector is user-generated with ImageJ line tools:
-                temp_vect = pd.read_csv(vectorp, sep="\t", header=None)
-                # Test if data had column headers and handle it
-                if temp_vect.iat[0, 0] in ['X', 'Y']:
-                    # Remove the row with column names and put it in the columns
-                    row, temp_vect = temp_vect.iloc[0], temp_vect.iloc[1:]
-                    temp_vect.columns = row
-                else:
-                    temp_vect.columns = ["X", "Y"]
-            elif vectorp.suffix == ".csv":
-                temp_vect = pd.read_csv(vectorp)
-            # Create LineString-object from the vector data
-            vector = list(zip(temp_vect.loc[:, 'X'].astype('float'), temp_vect.loc[:, 'Y'].astype('float')))
-            self.vector = gm.LineString(vector)
+            self.vector = system.read_vector(paths)
             self.vector_length = self.vector.length
             length_series = pd.Series(self.vector_length, name=self.name)
             system.save_to_file(length_series, path, 'Length.csv')
 
         # If vector file not found
-        except (FileNotFoundError, StopIteration):
+        except (FileNotFoundError, IndexError):
             msg = f'Vector-file NOT found for {self.name}'
             lg.logprint(LAM_logger, msg, 'e')
             print(f'ERROR: {msg}')
-        except AttributeError:  # If vector file is faulty
+        except (AttributeError, ValueError):  # If vector file is faulty
             msg = f'Faulty vector for {self.name}'
-            lg.logprint(LAM_logger, msg, 'w')
-            print(f'ERROR: Faulty vector for {msg}')
-        except ValueError:
-            msg = f'Vector data file in wrong format: {self.name}'
-            lg.logprint(LAM_logger, msg, 'ex')
+            lg.logprint(LAM_logger, msg, 'c')
             print(f'CRITICAL: {msg}')
 
     def get_vect_data(self, channel):
@@ -362,30 +336,30 @@ class GetSample:
                 mp_data = system.read_data(mp_path, header=Sett.header_row, test=False)
                 mp_data = mp_data.loc[:, ['Position X', 'Position Y']]
                 if not mp_data.empty:
-                    mp_bin = self.project_mps(mp_data, self.vector, datadir, filename="MPs.csv")
+                    mp_bin = self.project_mps(mp_data, datadir, filename="MPs.csv")
                     mp_df = pd.DataFrame(data=[mp_bin.values], columns=['MP'])
                     mp_df.to_csv(self.sampledir.joinpath("MPs.csv"), index=False)
             except (StopIteration, ValueError, UnboundLocalError):
                 mp_bin = None
-                msg = 'could not find MP position for {}'.format(self.name)
+                msg = f'could not find MP position for {self.name}'
                 lg.logprint(LAM_logger, msg, 'e')
-                print("-> Failed to find MP position data.")
+                print("    -> Failed to find MP position data.")
         else:  # Sets measurement point values to zero when MP's are not used
             mp_bin = pd.Series(0, name=self.name)
             system.save_to_file(mp_bin, datadir, "MPs.csv")
             system.save_to_file(mp_bin, self.sampledir, "MPs.csv", append=False)
         return mp_bin
 
-    def project_mps(self, positions, vector, datadir, filename="some.csv"):
+    def project_mps(self, positions, datadir, filename="some.csv"):
         """For the projection of spot coordinates onto the vector."""
         xy_positions = list(zip(positions['Position X'], positions['Position Y']))
         # The shapely packages reguires transformation into Multipoints for the
         # projection.
         points = gm.MultiPoint(xy_positions)
         # Find point of projection on the vector.
-        positions["VectPoint"] = [vector.interpolate(vector.project(gm.Point(x))) for x in points]
+        positions["VectPoint"] = [self.vector.interpolate(self.vector.project(gm.Point(x))) for x in points]
         # Find normalized distance (0->1)
-        positions["NormDist"] = [vector.project(x, normalized=True) for x in positions["VectPoint"]]
+        positions["NormDist"] = [self.vector.project(x, normalized=True) for x in positions["VectPoint"]]
         # Find the bins that the points fall into
         # Determine bins of each feature
         edges = np.linspace(0, 1, Sett.projBins+1)
@@ -512,7 +486,7 @@ class GetChannel:
                 if paths[0] == self.pospath and not any(self.data.columns.str.contains(namer)):
                     print(f"'{key}' not in {self.pospath.name} of {self.sample.name} on channel {self.name}")
                 temp_data = system.read_data(str(paths[0]), header=Sett.header_row)
-                cols = temp_data.columns.map(lambda x, namer=namer: bool(re.match(namer, x)) or x == 'ID')
+                cols = temp_data.columns.map(lambda x, matcher=namer: bool(re.match(matcher, x)) or x == 'ID')
                 temp_data = temp_data.loc[:, cols]
                 add_data = pd.merge(add_data, temp_data, on='ID')
             else:  # If multiple files, e.g. intensity, get all
@@ -618,11 +592,6 @@ class DefineWidths:
         self.name = path.name
         self.sampledir = path
         self.data = data
-
-        # Make sure that data is a linestring-object
-        if not isinstance(vector, gm.LineString):
-            vlist = list(zip(vector.loc[:, 'X'].astype('float'), vector.loc[:, 'Y'].astype('float')))
-            vector = gm.LineString(vlist)
         self.vector = vector
 
         # Determine width:
