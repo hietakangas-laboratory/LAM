@@ -204,6 +204,8 @@ def run():
         import src.interface as interface
         root = tk.Tk()
         interface.BaseGUI(root)
+        logo = pl.Path(__file__).parents[1] / 'img' / "lam.ico"
+        root.iconbitmap(logo)
         root.mainloop()
 
     # Otherwise make workdir into usable path and start the analysis

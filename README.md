@@ -1,3 +1,5 @@
+![](/img/lam.ico)
+
 # Linear Analysis of Midgut
 ### ---------------LAM---------------
 
