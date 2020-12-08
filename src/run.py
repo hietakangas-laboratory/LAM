@@ -204,8 +204,13 @@ def run():
         import src.interface as interface
         root = tk.Tk()
         interface.BaseGUI(root)
-        logo = pl.Path(__file__).parents[1] / 'img' / "lam.ico"
-        root.iconbitmap(logo)
+        # Add LAM-icon
+        try:
+            logo = pl.Path(__file__).parents[1] / 'img' / "lam.ico"
+            root.iconbitmap(logo)
+        except tk.TclError:
+            pass
+
         root.mainloop()
 
     # Otherwise make workdir into usable path and start the analysis
