@@ -202,7 +202,7 @@ class DataHandler:
 
 def read_data(filepath, header=Sett.header_row, test=True, index_col=False):
     """Read csv-data."""
-
+    data = None
     try:  # Read data
         data = pd.read_csv(filepath, header=header, index_col=index_col)
         data = data.loc[:, ~data.columns.str.contains('^Unnamed')]
@@ -270,6 +270,7 @@ def save_to_file(data, directory, filename, append=True, w_index=False):
 
 def start(test_vectors=True, only_vectors=False):
     """Check that everything is OK when starting a run."""
+
     # If workdir variable isn't pathlib.Path, make it so
     if not isinstance(Sett.workdir, pl.Path):
         Sett.workdir = pl.Path(Sett.workdir)
@@ -415,3 +416,11 @@ def read_vector(vector_paths):
                     vector_df.loc[:, 'Y'].astype('float')))
     vector = gm.LineString(vector_coords)
     return vector
+
+
+def check_workdir():
+    """Check that given work directory exists or return path to data-folder."""
+    if pl.Path(Sett.workdir).exists():
+        return
+    else:
+        Sett.workdir = str(pl.Path(__file__).parents[1])

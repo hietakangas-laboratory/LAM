@@ -198,6 +198,9 @@ def run():
         parser = pc.make_parser()
         pc.change_settings(parser)
 
+    # Get or set work directory.
+    system.check_workdir()
+
     # Create GUI if needed
     if Sett.GUI:
         import tkinter as tk
