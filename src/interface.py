@@ -11,9 +11,12 @@ import tkinter as tk
 from tkinter import filedialog
 from copy import deepcopy
 from itertools import chain
+import sys
+
 # Other packages
 import pathlib as pl
 import pandas as pd
+
 # LAM modules
 from src.run import main_catch_exit
 from src.settings import Settings as Sett
@@ -1003,3 +1006,14 @@ def rename_scoring_vars(options):
     for key in keys:
         nkey = key.replace(Sett.border_channel, options['vectChannel'])
         options['scoring_vars'][nkey] = options['scoring_vars'].pop(key)
+
+def set_icon(window):
+    try:
+        if sys.platform == 'win32':
+            logo = pl.Path(__file__).parents[1] / 'img' / "lam.ico"
+            window.iconbitmap(logo)
+        else:
+            logo = pl.Path(__file__).parents[1] / 'img' / "lam.png"
+            window.iconphoto(True, tk.PhotoImage(file=logo))
+    except tk.TclError:
+        pass

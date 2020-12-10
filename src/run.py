@@ -208,11 +208,7 @@ def run():
         root = tk.Tk()
         interface.BaseGUI(root)
         # Add LAM-icon
-        try:
-            logo = pl.Path(__file__).parents[1] / 'img' / "lam.ico"
-            root.iconbitmap(logo)
-        except tk.TclError:
-            pass
+        interface.set_icon(root)
 
         root.mainloop()
 
