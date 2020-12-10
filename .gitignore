@@ -19,3 +19,5 @@ build
 dist
 
 lam.egg-info
+
+.github
