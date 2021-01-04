@@ -1,7 +1,5 @@
 *.swp'
 
-LAM install.txt
-
 .spyproject
 
 __pycache__

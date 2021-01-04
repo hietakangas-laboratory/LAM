@@ -1007,13 +1007,15 @@ def rename_scoring_vars(options):
         nkey = key.replace(Sett.border_channel, options['vectChannel'])
         options['scoring_vars'][nkey] = options['scoring_vars'].pop(key)
 
+
 def set_icon(window):
     try:
-        if sys.platform == 'win32':
+        if sys.platform.startswith('win'):
             logo = pl.Path(__file__).parents[1] / 'img' / "lam.ico"
             window.iconbitmap(logo)
         else:
-            logo = pl.Path(__file__).parents[1] / 'img' / "lam.png"
-            window.iconphoto(True, tk.PhotoImage(file=logo))
+            logo = pl.Path(__file__).parents[1] / 'img' / "lam.ico"
+            img = tk.PhotoImage(file=logo)
+            window.tk.call('wm', 'iconphoto', window._w, img)
     except tk.TclError:
         pass
