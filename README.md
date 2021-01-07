@@ -28,8 +28,10 @@ setup.py, console command 'lam-run' will also launch LAM. Settings are handled t
 includes argument parsing for most important settings ('python src/run.py -h' OR 'lam-run -h'). Refer to
 'docs/UserManual' for additional information.
 
+A video tutorial series on LAM can be found on YouTube [here](https://www.youtube.com/playlist?list=PLjv-8Gzxh3AynUtI3HaahU2oddMbDpgtx).
+
 Hietakangas lab also provides a stitching script that uses ImageJ to properly stitch images for object detection and
-following LAM analysis. The script can be found [here](https://github.com/hietakangas-laboratory/Stitch)
+following LAM analysis. The script can be found [here](https://github.com/hietakangas-laboratory/Stitch).
 
 ### Test data
 The 'data/'-directory includes a small test dataset of two sample groups with four samples each. Note that the
