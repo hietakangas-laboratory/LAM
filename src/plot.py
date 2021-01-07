@@ -63,7 +63,10 @@ class MakePlot:
         # Adjust plot sizes so that everything fits properly
         fig = plt.gcf()
         if 'adjust' in kws.keys():
-            fig.subplots_adjust(top=kws['adjust'].get('top'), bottom=kws['adjust'].get('bottom'))
+            adjust = kws['adjust']
+            fig.subplots_adjust(top=adjust.get('top'), bottom=adjust.get('bottom'),
+                                right=adjust.get('right'), left=adjust.get('left'),
+                                wspace=adjust.get('wspace'), hspace=adjust.get('hspace'))
             if 'hspace' in kws['adjust'].keys():
                 fig.subplots_adjust(hspace=kws['adjust'].get('hspace'))
         else:
@@ -584,11 +587,13 @@ class Plotting:
         handle = system.DataHandler(self.sgroups, path, savepath)
         plotter = MakePlot(plot_data, handle, total_stats.filename, sec_data=total_stats.stat_data)
         p_kws = {'row': None, 'col': 'Variable', 'x_order': order, 'height': 3, 'aspect': 1, 'title_y': 1,
-                 'ylabel': 'collect', 'xlabel': 'Sample Group', 'gridspec': {'wspace': 0.25}}
+                 'ylabel': 'collect', 'xlabel': 'Sample Group', #'gridspec': {'wspace': 0.25},
+                 'adjust': {'left': 0.2, 'right': 0.9, 'bottom': 0.17, 'wspace': 0.6, 'top': 0.85}}
         plotter(pfunc.violin, 'title', 'total_stats', 'labels', 'legend', **p_kws)
 
     def stat_versus(self, stats, path):
-        """Plot statistics of group versus group for all variables."""
+        """Plot statistics of group versus1
+         group for all variables."""
         # Restructure data to be plottable:
         ctrl_data = stats.ctrl_data.T
         test_data = stats.test_data.T
