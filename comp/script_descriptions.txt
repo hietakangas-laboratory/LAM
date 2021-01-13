@@ -1,23 +1,17 @@
 •	ChannelPositionPlots.py
-Create plots of cell locations on different channels.
+Create plots of cell locations within samples on different channels.
 
 •	combineSets.py
-Used to combine LAM-created data sets from cropped samples.
-
-•	FileMove.py
-Move and rename image files after splitting channels and focal planes (ImarisFileConverter.ijm)
-
-•	ImarisFileConverter.ijm
-Fix broken Aurox confocal images for the Imaris file converter & stitcher
+Used to combine LAM-created data sets from split datasets.
 
 •	ManualVectorPlots.py
-Create vector plots from vector files
+Create plots of sample vectors with one datachannel on background, e.g. DAPI + vector
 
 •	rotator.py
-Rotate coords around origin to properly orientate samples for LAM vector creation.
+Rotate coordinates of dataset around origin to properly orientate samples for LAM vector creation.
 
 •	split_dataset.py
-Split all data and vectors in a dataset based on cut point channels
+Split all data and vectors in a dataset based on defined cut points.
 
 •	SubsetDataChannel.py
 Filter a datachannel for all samples found in LAM's Samples-folder to create a new datachannel.
