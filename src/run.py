@@ -28,8 +28,12 @@ Then activate the virtual environment with:
      Windows: 	<yourenvname>\Scripts\activate
 
 You can then install LAM and dependencies on your environment with:
-    python <path\to\LAM-master\setup.py> install
-    E.g. python C:\User\LAM-master\setup.py install
+    pip install lam
+
+    OR ALTERNATIVELY by using the setup.cfg with the following command while
+    located in in LAM-master folder:
+
+    python setup.py install
 
 Windows-users may need to install Shapely>=1.7.0 from a pre-compiled wheel in order
 to properly link GEOS and cython.
