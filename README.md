@@ -14,19 +14,22 @@ analysis is performed after image processing and object detection. Consequently,
 features as input.
 
 ### Installation
-LAM is used in Python >= 3.7 environment. You can install LAM from command line using the 'setup.py' by giving command:
+LAM is used in a Python (>=3.7, <3.9) environment and can be found on PyPI. It can be installed with command
+**pip install lam**. Note that by installing this way, you will be restricted to the settings on the GUI and/or the
+available command line arguments, and will not be able to alter settings.py.
+
+You can alternatively install LAM from command line using the 'setup.py' by giving command:
 'python setup.py install' while located inside the LAM-master -directory. Windows-users are recommended to install
 Shapely>=1.7.0 from a pre-compiled wheel found [here](https://www.lfd.uci.edu/~gohlke/pythonlibs/#shapely) in order to
-properly link GEOS and cython.
+properly link GEOS and cython. The wheel can be installed with **pip install path/to/wheel**.
 
 The distribution also includes docs/requirements.txt and docs/LAMenv.yml that can be used to install dependencies using
 pip or conda (Anaconda), respectively. Recommendation is to install LAM into its own virtual environment.
 
 ### Usage
-LAM is used by executing 'src/run.py', which by default opens up a graphical user interface. If installed through
-setup.py, console command 'lam-run' will also launch LAM. Settings are handled through src/settings.py, but LAM also
-includes argument parsing for most important settings ('python src/run.py -h' OR 'lam-run -h'). Refer to
-'docs/UserManual' for additional information.
+LAM is used by executing 'src/run.py' or with console command 'lam-run', both of which by default open up the graphical
+user interface. Settings can be handled through src/settings.py, but LAM also includes argument parsing for most important
+settings ('python src/run.py -h' OR 'lam-run -h'). Refer to 'docs/UserManual' for additional information.
 
 A video tutorial series on LAM can be found on YouTube [here](https://www.youtube.com/playlist?list=PLjv-8Gzxh3AynUtI3HaahU2oddMbDpgtx).
 
