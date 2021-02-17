@@ -409,7 +409,7 @@ class GetSample:
         channel_string = f'All_{channel_name}.csv'
         system.save_to_file(counts, datadir, channel_string)
         if channel_name == Sett.vectChannel:
-            test_count_projection(counts)
+            test_count_projection(counts, self.name)
 
     def test_projection(self, name):
         if self.data["DistBin"].isna().any():
@@ -578,10 +578,11 @@ class Normalize:
             # Save starting index of the sample
             sample_start.at[col] = insx
 
+        check_anchor_quality(sample_start)
         # Save anchored data
         if name is None:
-            name = 'Norm_{}'.format(self.channel)
-        filename = '{}.csv'.format(name)
+            name = f'Norm_{self.channel}'
+        filename = f'{name}.csv'
         data = data.sort_index(axis=1)
         system.save_to_file(data, self.path.parent, filename, append=False)
         return sample_start, data
@@ -879,9 +880,13 @@ def vector_test(path):
     raise VectorError(miss_vector)
 
 
-def test_count_projection(counts):
+def test_count_projection(counts, name):
     if (counts == 0).sum() > counts.size / 3:
-        print('   WARNING: Uneven projection <- vector may be faulty!')
+        print("\n")
+        print('WARNING: Uneven projection <- vector may be faulty!')
+        print("\n")
+        print('\a')
+        lg.logprint(LAM_logger, f'Uneven projection for {name}. Check vector quality.', 'w')
 
 
 def check_resize_step(resize, log=True):
@@ -912,3 +917,13 @@ def define_scoring_point(line, s_x, s_y):
     shifty = point2[1] - point1[1]  # shift in y for test point
 
     return gm.Point(s_x + shiftx, s_y + shifty)
+
+
+def check_anchor_quality(sample_start):
+    mean = np.mean(sample_start.astype('float'))
+    std = np.std(sample_start.astype('float'))
+    threshold = 2.5 * std
+    outliers = sample_start[np.abs(sample_start - mean) >= threshold]
+    if not outliers.empty:
+        print(f"WARNING: Samples with outlying anchoring. Check anchoring and vector of:" +
+              "\n - {'\n - '.join(outliers.index)}")

@@ -54,7 +54,7 @@ class Settings:
     # vector is created by finding middle point between smallest and largest
     # Y-axis position in bin.
     SkeletonVector = True
-    SkeletonResize = 0.2    # Binary image resize. Keep at steps of 0.1.
+    SkeletonResize = 0.1    # Binary image resize. Keep at steps of 0.1.
     # Find distance (in input coords) in skeleton vector creation
     find_dist = 180
     BDiter = 3         # Binary dilation iterations (set to 0 if not needed)

@@ -145,9 +145,10 @@ def heatmap(plotter, **kws):
         sub_data = data.loc[data[kws.get('row')] == rows[ind], data.columns != kws.get('row')]
         sns.heatmap(data=sub_data, cmap='coolwarm', robust=True, linewidth=0.05, linecolor='dimgrey', ax=ax)
         ax.set_title(rows[ind])
+        ylabels = ax.get_yticklabels()
+        ax.set_yticklabels(ylabels, rotation=35)
         if kws.get('Sample_plot'):
-            ylabels = ax.get_yticklabels()
-            ax.set_yticklabels(ylabels, rotation=35, fontsize=8)
+            ax.set_yticklabels(ylabels, fontsize=8)
             strings = [x[0] for x in sub_data.index.str.split('_')]
             inds = [strings.index(i) for i in sorted(set(strings))[1:]]
             left, right = ax.get_xlim()
