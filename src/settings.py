@@ -54,11 +54,11 @@ class Settings:
     # vector is created by finding middle point between smallest and largest
     # Y-axis position in bin.
     SkeletonVector = True
-    SkeletonResize = 0.5    # Binary image resize. Keep at steps of 0.1.
+    SkeletonResize = 0.1    # Binary image resize. Keep at steps of 0.1.
     # Find distance (in input coords) in skeleton vector creation
-    find_dist = 75
-    BDiter = 5          # Binary dilation iterations (set to 0 if not needed)
-    SigmaGauss = 7    # Sigma for gaussian smoothing (set to 0 if not needed)
+    find_dist = 180
+    BDiter = 3         # Binary dilation iterations (set to 0 if not needed)
+    SigmaGauss = 5    # Sigma for gaussian smoothing (set to 0 if not needed)
     simplifyTol = 20    # Tolerance for vector simplification.
     # Number of bins used for vector creation when using the median vector
     # creation. Increasing bin number too much may lead to stair-like vector;
