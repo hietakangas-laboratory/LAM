@@ -183,10 +183,12 @@ def skeleton_plot(savepath, samplename, binary_array, skeleton):
     ax[0].imshow(binary_array)
     ax[0].axis('off')
     ax[0].set_title('modified', fontsize=14)
+    ax[0].invert_yaxis()
     # Plot of skeletonized binary array
     ax[1].imshow(skeleton)
     ax[1].axis('off')
     ax[1].set_title('skeleton', fontsize=14)
+    ax[1].invert_yaxis()
     figskel.tight_layout()
     # Add settings string to plot
     plt.annotate(sett_string, (5, 5), xycoords='figure points')
@@ -196,12 +198,14 @@ def skeleton_plot(savepath, samplename, binary_array, skeleton):
     plt.close()
 
 
-def create_vector_plots(workdir, savedir, sample_dirs):
+def create_vector_plots(workdir, savedir, sample_dirs, settings=None, non_valid: (list, bool)=False):
     full = pd.DataFrame()
     vectors = pd.DataFrame()
     cols = ['Position X', 'Position Y']
     for path in sample_dirs:
-        cpath = [p for p in workdir.joinpath(path.name).glob(f'*_{Sett.vectChannel}_*') if p.is_dir()]
+        channel_folders = [p for p in workdir.joinpath(path.name).iterdir() if p.is_dir()]
+        cpath = [p for p in channel_folders if (str(p).startswith(f'{Sett.vectChannel}_') or
+                                                f'_{Sett.vectChannel}_' in str(p))]
         try:
             dpath = cpath[0].glob('*Position.csv')
             data = pd.read_csv(next(dpath), header=Sett.header_row)
@@ -222,13 +226,21 @@ def create_vector_plots(workdir, savedir, sample_dirs):
     plt.subplots_adjust(hspace=1)
     samples = pd.unique(full.loc[:, 'sample'])
     for ind, ax in enumerate(grid.axes.flat):
-        data = full.loc[full.loc[:, 'sample'] == samples[ind], :]
-        sns.scatterplot(data=data, x='Position X', y='Position Y', color='xkcd:tan', linewidth=0, ax=ax)
-        vector_data = vectors.loc[vectors.loc[:, 'sample'] == samples[ind], :]
-        ax.plot(vector_data.X, vector_data.Y)
+        sample_name = samples[ind]
+        if non_valid and sample_name not in non_valid:
+            bgcol, vcol = 'xkcd:beige', 'green'
+        else:
+            bgcol, vcol = 'xkcd:tan', None
+        data = full.loc[full.loc[:, 'sample'] == sample_name, :]
+        sns.scatterplot(data=data, x='Position X', y='Position Y', color=bgcol, linewidth=0, ax=ax)
+        vector_data = vectors.loc[vectors.loc[:, 'sample'] == sample_name, :]
+        ax.plot(vector_data.X, vector_data.Y, color=vcol)
         ax.set_xlabel('')
         ax.set_ylabel('')
         ax.set_title(samples[ind])
+    if settings is not None:
+        #comment =
+        plt.annotate(settings, (5, 5), xycoords='figure pixels')
     grid.savefig(str(savedir.joinpath('Vectors.png')))
     plt.close('all')
 
