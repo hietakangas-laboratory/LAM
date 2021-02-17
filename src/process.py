@@ -18,8 +18,9 @@ import numpy as np
 import pandas as pd
 import pathlib as pl
 import shapely.geometry as gm
+from shapely.ops import polygonize
 from scipy.ndimage import morphology as mp
-from skimage.morphology import skeletonize
+from skimage.morphology import medial_axis
 from skimage.filters import gaussian
 from skimage.transform import resize as resize_arr
 from skimage.measure import find_contours
@@ -107,8 +108,9 @@ class GetSample:
         # Extract point coordinates of the vector:
         positions = self.vect_data
         x, y = positions.loc[:, 'Position X'], positions.loc[:, 'Position Y']
-        bin_array, skeleton, line_df = self.skeleton_vector(x, y, Sett.SkeletonResize, Sett.BDiter,
-                                                            Sett.SigmaGauss)
+        coord_df, bin_array, skeleton = self.binarize_coords(x, y, Sett.SkeletonResize,
+                                                            Sett.BDiter, Sett.SigmaGauss)
+        line_df = self.skeleton_vector(coord_df)
         if line_df is not None and not line_df.empty:
             system.save_to_file(line_df, self.sampledir, 'Vector.csv', append=False)
         pfunc.skeleton_plot(self.sampledir, self.name, bin_array, skeleton)
@@ -121,13 +123,13 @@ class GetSample:
         if line_df is not None and not line_df.empty:
             system.save_to_file(line_df, self.sampledir, 'Vector.csv', append=False)
 
-    def skeleton_vector(self, x_values, y_values, resize: float, bd_iter: int, sigma_gauss: float):
-        """Create vector by skeletonization of image-transformed positions."""
+    def binarize_coords(self, x_values, y_values, resize: float, bd_iter: int, sigma_gauss: float):
+        """Create binary image from cell coordinates."""
 
         def _binarize():
             """Transform XY into binary image and perform operations on it."""
             # Create DF indices (X&Y-coords) with a buffer for operations:
-            buffer = 500 * resize
+            buffer = 1000 * resize
             # Get needed axis related variables:
             x_max, x_min = round(max(x_values) + buffer), round(min(x_values) - buffer)
             y_max, y_min = round(max(y_values) + buffer), round(min(y_values) - buffer)
@@ -143,6 +145,7 @@ class GetSample:
                 y_size = round(y_size * resize)
                 x_size = round(x_size * resize)
                 binary_arr = resize_arr(binary_arr, (y_size, x_size))
+                binary_arr = np.where(binary_arr > 0, 1, 0)
             # Create Series to store real coordinate labels
             x_lbl = pd.Series(np.linspace(x_min, x_max, x_size), index=pd.RangeIndex(binary_arr.shape[1]))
             y_lbl = pd.Series(np.linspace(y_min, y_max, y_size), index=pd.RangeIndex(binary_arr.shape[0]))
@@ -156,17 +159,16 @@ class GetSample:
             if sigma_gauss > 0:  # Gaussian smoothing
                 binary_arr = gaussian(binary_arr, sigma=sigma_gauss)
 
-            # FIND CONTOURS AND SIMPLIFY
-            contours = find_contours(binary_arr, 0.6)
-            pols = []
-            for cont in contours:
-                pol = gm.Polygon(cont)
-                pol = pol.simplify(Sett.simplifyTol * resize, preserve_topology=False)
-                pols.append(pol)
-            pols = gm.MultiPolygon(pols)
-            segm = _intersection(binary_arr.shape, pols)
+            # FIND CONTOURS
+            contours = find_contours(binary_arr, 0.5)
+            continuous = contours
+            try:
+                pol = gm.MultiPolygon(polygonize(continuous))
+            except (TypeError, NotImplementedError):
+                pol = gm.Polygon(continuous)
 
-            # Fill holes in the array
+            # CREATE ARRAY WITH FILLED SAMPLE OUTLINE
+            segm = _intersection(binary_arr.shape, pol)
             with warnings.catch_warnings():
                 warnings.simplefilter('ignore', category=UserWarning)
                 bool_bin_arr = mp.binary_fill_holes(segm)
@@ -175,131 +177,131 @@ class GetSample:
         def _intersection(shape: tuple, pols: gm.multipolygon) -> np.ndarray:
             """Create binary array by filling given polygons."""
             segment_array = np.zeros(shape)
-            # Define acceptable datatypes
-            cols = (gm.MultiLineString, gm.collection.GeometryCollection)
 
             # Loop rows of array
             for ind in np.arange(shape[0]+1):
                 # Create LineString from row and see where it intersects with polygons
                 row = gm.LineString([(ind, 0), (ind, shape[1]+1)])
                 section = row.intersection(pols)
-                # Test that intersection gave values and the datatype of result:
-                if not section.is_empty and isinstance(section, gm.LineString):
+                if section.is_empty:
+                    continue
+
+                # Test the datatype of intersection:
+                if isinstance(section, gm.LineString):
                     _, miny, _, maxy = section.bounds
                     # Assign True to elements that fall within the polygons
                     segment_array[ind, round(miny):round(maxy)] = 1
                 # If the results gave collections of objects:
-                elif not section.is_empty and isinstance(section, cols):
+                elif isinstance(section, (gm.MultiLineString, gm.collection.GeometryCollection)):
                     # Assign values from each object
                     for geom in section.geoms:
                         _, miny, _, maxy = geom.bounds
                         segment_array[ind, round(miny):round(maxy)] = 1
             return segment_array
 
-        def _score_nearest():
-            # DataFrame for storing relevant info on pixel coordinates
-            distances = pd.DataFrame(np.zeros((nearest.size, 6)), index=nearest,
-                                     columns=['rads', 'dist', 'distOG', 'penalty', 'X', 'Y'])
-            # Create scores for each nearby pixel:
-            for ind, __ in coord_df.loc[nearest, :].iterrows():
-                x_n, y_n = coord_df.X.at[ind], coord_df.Y.at[ind]
-                point3 = gm.Point(x_n, y_n)
-                shift_x = x_n - point2[0]  # shift in x for test point
-                shift_y = y_n - point2[1]  # shift in y for test point
-                rads = math.atan2(shift_y, shift_x)
-                dist = test_point.distance(point3)  # distance to a testpoint
-                dist_org = point.distance(point3)  # dist to current coord
-                penalty = dist_org + dist + abs(rads * 5)
-                distances.loc[ind, :] = [rads, dist, dist_org, penalty, x_n, y_n]
-            return distances
-
         coords = list(zip(x_values, y_values))
         # Transform to binary
         bin_array, bin_arr_ind, bin_arr_cols = _binarize()
         # Make skeleton and get coordinates of skeleton pixels
-        skeleton = skeletonize(bin_array)
+        # skeleton = skeletonize(bin_array)
+        skeleton = medial_axis(bin_array)
         skel_values = [(bin_arr_ind.iat[y], bin_arr_cols.iat[x]) for y, x in zip(*np.where(skeleton == 1))]
         # Dataframe from skeleton coords
-        coord_df = pd.DataFrame(skel_values, columns=['Y', 'X'])
+        coord_df = pd.DataFrame(skel_values, columns=['Y', 'X']).infer_objects()
+        return coord_df, bin_array, skeleton
+
+    def skeleton_vector(self, coord_df):
+        """Create vector by skeletonization of image-transformed positions."""
+
+        def _score_nearest(test_point):
+            # DataFrame for storing relevant info on pixel coordinates
+            score = pd.DataFrame(np.zeros((nearest.size, 6)), index=nearest,
+                                 columns=['rads', 'dist_test', 'dist_vect', 'penalty', 'X', 'Y'])
+            score.X, score.Y = coord_df.X, coord_df.Y
+
+            # Get direction of test point
+            test_x, test_y = test_point.x - last_point.x, test_point.y - last_point.y
+            test_rad = math.atan2(test_y, test_x)
+            # Calculate scoring variables
+            shifts = pd.DataFrame(data=(score.X - last_point.x, score.Y - last_point.y), columns=nearest).T
+            score.rads = shifts.apply(lambda p, r=test_rad: abs(math.atan2(p.iat[1], p.iat[0]) - r), axis=1)
+            score.dist_vect = score.apply(lambda p, t=last_point: t.distance(gm.Point(p.X, p.Y)), axis=1)
+            score.dist_test = score.apply(lambda p, t=test_point: t.distance(gm.Point(p.X, p.Y)), axis=1)
+            score.penalty = score.dist_vect + score.dist_test + (score.rads * 10)
+            # Drop values that would turn the vector to move backwards
+            score.penalty.loc[score.rads > 1.9] = np.nan
+            #print(sum(abs(shifts.loc[score.penalty.idxmin(), :].values)))
+            return score
+
+        def _find_pixel(line, s_x, s_y, flag=False):
+            # Establish the vector's direction and project a forward point:
+            test_point = define_scoring_point(line, s_x, s_y)
+            # Calculate scoring of pixels
+            scores = _score_nearest(test_point)
+            # Get the pixels that are behind current vector coord
+            forfeit = scores.loc[((scores.dist_test > scores.dist_vect) & scores.rads > 1.3) |
+                                 (scores.penalty == np.nan)].index
+
+            # Find the pixel with the smallest penalty and add to vector:
+            try:
+                best = scores.penalty.idxmin()
+                x_2, y_2 = coord_df.X.at[best], coord_df.Y.at[best]
+
+                # Drop used pixel and pixels falling behind vector
+                forfeit = forfeit.append(pd.Index([best], dtype='int64'))
+                coord_df.drop(forfeit, inplace=True)
+
+                # Set found pixel for the next loop
+                line.append((x_2, y_2))
+                s_x, s_y = x_2, y_2
+
+            except (ValueError, KeyError):
+                flag = True
+
+            return line, s_x, s_y, flag
+
 
         # BEGIN CREATION OF VECTOR FROM SKELETON COORDS
-        finder = Sett.find_dist * resize  # Distance for detection of nearby XY
+        finder = Sett.find_dist  # Distance for detection of nearby XY
         line = []  # For storing vector
-        # Start from smallest x-coords
-        coord_df = coord_df.infer_objects()
+        # Start from mean coordinates of pixels with smallest x-coords
         start = coord_df.nsmallest(5, 'X').idxmin()
-        s_x = coord_df.loc[start, 'X'].mean()
-        s_y = coord_df.loc[start, 'Y'].mean()
-        multip = 0.001
-        flag = False
-
-        # Determining starting point of vector from as near to the end of
-        # sample as possible:
-        while not flag:
-            near_start = coord_df[(abs(coord_df.X - s_x) <= finder * multip) &
-                                  (abs(coord_df.Y - s_y) <= finder * 3)].index
-            if near_start.size < 3:
-                multip += 0.001
-            else:
-                flag = True
-        # Take mean coordinates of cells near the end to be the starting point
-        s_x, s_y = coord_df.loc[near_start, 'X'].min(), coord_df.loc[near_start, 'Y'].mean()
+        s_x, s_y = coord_df.loc[start, 'X'].mean(), coord_df.loc[start, 'Y'].mean()
         line.append((s_x, s_y))
-        # Drop the used coordinates
-        coord_df.drop(near_start, inplace=True)
+        coord_df.drop(start, inplace=True)  # Drop the start coordinates from data
+        s_x, s_y = s_x + finder / 4, s_y
 
-        # Continue finding next points until flagged ready:
+        # Continue finding next pixels until flagged ready:
         flag = False
         while not flag:
-            point = gm.Point(s_x, s_y)
+            # Current end point of line:
+            last_point = gm.Point(line[-1])
+
             # Find pixels near to the current coordinate
             with warnings.catch_warnings():
                 warnings.simplefilter('ignore', category=UserWarning)
-                nearest = coord_df[(abs(coord_df.X - s_x) <= finder) & (abs(coord_df.Y - s_y) <= finder)].index
-            if nearest.size == 0:  # If none near, extend search distance once
-                with warnings.catch_warnings():
-                    warnings.simplefilter('ignore', category=UserWarning)
-                    max_distance = finder * 2
-                    nearest = coord_df[(abs(coord_df.X - s_x) <= max_distance) &
-                                       (abs(coord_df.Y - s_y) <= max_distance)].index
-            if nearest.size > 1:
-                # If pixels are found, establish the vector's direction:
-                try:
-                    point1, point2 = line[-3], line[-1]
-                except IndexError:
-                    point1, point2 = (s_x, s_y), (s_x + 5, s_y)
-                # Create a test point (used to score nearby pixels)
-                shiftx = point2[0] - point1[0]  # shift in x for test point
-                shifty = point2[1] - point1[1]  # shift in y for test point
-                test_point = gm.Point(s_x + shiftx, s_y + shifty)
-                # Calculate scoring of points
-                scores = _score_nearest()
-                # Drop the pixels that are behind current vector coord
-                forfeit = scores.loc[((scores.dist > scores.distOG) & (abs(scores.rads) > 1.6))].index
-                # Find the pixel with the smallest penalty and add to vector:
-                try:
-                    best = scores.loc[nearest.difference(forfeit)].penalty.idxmin()
-                    x_2, y_2 = coord_df.X.at[best], coord_df.Y.at[best]
-                    line.append((x_2, y_2))
-                    best = pd.Index([best], dtype='int64')
-                    forfeit = forfeit.append(best)
-                    coord_df.drop(forfeit, inplace=True)
-                    # Set current location for the next loop
-                    s_x, s_y = x_2, y_2
-                except ValueError:
-                    flag = True
+                nearest = coord_df[(abs(coord_df.X - s_x) <= finder) &
+                                   (abs(coord_df.Y - s_y) <= finder)].index
+
+            if nearest.size >= 1:
+                line, s_x, s_y, flag = _find_pixel(line, s_x, s_y)
             else:
                 flag = True
-        try:  # Create LineString-object from finished vector
+
+        # Create LineString-object from finished vector:
+        try:
             xy_coord = gm.LineString(line).simplify(Sett.simplifyTol).xy
             linedf = pd.DataFrame(data=list(zip(xy_coord[0], xy_coord[1])), columns=['X', 'Y'])
-        except (ValueError, AttributeError):  # If something went wrong with creation, warn
+
+        # If something went wrong with creation, warn
+        except (ValueError, AttributeError):
             linedf = pd.DataFrame().assign(X=[line[0][0]], Y=[line[0][1]])
             msg = 'Faulty vector for {}'.format(self.name)
             if LAM_logger is not None:
                 lg.logprint(LAM_logger, msg, 'e')
             print("WARNING: Faulty vector. Try different settings")
-        return bin_array, skeleton, linedf
+
+        return linedf
 
     def median_vector(self, x_values, y_values, creation_bins):
         """Create vector by calculating median coordinates."""
@@ -407,7 +409,7 @@ class GetSample:
         channel_string = f'All_{channel_name}.csv'
         system.save_to_file(counts, datadir, channel_string)
         if channel_name == Sett.vectChannel:
-            test_count_projection(counts)
+            test_count_projection(counts, self.name)
 
     def test_projection(self, name):
         if self.data["DistBin"].isna().any():
@@ -576,10 +578,11 @@ class Normalize:
             # Save starting index of the sample
             sample_start.at[col] = insx
 
+        check_anchor_quality(sample_start)
         # Save anchored data
         if name is None:
-            name = 'Norm_{}'.format(self.channel)
-        filename = '{}.csv'.format(name)
+            name = f'Norm_{self.channel}'
+        filename = f'{name}.csv'
         data = data.sort_index(axis=1)
         system.save_to_file(data, self.path.parent, filename, append=False)
         return sample_start, data
@@ -877,9 +880,13 @@ def vector_test(path):
     raise VectorError(miss_vector)
 
 
-def test_count_projection(counts):
+def test_count_projection(counts, name):
     if (counts == 0).sum() > counts.size / 3:
-        print('   WARNING: Uneven projection <- vector may be faulty!')
+        print("\n")
+        print('WARNING: Uneven projection <- vector may be faulty!')
+        print("\n")
+        print('\a')
+        lg.logprint(LAM_logger, f'Uneven projection for {name}. Check vector quality.', 'w')
 
 
 def check_resize_step(resize, log=True):
@@ -893,3 +900,30 @@ def check_resize_step(resize, log=True):
         if log:
             lg.logprint(LAM_logger, msg, 'w')
             lg.logprint(LAM_logger, msg2, 'i')
+
+
+def define_scoring_point(line, s_x, s_y):
+    points, point2 = line[-3:-2], line[-1]
+    if not points:
+        point1 = (s_x, s_y)
+    elif len(points) == 1:
+        point1 = points[0]
+    else:
+        p1, p2 = points[0], points[1]
+        point1 = ((p1.x + p2.x) / 2, (p1.y + p2.y) / 2)
+
+    # Create a test point (used to score nearby pixels)
+    shiftx = point2[0] - point1[0]  # shift in x for test point
+    shifty = point2[1] - point1[1]  # shift in y for test point
+
+    return gm.Point(s_x + shiftx, s_y + shifty)
+
+
+def check_anchor_quality(sample_start):
+    mean = np.mean(sample_start.astype('float'))
+    std = np.std(sample_start.astype('float'))
+    threshold = 2.5 * std
+    outliers = sample_start[np.abs(sample_start - mean) >= threshold]
+    if not outliers.empty:
+        print(f"WARNING: Samples with outlying anchoring. Check anchoring and vector of:" +
+              "\n - {'\n - '.join(outliers.index)}")

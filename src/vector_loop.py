@@ -117,7 +117,7 @@ class VectorWin:
         # Get necessary system_paths for vector creation
         system_paths = system.start(test_vectors=False, only_vectors=True)
         process.check_resize_step(Sett.SkeletonResize)  # Test resize setting
-        print_settings()  # Print used creation settings
+        sett_dict = print_settings()  # Print used creation settings
         # Loop all samples that don't have a valid vector
         for sample in self.sample_vars:
             path = Sett.workdir.joinpath(sample[0])  # Sample's data path
@@ -135,7 +135,8 @@ class VectorWin:
         print("Creation loop done. Select samples to keep.\n")
         # Creation of vector plot of all samples
         sample_dirs = [p for p in system_paths.samplesdir.iterdir() if p.is_dir()]
-        pfunc.create_vector_plots(Sett.workdir, system_paths.samplesdir, sample_dirs)
+        pfunc.create_vector_plots(Sett.workdir, system_paths.samplesdir, sample_dirs, settings=sett_dict,
+                                  non_valid=[s[0] for s in self.sample_vars])
 
     def keep_vectors(self):
         """Remove selected samples from creation loop and refresh table."""
@@ -189,3 +190,4 @@ def print_settings():
     else:
         sett_dict = {'Type': 'Median', 'Simplif.': Sett.simplifyTol, 'Bins': Sett.medianBins}
     print(f'Settings: {sett_dict}')
+    return sett_dict
