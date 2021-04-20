@@ -251,4 +251,5 @@ def violin(plotter, **kws):
     plotter.g = sns.catplot(x='Sample Group', y='Value', data=plotter.data, row=kws.get('row'), col=kws.get('col'),
                             height=kws.get('height'), aspect=kws.get('aspect'), palette=plotter.handle.palette,
                             kind='violin', sharey=False, saturation=0.5)
+    plotter.g.set_xticklabels(rotation=30)
     return plotter.g

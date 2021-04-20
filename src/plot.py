@@ -587,8 +587,8 @@ class Plotting:
         handle = system.DataHandler(self.sgroups, path, savepath)
         plotter = MakePlot(plot_data, handle, total_stats.filename, sec_data=total_stats.stat_data)
         p_kws = {'row': None, 'col': 'Variable', 'x_order': order, 'height': 3, 'aspect': 1, 'title_y': 1,
-                 'ylabel': 'collect', 'xlabel': 'Sample Group', #'gridspec': {'wspace': 0.25},
-                 'adjust': {'left': 0.2, 'right': 0.9, 'bottom': 0.17, 'wspace': 0.6, 'top': 0.85}}
+                 'ylabel': 'collect', 'xlabel': '', #'gridspec': {'wspace': 0.25},
+                 'adjust': {'left': 0.2, 'right': 0.9, 'bottom': 0.25, 'wspace': 0.6, 'top': 0.85}}
         plotter(pfunc.violin, 'title', 'total_stats', 'labels', 'legend', **p_kws)
 
     def stat_versus(self, stats, path):
