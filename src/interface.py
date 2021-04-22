@@ -633,7 +633,7 @@ class OtherWin:
 
         # ADDITIONAL DATA ENTRIES
         # Create example variables for entries
-        ex_str = ["Area", "Area.csv", "Area, $\u03BCm^2$"]
+        ex_str = ["Area", "Position.csv", "Area, $\u03BCm^2$"]
         self.insert = [tk.StringVar(value=s) for s in ex_str]
 
         # Entry for names of data columns
@@ -920,16 +920,15 @@ class SettingHandler:
     def translate(self):
         """Translate tk variables to original format."""
         mods = self.vars.loc[self.vars.check, 'ref'].to_dict()
+        out = deepcopy(SettingHandler.default_settings)
         for key, value in mods.items():
             if key in ('cluster_channels', 'distance_channels', 'vs_channels', 'vs_adds'):
                 var = mods[key].get().split(',')
-                mods[key] = [v.strip() for v in var]
+                out[key] = [v.strip() for v in var]
             elif isinstance(value, dict):
-                mods[key].update({kn: lst_get(kv) for kn, kv in value.items()})
+                out[key] = {kn: lst_get(kv) for kn, kv in value.items()}
             else:
-                mods[key] = value.get()
-        out = deepcopy(SettingHandler.default_settings)
-        out.update(mods)
+                out[key] = value.get()
         return out
 
 

@@ -921,9 +921,11 @@ def define_scoring_point(line, s_x, s_y):
 
 def check_anchor_quality(sample_start):
     mean = np.mean(sample_start.astype('float'))
+    if mean == 0:
+        return
     std = np.std(sample_start.astype('float'))
     threshold = 2.5 * std
     outliers = sample_start[np.abs(sample_start - mean) >= threshold]
     if not outliers.empty:
         print(f"WARNING: Samples with outlying anchoring. Check anchoring and vector of:" +
-              "\n - {'\n - '.join(outliers.index)}")
+              f"\n - {', '.join(outliers.index)}")

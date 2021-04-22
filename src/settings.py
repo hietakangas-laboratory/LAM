@@ -88,9 +88,9 @@ class Settings:
     # E.g. "Intensity_Mean" => "Intensity_Mean_Ch=1".
     # The last value is the unit of the values used for plotting labels,
     # e.g. um^2 for area. um^2 = "$\u03BCm^2$"  ;   um^3 = "$\u03BCm^3$"
-    AddData = {"Area": ["Area.csv", "Area, $\u03BCm^2$"],
-               "Volume": ["Volume.csv", "Volume, $\u03BCm^3$"],
-               "Intensity Mean": ["Intensity_Mean", "Intensity"]
+    AddData = {"Area": ["Position.csv", "Area, $\u03BCm^2$"],
+               "Volume": ["Position.csv", "Volume, $\u03BCm^3$"],
+               "Intensity Mean": ["Position.csv", "Intensity"]
                }
     # If set to true, replaces the above mentioned (AddData) ID numbers with an
     # alternative moniker as defined in channelID
