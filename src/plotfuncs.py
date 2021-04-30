@@ -200,50 +200,68 @@ def skeleton_plot(savepath, samplename, binary_array, skeleton):
 
 
 def create_vector_plots(workdir, savedir, sample_dirs, settings=None, non_valid: (list, bool)=False):
+    def _get_ch_data(sample_name, dir_glob, ch_name):
+        try:
+            dir_path = [p for p in dir_glob if (str(p).startswith(f'{ch_name}_') or f'_{ch_name}_' in str(p))
+                        and p.is_dir()][0]
+            data_path = dir_path.glob('*Position.csv')
+            data = pd.read_csv(next(data_path), header=Sett.header_row)
+            return data.loc[:, ['Position X', 'Position Y']].assign(sample=sample_name)
+        except (IndexError, StopIteration, FileNotFoundError) as err:
+            print(f'WARNING: Cannot read {ch_name}-file for {sample_name}')
+            print(f'  --> error message: {err}')
+            return pd.DataFrame({'Position X': [np.nan], 'Position Y': [np.nan], 'sample': [sample_name]})
+
     full = pd.DataFrame()
     vectors = pd.DataFrame()
-    cols = ['Position X', 'Position Y']
+    mp_full = pd.DataFrame()
     for path in sample_dirs:
-        channel_folders = [p for p in workdir.joinpath(path.name).iterdir() if p.is_dir()]
-        cpath = [p for p in channel_folders if (str(p).startswith(f'{Sett.vectChannel}_') or
-                                                f'_{Sett.vectChannel}_' in str(p))]
-        try:
-            dpath = cpath[0].glob('*Position.csv')
-            data = pd.read_csv(next(dpath), header=Sett.header_row)
-            data = data.loc[:, cols].assign(sample=path.name)
-        except (IndexError, FileNotFoundError) as err:
-            print(f'WARNING: Cannot read {Sett.vectChannel}-file for {path.name}')
-            print(f'  --> error message: {err}')
-            data = pd.DataFrame(data=[np.nan, np.nan], columns=cols)
+        sample = path.name
+        data = _get_ch_data(sample, workdir.joinpath(sample).glob(f'*{Sett.vectChannel}_*'), Sett.vectChannel)
         try:
             vector = pd.read_csv(next(path.glob('Vector.*')))
-            vector = vector.assign(sample=path.name)
+            vector = vector.assign(sample=sample)
         except (FileNotFoundError, StopIteration):
-            print(f'WARNING: Cannot find vector-file for {path.name}')
-            vector = pd.DataFrame(data=[np.nan, np.nan], columns=['X', 'Y'])
+            print(f'WARNING: Cannot find vector-file for {sample}')
+            vector = pd.DataFrame({'X': [np.nan], 'Y': [np.nan], 'sample': [sample]})
         full = pd.concat([full, data])
         vectors = pd.concat([vectors, vector])
+
+        # read MP data
+        if not Sett.useMP:
+            continue
+        mp_data = _get_ch_data(sample, workdir.joinpath(sample).glob(f'*{Sett.MPname}_*'), Sett.MPname)
+        mp_full = pd.concat([mp_full, mp_data])
+
+    # create plot
     grid = sns.FacetGrid(data=full, col='sample', col_wrap=4, sharex=False, sharey=False, height=2, aspect=3.5)
     plt.subplots_adjust(hspace=1)
     samples = pd.unique(full.loc[:, 'sample'])
     for ind, ax in enumerate(grid.axes.flat):
         sample_name = samples[ind]
+        # Assign colors depending on validity of vectors
         if non_valid and sample_name not in non_valid:
-            bgcol, vcol = 'xkcd:beige', 'green'
+            bgcol, vcol, mpcol = 'xkcd:beige', 'green', 'brown'
         else:
-            bgcol, vcol = 'xkcd:tan', None
+            bgcol, vcol, mpcol = 'xkcd:tan', None, 'red'
+        # Plot data underlying vector
         data = full.loc[full.loc[:, 'sample'] == sample_name, :]
         sns.scatterplot(data=data, x='Position X', y='Position Y', color=bgcol, linewidth=0, ax=ax)
+        # plot vector
         vector_data = vectors.loc[vectors.loc[:, 'sample'] == sample_name, :]
         ax.plot(vector_data.X, vector_data.Y, color=vcol)
+        # plot MP:
+        if Sett.useMP and not mp_full.empty:
+            mp_data = mp_full.loc[mp_full.loc[:, 'sample'] == samples[ind], :]
+            ax.scatter(x=mp_data.at[0, 'Position X'], y=mp_data.at[0, 'Position Y'], c=mpcol, s=36, zorder=4)
         ax.set_xlabel('')
         ax.set_ylabel('')
         ax.set_title(samples[ind])
     if settings is not None:
-        #comment =
         plt.annotate(settings, (5, 5), xycoords='figure pixels')
     grid.savefig(str(savedir.joinpath('Vectors.png')))
     plt.close('all')
+    print("Vector plot created in 'Analysis Data/Samples'.")
 
 
 def violin(plotter, **kws):

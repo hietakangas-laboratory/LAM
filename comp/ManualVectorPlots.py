@@ -11,6 +11,7 @@ USAGE:
     1. Input path to the analysis directory to variable analysis_dir below.
     2. Give name of a channel to variable base_channel, which will be plotted
        alongside the vector, i.e. to show that vector is on top of cells
+    3. If anchoring point is also wanted, give name of the directory (default 'MP')
     3. Give header row of the channel data into channel_data_header
     4. Run script
 
@@ -27,15 +28,19 @@ import numpy as np
 
 
 # Path to analysis directory
-analysis_dir = pl.Path(r'C:')
+analysis_dir = pl.Path(r'E:\Code_folder\All_statistics_P-folder')
+# Name channel to plot under vector (gives shape of midgut)
 base_channel = 'DAPI'
+# Name of anchoring point channel (MP). Set to None if not needed.
+mp_name = 'MP'
+# Row for datafile column labels
 channel_data_header = 2
 
 
 def main():
     sample_dir = analysis_dir.joinpath('Analysis Data', 'Samples')
     samplepaths = [p for p in sample_dir.iterdir() if p.is_dir()]
-    create_vector_plots(analysis_dir, sample_dir, samplepaths)
+    create_vector_plots(analysis_dir, sample_dir, samplepaths, mp_name)
 
 
 def get_vector_data(files):
@@ -55,39 +60,60 @@ def get_vector_data(files):
         data = pd.read_csv(file, index_col=False)
     return data
 
-def create_vector_plots(workdir, savedir, sample_dirs):
+
+def get_ch_data(sample_name, dir_glob, header):
+    try:
+        dir_path = [p for p in dir_glob if p.is_dir()][0]
+        data_path = dir_path.glob('*Position.csv')
+        data = pd.read_csv(next(data_path), header=header)
+        return data.loc[:, ['Position X', 'Position Y']].assign(sample=sample_name)
+    except (IndexError, StopIteration, FileNotFoundError):
+        return pd.DataFrame({'Position X': [np.nan], 'Position Y': [np.nan], 'sample': [sample_name]})
+
+
+def create_vector_plots(workdir, savedir, sample_dirs, mp_dir_name):
     """"Create single plot file that contains vectors of all found samples."""
     full = pd.DataFrame()
     vectors = pd.DataFrame()
-    cols = ['Position X', 'Position Y']
+    mp_full = pd.DataFrame()
+
+    # Loop all samples:
     for path in sample_dirs:
-        print(path.name)
-        cpath = workdir.joinpath(path.name).glob(f'*_{base_channel}_*')
-        cpath = [p for p in cpath if p.is_dir()][0]
-        try:
-            dpath = cpath.glob('*Position.csv')
-            data = pd.read_csv(next(dpath), header=channel_data_header)
-            data = data.loc[:, cols].assign(sample=path.name)
-        except StopIteration:
-            data = pd.DataFrame(data=[np.nan, np.nan], columns=cols)
+        sample = path.name
+        print(sample)
+        data = get_ch_data(sample, workdir.joinpath(sample).glob(f'*{base_channel}_*'), channel_data_header)
         try:
             files = path.glob('Vector.*')
             vector = get_vector_data(files)
-            vector = vector.assign(sample=path.name)
+            vector = vector.assign(sample=sample)
         except (FileNotFoundError, StopIteration):
-            vector = pd.DataFrame(data=[np.nan, np.nan], columns=['X', 'Y'])
+            vector = pd.DataFrame({'X': [np.nan], 'Y': [np.nan], 'sample': [sample]})
         full = pd.concat([full, data])
         vectors = pd.concat([vectors, vector])
+
+        # read MP data
+        if mp_dir_name is None:
+            continue
+        mp_data = get_ch_data(sample, workdir.joinpath(sample).glob(f'*{mp_dir_name}_*'), channel_data_header)
+        mp_full = pd.concat([mp_full, mp_data])
+
+
     grid = sns.FacetGrid(data=full, col='sample', col_wrap=4, sharex=False,
                          sharey=False, height=2, aspect=3.5)
     plt.subplots_adjust(hspace=1)
     samples = pd.unique(full.loc[:, 'sample'])
     for ind, ax in enumerate(grid.axes.flat):
+        # Channel data:
         data = full.loc[full.loc[:, 'sample'] == samples[ind], :]
-        sns.scatterplot(data=data, x='Position X', y='Position Y',
-                        color='xkcd:tan', linewidth=0, ax=ax)
+        sns.scatterplot(data=data, x='Position X', y='Position Y', color='xkcd:tan', linewidth=0, ax=ax)
+        # Vector:
         vector_data = vectors.loc[vectors.loc[:, 'sample'] == samples[ind], :]
         ax.plot(vector_data.X, vector_data.Y)
+        # MP:
+        if mp_dir_name is not None and not mp_full.empty:
+            mp_data = mp_full.loc[mp_full.loc[:, 'sample'] == samples[ind], :]
+            ax.scatter(x=mp_data.at[0, 'Position X'], y=mp_data.at[0, 'Position Y'], c='red', s=36, zorder=4)
+        # Set labels and title
         ax.set_xlabel('')
         ax.set_ylabel('')
         ax.set_title(samples[ind])
