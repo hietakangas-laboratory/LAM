@@ -16,6 +16,8 @@ Vars:
         consecutively, i.e. all are performed to produce the final data subset.
         The expressions should be given in pattern: '{column_label} {operator} {value}'
         E.g. 'Area > 100', 'Nearest_Dist_DAPI <= 10', 'Volume != 200'
+        Some column names need to be surrounded by backticks to be read properly, such as any with '='-characters or
+        names with empty spaces. Example:  '`Intensity Mean_Ch=1` >= 1000'
         For additional information, see:
             https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.query.html
 
@@ -37,7 +39,7 @@ analysis_path = pl.Path(r'E:\Code_folder\ALLSTATS')
 data_channel = 'DAPI.csv'
 
 # Give filtering expressions to subset the data.
-filtering = ['Area > 100', 'Nearest_Dist_DAPI <= 10']
+filtering = ['Area > 100', '`Intensity_Mean_Ch=2` <= 10']
 
 # Give name for output-file.
 output_file = 'DAPI_subset.csv'
