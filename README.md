@@ -28,13 +28,21 @@ pip or conda (Anaconda), respectively. Recommendation is to install LAM into its
 
 ### Usage
 LAM is used by executing 'src/run.py' or with console command 'lam-run', both of which by default open up the graphical
-user interface. Settings can be handled through src/settings.py, but LAM also includes argument parsing for most important
-settings ('python src/run.py -h' OR 'lam-run -h'). Refer to 'docs/UserManual' for additional information.
+user interface. Settings can be handled through src/settings.py, but LAM also includes argument parsing for most
+important settings ('python src/run.py -h' OR 'lam-run -h'). Refer to 'docs/UserManual' for additional information.
+Several modules related to forming LAM-compatible folder structures can be found
+[here](https://github.com/hietakangas-laboratory/LAM-helper-modules).
 
-A video tutorial series on LAM can be found on YouTube [here](https://www.youtube.com/playlist?list=PLjv-8Gzxh3AynUtI3HaahU2oddMbDpgtx).
+A video tutorial series on LAM can be found on YouTube
+[here](https://www.youtube.com/playlist?list=PLjv-8Gzxh3AynUtI3HaahU2oddMbDpgtx).
 
 Hietakangas lab also provides a stitching script that uses ImageJ to properly stitch images for object detection and
 following LAM analysis. The script can be found [here](https://github.com/hietakangas-laboratory/Stitch).
+
+For object segmentation and/or acquirement of label information, we also provide a wrapper package for
+[StarDist](https://github.com/stardist/stardist) called [predictSD](https://github.com/hietakangas-laboratory/predictSD)
+that includes several 3D deep learning models that have been trained on images from Aurox spinning disc confocal. The
+package can extract label information in a format that is directly usable by LAM.
 
 ### Test data
 The 'data/'-directory includes a small test dataset of two sample groups with four samples each. Note that the
@@ -51,4 +59,3 @@ Arto I. Viitanen - [Hietakangas laboratory](https://www.helsinki.fi/en/researchg
 Ville Hietakangas - [Hietakangas laboratory](https://www.helsinki.fi/en/researchgroups/nutrient-sensing/)
 
 Jaakko Mattila - [Mattila laboratory](https://www.helsinki.fi/en/researchgroups/metabolism-and-signaling/)
-
