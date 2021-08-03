@@ -36,8 +36,8 @@ Several modules related to forming LAM-compatible folder structures can be found
 A video tutorial series on LAM can be found on YouTube
 [here](https://www.youtube.com/playlist?list=PLjv-8Gzxh3AynUtI3HaahU2oddMbDpgtx).
 
-Hietakangas lab also provides a stitching script that uses ImageJ to properly stitch images for object detection and
-following LAM analysis. The script can be found [here](https://github.com/hietakangas-laboratory/Stitch).
+Hietakangas lab also provides a stitching script that uses ImageJ to properly stitch tile scan images for object
+detection and following LAM analysis. The script can be found [here](https://github.com/hietakangas-laboratory/Stitch).
 
 For object segmentation and/or acquirement of label information, we also provide a wrapper package for
 [StarDist](https://github.com/stardist/stardist) called [predictSD](https://github.com/hietakangas-laboratory/predictSD)
@@ -49,13 +49,24 @@ The 'data/'-directory includes a small test dataset of two sample groups with fo
 sample number is not enough for a proper analysis; in ideal circumstances, it is recommended that each sample group
 should have >=10 samples. Refer to user-manual for additional information.
 
+### Publication
+* Viitanen, A., Gullmets, J., Morikka, J., Katajisto, P., Mattila, J., & Hietakangas, V. (2021). An image analysis method
+for regionally defined cellular phenotyping of the Drosophila midgut. Cell Reports Methods, Sep 27th.
+https://doi.org/10.1016/j.crmeth.2021.100059
+  
+### Additional Resources
+* [LAM helper modules](https://github.com/hietakangas-laboratory/LAM-helper-modules) - organize data for LAM input
+* [LAM tutorial videos](https://www.youtube.com/playlist?list=PLjv-8Gzxh3AynUtI3HaahU2oddMbDpgtx)
+* [predictSD](https://github.com/hietakangas-laboratory/predictSD) - a wrapper and some models for running
+  [StarDist](https://github.com/stardist/stardist) segmentation with LAM-compatible output
+* [Stitch](https://github.com/hietakangas-laboratory/Stitch) - Tile scan image stitching
+
 ### License
 This project is licensed under the GPL-3.0 License  - see the LICENSE.md file for details
 
 ### Authors
-Arto I. Viitanen - [Hietakangas laboratory](https://www.helsinki.fi/en/researchgroups/nutrient-sensing)
+* Arto I. Viitanen - [Hietakangas laboratory](https://www.helsinki.fi/en/researchgroups/nutrient-sensing)
 
 ### Acknowledgments
-Ville Hietakangas - [Hietakangas laboratory](https://www.helsinki.fi/en/researchgroups/nutrient-sensing/)
-
-Jaakko Mattila - [Mattila laboratory](https://www.helsinki.fi/en/researchgroups/metabolism-and-signaling/)
+* Ville Hietakangas - [Hietakangas laboratory](https://www.helsinki.fi/en/researchgroups/nutrient-sensing/)
+* Jaakko Mattila - [Mattila laboratory](https://www.helsinki.fi/en/researchgroups/metabolism-and-signaling/)
