@@ -312,8 +312,10 @@ class BaseGUI:
         if self.handle('Create_Plots').get():
             if self.handle('border_detection').get():
                 self.borderc.configure(state='normal')
+                self.handle('Create_Border_Plots').set(True)
             else:
                 self.borderc.configure(state='disable')
+                self.handle('Create_Border_Plots').set(False)
         else:
             self.handle('Create_Border_Plots').set(False)
 
@@ -560,8 +562,10 @@ class BaseGUI:
         if self.handle('Create_Plots').get():
             if self.handle('measure_width').get():
                 self.widthc.configure(state='normal')
+                self.handle('plot_width').set(True)
             else:
                 self.widthc.configure(state='disable')
+                self.handle('plot_width').set(False)
         else:
             self.handle('plot_width').set(False)
 

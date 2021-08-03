@@ -142,7 +142,7 @@ def heatmap(plotter, **kws):
     data = plotter.data.replace(np.nan, 0)
     rows = data.loc[:, kws.get('row')].unique()
     for ind, ax in enumerate(plotter.g.axes.flat):
-        sub_data = data.loc[data[kws.get('row')] == rows[ind], data.columns != kws.get('row')]
+        sub_data = data.loc[data[kws.get('row')] == rows[ind], data.columns != kws.get('row')].sort_index()
         sns.heatmap(data=sub_data, cmap='coolwarm', robust=True, linewidth=0.05, linecolor='dimgrey', ax=ax)
         ax.set_title(rows[ind])
         ylabels = ax.get_yticklabels()

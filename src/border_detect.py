@@ -643,8 +643,8 @@ def peak_selection(datadir, gui_root=None):
         peaks = pd.read_csv(datadir.joinpath('Borders_peaks.csv'))
     except FileNotFoundError:
         msg = 'Borders NOT added to plots - missing Border_peaks.csv'
-        print(f'\nWARNING: {msg}')
-        lg.logprint(LAM_logger, msg, 'w')
+        print(f'\nINFO: {msg}')
+        lg.logprint(LAM_logger, msg, 'i')
         return
 
     if Sett.force_dialog:
