@@ -208,7 +208,7 @@ def get_stats(row, row2, ind, stat_data):
     unqs = np.unique(np.hstack((row, row2))).size
 
     # If data rows are different, get stats
-    if (row.any() or row2.any()) and not np.array_equal(np.unique(row), np.unique(row2)) and unqs > 1:
+    if (row.any() and row2.any()) and not np.array_equal(np.unique(row), np.unique(row2)) and unqs > 1:
 
         with warnings.catch_warnings():
             warnings.simplefilter('ignore', category=RuntimeWarning)

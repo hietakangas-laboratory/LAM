@@ -339,7 +339,7 @@ class GetSample:
                 mp_data = mp_data.loc[:, ['Position X', 'Position Y']]
                 if not mp_data.empty:
                     mp_bin = self.project_mps(mp_data, datadir, filename="MPs.csv")
-                    mp_df = pd.DataFrame(data=[mp_bin.values], columns=['MP'])
+                    mp_df = pd.DataFrame({'MP': mp_bin.values.codes})
                     mp_df.to_csv(self.sampledir.joinpath("MPs.csv"), index=False)
             except (StopIteration, ValueError, UnboundLocalError):
                 mp_bin = None

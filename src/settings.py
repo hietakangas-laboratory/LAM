@@ -78,7 +78,7 @@ class Settings:
 
     # ---DATA GATHERING--- #
 
-    header_row = 2  # On which row does the data have its header (start = 0)
+    header_row = 0  # On which row does the data have its header (starts from 0)
 
     # Additional data to be collected from channels. Key (the first string
     # before ':') must be the data column label and the following string for

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # Standard libs
 r"""
-Run file for Longitudinal Analysis of Midgut.
+Run file for Longitudinal Analysis of Midgut (LAM v0.4.3).
 
 Created on Wed Mar  6 12:42:28 2019
 @author: Arto I. Viitanen
