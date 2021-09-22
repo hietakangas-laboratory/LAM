@@ -113,14 +113,15 @@ def cluster_positions(plotter, **kws):
 def distribution(plotter, **kws):
     """Plot distributions."""
     data = plotter.data
+    data = data.reset_index()
     row_order = data.loc[:, kws.get('row')].unique()
     discrete = False
     if kws.get('row') == 'Channel':
         discrete = True
     try:
         g = sns.displot(data=data, x='Value', hue=kws.get('hue'), col=kws.get('col'), row=kws.get('row'), alpha=0.4,
-                        stat="probability", palette=plotter.handle.palette, kde=True, height=2.5, aspect=2.25,
-                        row_order=row_order, common_norm=False, discrete=discrete, common_bins=True, element='bars',
+                        kind='hist', stat='probability', palette=plotter.handle.palette, kde=True, height=2.5, aspect=2.25,
+                        row_order=row_order, discrete=discrete, multiple='stack',
                         facet_kws={'legend_out': True, 'sharex': False, 'sharey': False,
                                    'gridspec_kws': kws.get('gridspec')})
     except np.linalg.LinAlgError:
@@ -165,10 +166,9 @@ def lines(plotter, **kws):
     data = plotter.data
     # data = plotter.data.dropna()
     melt_kws = kws.get('melt')
-    g = (plotter.g.map_dataframe(sns.lineplot, data=data, x=data.loc[:, melt_kws.get('var_name')].astype(float),
-                                 y=data.loc[:, melt_kws.get('value_name')], ci='sd', err_style='band',
-                                 hue=kws.get('hue'), dashes=False, alpha=1, palette=plotter.handle.palette,
-                                 err_kws=err_dict))
+    g = (plotter.g.map_dataframe(sns.lineplot, data=data, x=melt_kws.get('var_name'), y=melt_kws.get('value_name'),
+                                 ci='sd', err_style='band', hue=kws.get('hue'), dashes=False, alpha=1,
+                                 palette=plotter.handle.palette, err_kws=err_dict))
     # for ax in g.axes.flat:
     #     ax.set_ylim(100, 300)
     return g
