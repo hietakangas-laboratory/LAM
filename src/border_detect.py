@@ -100,7 +100,7 @@ class FullBorders:
 
         # Compute total scores of sample groups
         s_sums = get_group_total(flattened)
-        s_sums.value = s_sums.groupby(s_sums.group).apply(lambda x: x.assign(value=norm_func(x.value)))
+        s_sums = s_sums.groupby(s_sums.group).apply(lambda x: x.assign(value=norm_func(x.value)))
 
         # Find group peaks
         peaks = get_peak_data(s_sums, threshold)
