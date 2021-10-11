@@ -364,7 +364,7 @@ class Samplegroups:
                 name = "{} Distances".format(path.name.split('_')[1])
             else:
                 name = "Widths"
-            chan_data, __, _ = self.read_channel(path, self._groups, drop=drpb)
+            chan_data, __, _ = self.read_channel(path, self._groups, drop=False)
 
             # Assign data type identifier
             chan_data = chan_data.assign(Variable=name)
