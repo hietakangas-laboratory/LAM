@@ -718,7 +718,7 @@ class OtherWin:
             self.btns.append(tk.Button(self.frame, text='x', relief='raised',
                                        command=lambda i=self.rwn: self.rmv_data(i)))
             self.btns[self.rwn].grid(row=row, column=7, sticky='w')
-            var = [get_tkvar(self.insert[1]), get_tkvar(self.insert[2])]
+            var = [get_tkvar(self.insert[1].get()), get_tkvar(self.insert[2].get())]
             self.handle('AddData').update({self.insert[0].get(): var})
             self.rwn = self.rwn + 1
         else:
