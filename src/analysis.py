@@ -302,7 +302,7 @@ class Samplegroups:
 
         def _read_and_sum():
             """Read path and sum cell numbers of bins for each sample."""
-            chan_data, __, _ = self.read_channel(path, self._groups, drop=drpb)
+            chan_data, __, _ = self.read_channel(path, self._groups, drop=False)
             # Get sum of cells for each sample
             ch_sum = chan_data.sum(axis=1, skipna=True, numeric_only=True)
             # Get group of each sample
@@ -313,7 +313,6 @@ class Samplegroups:
             return ch_sum
 
         lg.logprint(LAM_logger, 'Finding total counts', 'i')
-        drpb = Sett.Drop_Outliers  # Find if dropping outliers
         datadir = self.paths.datadir
         full_df = pd.DataFrame()
 
@@ -332,7 +331,7 @@ class Samplegroups:
             full_df = pd.DataFrame()
 
             for path in datadir.glob('Avg_{}_*'.format(channel)):
-                chan_data, __, _ = self.read_channel(path, self._groups, drop=drpb)
+                chan_data, __, _ = self.read_channel(path, self._groups, drop=False)
                 # Assign channel identifier
                 add_name = path.stem.split('_')[2:]  # Channel name
                 chan_data = chan_data.assign(Variable='_'.join(add_name))
