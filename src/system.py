@@ -291,15 +291,23 @@ def start(test_vectors=True, only_vectors=False):
     if Sett.process_samples or (Sett.measure_width and Sett.process_counts):
         samples = [p for p in Sett.workdir.iterdir() if p.is_dir() and p.name != 'Analysis Data']
         failed = []
+        wrong_index = []
         for sample in samples:
             try:
                 next(sample.glob(f'*_{Sett.vectChannel}_*'))
             except StopIteration:
-                failed.append(sample.name)
-        if failed:
+                try:
+                    next(sample.glob(f'^{Sett.vectChannel}_*'))
+                    wrong_index.append(sample.name)
+                except StopIteration:
+                    failed.append(sample.name)
+        if failed or wrong_index:
             msg = f"Vector channel data not found for {', '.join(failed)}"
+            if wrong_index:
+                print("Channel folders MUST have channel name separated by underscores, e.g. 'sample_DAPI_stats'.")
+            else:
+                print("Check vector channel's name setting and/or file existence.")
             print(f'ERROR: {msg}')
-            print('Check vector channel setting or data.')
             lg.logprint(LAM_logger, msg, 'e')
             raise SystemExit
 
