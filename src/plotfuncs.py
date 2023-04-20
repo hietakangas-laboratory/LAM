@@ -167,7 +167,7 @@ def lines(plotter, **kws):
     # data = plotter.data.dropna()
     melt_kws = kws.get('melt')
     g = (plotter.g.map_dataframe(sns.lineplot, data=data, x=melt_kws.get('var_name'), y=melt_kws.get('value_name'),
-                                 ci='sd', err_style='band', hue=kws.get('hue'), dashes=False, alpha=1,
+                                 errorbar='sd', err_style='band', hue=kws.get('hue'), dashes=False, alpha=1,
                                  palette=plotter.handle.palette, err_kws=err_dict))
     # for ax in g.axes.flat:
     #     ax.set_ylim(100, 300)
