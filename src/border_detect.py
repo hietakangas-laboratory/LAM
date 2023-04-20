@@ -90,7 +90,7 @@ class FullBorders:
         self.samples = samples
         self.width_data = widths
         self.anchor = anchor * 2
-        self.sample_starts = pd.Series()
+        self.sample_starts = pd.Series(dtype=np.float64)
         self.palette = palette
         self.scores = pd.DataFrame(columns=[p.name for p in samples], index=widths.index)
 

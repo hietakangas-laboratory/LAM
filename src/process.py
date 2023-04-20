@@ -339,7 +339,7 @@ class GetSample:
                 mp_data = mp_data.loc[:, ['Position X', 'Position Y']]
                 if not mp_data.empty:
                     mp_bin = self.project_mps(mp_data, datadir, filename="MPs.csv")
-                    mp_df = pd.DataFrame({'MP': mp_bin.values.codes})
+                    mp_df = pd.DataFrame({'MP': mp_bin.values})
                     mp_df.to_csv(self.sampledir.joinpath("MPs.csv"), index=False)
             except (StopIteration, ValueError, UnboundLocalError):
                 mp_bin = None
@@ -513,7 +513,7 @@ class Normalize:
         samples = norm_counts.columns.tolist()
         groups = set({s.casefold(): s.split('_')[0] for s in samples}.values())
         cols = ["{}_All".format(g) for g in groups]
-        averages = pd.DataFrame(index=norm_counts.index, columns=cols)
+        averages = pd.DataFrame(index=norm_counts.index)
         for grp in groups:  # For each group found in data
             namer = "{}_".format(grp)
             group_data = norm_counts.loc[:, norm_counts.columns.str.startswith(namer)]
@@ -647,7 +647,7 @@ class DefineWidths:
         cols = ['NormDist', 'ProjDist', 'hand']
         data = self.data.sort_values(by='NormDist').loc[:, cols]
         # Create series to hold width results
-        res = pd.Series(name=self.name, index=pd.RangeIndex(stop=len(edges)))
+        res = pd.Series(name=self.name, index=pd.RangeIndex(stop=len(edges)), dtype=np.float64)
         # Loop segments and get widths:
         for ind, _ in enumerate(edges[:-1]):
             d_index = data.loc[(data.NormDist >= edges[ind]) & (data.NormDist < edges[ind+1])].index
