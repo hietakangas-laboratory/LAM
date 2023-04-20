@@ -222,10 +222,10 @@ def get_stats(row, row2, ind, stat_data):
             __, pval = ss.mannwhitneyu(row, row2, alternative='two-sided')
             stat_data.iat[ind, 8] = pval
 
-    else:  # If rows are same. input zeros
-        stat_data.iat[ind, 0], stat_data.iat[ind, 2] = 0, 0
-        stat_data.iat[ind, 5] = 0
-        stat_data.iat[ind, 8] = 0
+    else:  # If rows are same. input NaNs
+        stat_data.iat[ind, 0], stat_data.iat[ind, 2] = np.nan, np.nan
+        stat_data.iat[ind, 5] = np.nan
+        stat_data.iat[ind, 8] = np.nan
     return stat_data
 
 
