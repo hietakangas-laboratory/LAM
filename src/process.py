@@ -512,7 +512,7 @@ class Normalize:
         # Find groups of each sample based on samplenames
         samples = norm_counts.columns.tolist()
         groups = set({s.casefold(): s.split('_')[0] for s in samples}.values())
-        cols = ["{}_All".format(g) for g in groups]
+        # cols = ["{}_All".format(g) for g in groups]
         averages = pd.DataFrame(index=norm_counts.index)
         for grp in groups:  # For each group found in data
             namer = "{}_".format(grp)
