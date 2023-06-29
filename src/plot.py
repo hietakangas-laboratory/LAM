@@ -215,7 +215,7 @@ class MakePlot:
                 logvals.loc[ind] = np.log2(y_val[ind].astype(np.float64))
             # Create twin axis with -log2 P-values
             ax2.plot(x_val, np.negative(logvals), color='dimgrey', linewidth=1.5, **lkws)
-            ax2.set_ylabel('P value\n(-log2)')
+            ax2.set_ylabel('\n-log2(p)', loc='top')  # , labelpad=0.05)
         # Create significance stars and color fills
         for index, row in stats.iterrows():
             plot_significance(index, row, ax2, yaxis, yheight=0)
@@ -615,7 +615,7 @@ class Plotting:
         f_title = "{} = {}".format(stats.title, titlep)
         # Plot variable
         plotter = MakePlot(plot_data, handle, f_title, sec_data=stats)
-        ylabel = get_unit(data_name[-1])
+        ylabel = get_unit(data_name[2]) if len(data_name) == 3 else get_unit(data_name[-1])
         p_kws = {'col': None, 'row': None, 'ylabel': ylabel, 'label_first_only': True, 'gridspec': {'bottom': 0.2},
                  'melt': {'id_vars': ['Sample Group'], 'var_name': 'Linear Position', 'value_name': 'Value'}}
         if Sett.windowed:
