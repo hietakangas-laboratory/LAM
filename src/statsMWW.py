@@ -239,5 +239,6 @@ def correct(stat_data, p_vals, corr_ind, rej_ind):
         reject, corr_p, _, _ = multi.multipletests(vals, method='fdr_bh', alpha=Sett.alpha)
 
     # Add corrected values to DF
-    stat_data.iloc[:, corr_ind], stat_data.iloc[:, rej_ind] = corr_p, reject
+    stat_data[stat_data.columns[corr_ind]] = corr_p
+    stat_data[stat_data.columns[rej_ind]] = reject
     return stat_data
