@@ -16,7 +16,8 @@ features as input.
 ### Installation
 LAM is used in a Python (>=3.7, <3.9) environment and can be found on PyPI. It can be installed with command
 **pip install lam**. Note that by installing this way, you will be restricted to the settings on the GUI and/or the
-available command line arguments, and will not be able to alter settings.py.
+available command line arguments, and will not be able to alter settings.py. However, a separate LAM-master *can be
+edited* and executed within the environment
 
 You can alternatively install LAM from command line using the 'setup.py' by giving command:
 'python setup.py install' while located inside the LAM-master -directory. Windows-users are recommended to install
