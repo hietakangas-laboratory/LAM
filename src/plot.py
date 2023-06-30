@@ -484,11 +484,11 @@ class Plotting:
         # Construct a dataframe with averages:
         avg_data = pd.DataFrame()
         for grp, data in grouped:
-            temp = pd.Series(data.mean(), name=grp[1])
-            temp['Channel'] = grp[0]
-            avg_data = avg_data.append(temp)
+            temp = data.select_dtypes(include=np.number).mean().rename(grp[1])
+            temp.at['Channel'] = grp[0]
+            avg_data = pd.concat([avg_data, temp], axis=1, ignore_index=False)
         # Create plot
-        plotter = MakePlot(avg_data, handle, 'Cluster Heatmaps - Groups')
+        plotter = MakePlot(avg_data.T, handle, 'Cluster Heatmaps - Groups')
         plotter(pfunc.heatmap, 'centerline', 'ticks', 'title', 'labels', 'peaks', **new_kws)
 
         # CLUSTER LINEPLOT
