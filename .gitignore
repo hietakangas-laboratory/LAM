@@ -17,5 +17,9 @@ build
 dist
 
 .github
+
 /data/2022_data/
+
 /LAM.egg-info/
+
+.idea
