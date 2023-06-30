@@ -187,15 +187,13 @@ class MakePlot:
         tytop = ytop*1.35
         ax = plt.gca()
         ax.set_ylim(top=tytop)
-        yaxis = [tytop, tytop]
 
         # Create secondary axis for significance plotting
         ax2 = plt.twinx()
         lkws = {'alpha': 0.85}
         xmin, xtop = stats.index.min(), stats.index.max()
         ax2.plot((xmin, xtop), (0, 0), linestyle='dashed', color='grey', linewidth=0.85, **lkws)
-        # Find top of original y-axis and create a buffer for twin to
-        # create a prettier plot
+        # Find top of original y-axis and create a buffer for twin to create a prettier plot
         bottom_add = 2.75*-Sett.ylim
         ax2.set_ylim(bottom=bottom_add, top=Sett.ylim)
         ax2.set_yticks(np.arange(0, Sett.ylim, 10))
@@ -218,7 +216,7 @@ class MakePlot:
             ax2.set_ylabel('\n-log2(p)', loc='top')  # , labelpad=0.05)
         # Create significance stars and color fills
         for index, row in stats.iterrows():
-            plot_significance(index, row, ax2, yaxis, yheight=0)
+            plot_significance(index, row, ax2, (tytop, tytop), yheight=0)
         # Add info on sliding window to plot
         if 'windowed' in kws:
             comment = "Window: lead {}, trail {}".format(Sett.lead, Sett.trail)
@@ -757,6 +755,6 @@ def plot_significance(index, row, ax, yaxis, yheight, fill=Sett.fill, stars=Sett
     elif row[6] is True:  # ctrl is lesser
         p_str, color = significance_marker(row[4], MakePlot.GRcolors)
     if fill:
-        ax.fill_between(xaxis, yaxis, color=color, alpha=0.35, zorder=0)
+        ax.fill_between(xaxis, yaxis[1], y2=(0, 0), color=color, alpha=0.35, zorder=0)
     if stars:
         ax.annotate(p_str, (index, yheight), fontsize=8, ha='center')
