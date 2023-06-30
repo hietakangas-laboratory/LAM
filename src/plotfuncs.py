@@ -35,7 +35,7 @@ def bivariate_kde(plotter, **in_kws):
         warnings.simplefilter('ignore', category=UserWarning)
         try:
             # Create plots
-            g = g.map(sns.kdeplot, 'Value_y', 'Value_x', shade_lowest=False, shade=False, linewidths=1.75, alpha=0.6)
+            g = g.map(sns.kdeplot, 'Value_y', 'Value_x', fill=False, linewidths=1.75, alpha=0.6)
         except np.linalg.LinAlgError:
             msg = '-> Confirm that all samples have proper channel data'
             fullmsg = f'Bivariate plot singular matrix\n{msg}'
@@ -167,7 +167,7 @@ def lines(plotter, **kws):
     # data = plotter.data.dropna()
     melt_kws = kws.get('melt')
     g = (plotter.g.map_dataframe(sns.lineplot, data=data, x=melt_kws.get('var_name'), y=melt_kws.get('value_name'),
-                                 ci='sd', err_style='band', hue=kws.get('hue'), dashes=False, alpha=1,
+                                 errorbar='sd', err_style='band', hue=kws.get('hue'), dashes=False, alpha=1,
                                  palette=plotter.handle.palette, err_kws=err_dict))
     # for ax in g.axes.flat:
     #     ax.set_ylim(100, 300)

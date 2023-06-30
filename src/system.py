@@ -364,10 +364,10 @@ def drop_outliers(all_data, melted=False, raw=False, **kws):
             data.where(np.abs(values - mean) <= drop_val, other=np.nan, inplace=True)
         else:  # If data is melted and sorted, find indexes until val < drop
             idx = []
-            for ind, val in values.iteritems():
+            for (key, val) in values.items():
                 if np.abs(val - mean) < drop_val:
                     break
-                idx.append(ind)
+                idx.append(key)
             # Select data that fills criteria for validity
             data = data.loc[(data.index.difference(idx)), :]
         return data

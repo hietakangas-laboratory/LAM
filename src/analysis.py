@@ -158,13 +158,11 @@ class Samplegroups:
         data = system.read_data(path, header=0, test=False)
         read_data = pd.DataFrame()
 
-        # Loop through given groups and give an identification variable for
-        # each sample belonging to the group.
+        # Loop through given groups and give an identification variable for each sample belonging to the group.
         for grp in groups:
-            namerreg = re.compile('^{}_'.format(grp), re.I)
             # Get only the samples that belong to the loop's current group
-            temp = data.loc[:, data.columns.str.contains(namerreg)].T
-            if Sett.Drop_Outliers and drop:  # conditionfull_dfy drop outliers
+            temp = data.loc[:, data.columns.str.startswith(f'{grp}_')].T
+            if Sett.Drop_Outliers and drop:  # drop outliers
                 temp = drop_outlier(temp)
             temp['Sample Group'] = grp  # Giving of sample group identification
             if read_data.empty:
@@ -390,14 +388,13 @@ class Group(Samplegroups):
         super().__init__(child=True)  # Inherit from samplegroups-class
         self.group = group  # group
         # For finding group-specific columns etc.
-        self.namer = '{}_'.format(group)
+        self.namer = f'{self.group}_'
 
         # When first initialized, create variables inherited by samples:
         if not child:
             self.color = self.grp_palette.get(self.group)
-            namerreg = re.compile("^{}".format(self.namer), re.I)
-            self.groupPaths = [p for p in self.sample_paths if namerreg.search(p.name)]
-            inds = self.sample_mps.columns.str.contains(self.namer)
+            self.groupPaths = [p for p in self.sample_paths if p.name.startswith(self.namer)]
+            inds = self.sample_mps.columns.str.startswith(self.namer)
             self.MPs = self.sample_mps.loc[:, inds]
 
 

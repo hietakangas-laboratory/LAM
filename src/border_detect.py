@@ -90,7 +90,7 @@ class FullBorders:
         self.samples = samples
         self.width_data = widths
         self.anchor = anchor * 2
-        self.sample_starts = pd.Series()
+        self.sample_starts = pd.Series(dtype=np.int8)
         self.palette = palette
         self.scores = pd.DataFrame(columns=[p.name for p in samples], index=widths.index)
 
@@ -100,10 +100,10 @@ class FullBorders:
 
         # Compute total scores of sample groups
         s_sums = get_group_total(flattened)
-        s_sums = s_sums.groupby(s_sums.group).apply(lambda x: x.assign(value=norm_func(x.value)))
+        score_sum = s_sums.groupby(s_sums.group, group_keys=False).apply(lambda x: x.assign(value=norm_func(x.value)))
 
         # Find group peaks
-        peaks = get_peak_data(s_sums, threshold)
+        peaks = get_peak_data(score_sum, threshold)
 
         # Create plots
         if Sett.Create_Border_Plots & Sett.Create_Plots:
@@ -111,7 +111,7 @@ class FullBorders:
             # Transform data to plottable format
             scores = prepare_data(self.scores.T)
             # Plot
-            self.group_plots(scores, s_sums, peaks, dirpath)
+            self.group_plots(scores, score_sum, peaks, dirpath)
 
         # Readjust peak locations and indexing to original bins
         peaks.peak = peaks.peak.divide(2)
@@ -127,7 +127,6 @@ class FullBorders:
         grouped = vals.groupby('group')
         # Fit curve to values in each sample group
         curves = grouped.apply(lambda x: get_fit(x, x.name, id_var=['group']))
-        # re-index
         curves = curves.droplevel(1)
         # Subtract curve from each sample
         devs = vals.apply(lambda x, c=curves: x[:-1].subtract(c.loc[x.group, :]), axis=1)
@@ -457,16 +456,13 @@ def detect_peaks(score_arr, x_dist=6, thresh=0.15, width=1):
 
         # NEGATIVE peaks
         # neg_total = total * -1
-        # npeaks, _ = find_peaks(neg_total, distance=4, height=thresh,
-        #                           width=2)#, threshold=thresh)
+        # npeaks, _ = find_peaks(neg_total, distance=4, height=thresh, width=2)#, threshold=thresh)
         # nprom = peak_prominences(neg_total, npeaks)[0]
         # npeaks = neg_total.index[npeaks].get_level_values(1).values
-        # npeak_dict = {'group': grp, 'peak': npeaks, 'prominence': nprom * -1,
-        #               'sign': 'neg'}
+        # npeak_dict = {'group': grp, 'peak': npeaks, 'prominence': nprom * -1, 'sign': 'neg'}
 
         # Add groups data to full peak data
-        all_peaks = all_peaks.append(pd.DataFrame(peak_dict), ignore_index=True)
-        # all_peaks = all_peaks.append(pd.DataFrame(npeak_dict), ignore_index=True)
+        all_peaks = pd.concat([all_peaks, pd.DataFrame(peak_dict)], ignore_index=True)
     return all_peaks
 
 
@@ -483,15 +479,15 @@ def get_group_total(data):
     # smoothed = smooth_data(data.T, win=7, tau=10).T
     trimmed = prepare_data(data)
     # Get mean score for each bin
-    s_sums = trimmed.groupby(['group', 'variable']).apply(lambda x: x.value.mean())
+    s_sums = trimmed.groupby(['group', 'variable'], group_keys=True).apply(lambda x: x.value.mean())
 
     # Transform to dataframe and assign necessary identifier columns
     s_sums = s_sums.to_frame(name='value')
-    s_sums = s_sums.groupby('group').apply(lambda x: x.assign(value=smooth_data(x.value, win=5, tau=10)))
-
+    s_sums = s_sums.groupby('group', group_keys=False).apply(
+        lambda x: x.assign(value=smooth_data(x.value, win=5, tau=10)))
     # Add identifier columns, i.e. groups and bins
-    s_sums = s_sums.assign(group=s_sums.index.get_level_values(0), variable=s_sums.index.get_level_values(1))
-    return s_sums
+    return s_sums.assign(group=s_sums.index.get_level_values(0),
+                         variable=s_sums.index.get_level_values(1))
 
 
 def get_sum_score(scores):
@@ -568,7 +564,7 @@ def smooth_data(data, win=3, tau=10):
 
 def trim_data(data, grouper='group'):
     """Trim bins where less than half of a sample group has values."""
-    grouped = data.groupby(grouper)
+    grouped = data.groupby(grouper, group_keys=False)
     # Create mask
     masks = grouped.apply(lambda x: x.isna().sum() < x.shape[0]/2)
     # Apply mask
@@ -592,8 +588,8 @@ def get_fit(data, name='c', id_var=None):
     data = data.dropna()
 
     # Take all x and y data
-    x_data = data.variable.values.astype(np.float)
-    y_data = data.value.values.astype(np.float)
+    x_data = data.variable.values.astype(np.int8)
+    y_data = data.value.values.astype(np.float32)
 
     #  #Fit x and y data with 4th degree polynomial
     # z = np.polyfit(x_data.astype(np.float), y_data.astype(np.float), 4)
@@ -614,7 +610,7 @@ def get_fit(data, name='c', id_var=None):
 
 def norm_func(arr: pd.Series) -> pd.Series:
     """Normalize array between 0 and 1."""
-    return (arr-np.nanmin(arr))/(np.nanmax(arr)-np.nanmin(arr))
+    return (arr - np.nanmin(arr)) / (np.nanmax(arr) - np.nanmin(arr))
 
 
 def ask_peaks(peaks, gui_root):

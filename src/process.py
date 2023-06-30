@@ -339,7 +339,7 @@ class GetSample:
                 mp_data = mp_data.loc[:, ['Position X', 'Position Y']]
                 if not mp_data.empty:
                     mp_bin = self.project_mps(mp_data, datadir, filename="MPs.csv")
-                    mp_df = pd.DataFrame({'MP': mp_bin.values.codes})
+                    mp_df = pd.DataFrame({'MP': mp_bin.values})
                     mp_df.to_csv(self.sampledir.joinpath("MPs.csv"), index=False)
             except (StopIteration, ValueError, UnboundLocalError):
                 mp_bin = None
@@ -355,22 +355,17 @@ class GetSample:
     def project_mps(self, positions, datadir, filename="some.csv"):
         """For the projection of spot coordinates onto the vector."""
         xy_positions = list(zip(positions['Position X'], positions['Position Y']))
-        # The shapely packages reguires transformation into Multipoints for the
-        # projection.
-        points = gm.MultiPoint(xy_positions)
-        # Find point of projection on the vector.
-        positions["VectPoint"] = [self.vector.interpolate(self.vector.project(gm.Point(x))) for x in points]
-        # Find normalized distance (0->1)
-        positions["NormDist"] = [self.vector.project(x, normalized=True) for x in positions["VectPoint"]]
-        # Find the bins that the points fall into
-        # Determine bins of each feature
-        edges = np.linspace(0, 1, Sett.projBins+1)
-        labels = np.arange(0, Sett.projBins)
-        positions["DistBin"] = pd.cut(positions["NormDist"], edges, labels=labels)
-        mp_bin = pd.Series(positions.loc[:, "DistBin"], name=self.name)
+        points = (gm.Point(c) for c in xy_positions)
+        # Find points of projection and respective normalized linear reference along vector
+        projected = [self.vector.interpolate(self.vector.project(p)) for p in points]
+        positions["NormDist"] = [self.vector.project(p, normalized=True) for p in projected]
+        # Get bins for the projected MPs
+        positions["DistBin"] = pd.cut(positions.loc[:, "NormDist"], bins=np.linspace(0, 1, Sett.projBins+1),
+                                      labels=np.arange(0, Sett.projBins), include_lowest=True)
+        # Format output and sanity check on results:
         self.data = positions
         self.test_projection(Sett.MPname)
-        # Save the obtained data:
+        mp_bin = pd.Series(positions.loc[:, "DistBin"], name=self.name)
         system.save_to_file(mp_bin.astype(int), datadir, filename)
         return mp_bin
 
@@ -378,28 +373,21 @@ class GetSample:
         """For projecting coordinates onto the vector."""
         data = channel.data
         xy_positions = list(zip(data['Position X'], data['Position Y']))
-        # Transformation into Multipoints required for projection:
         points = gm.MultiPoint(xy_positions)
-        # Find projection distance on the vector.
-        proj_vector_dist = [self.vector.project(x) for x in points]
-        # Find the exact point of projection
-        proj_points = [self.vector.interpolate(p) for p in proj_vector_dist]
-        # Find distance between feature and the point of projection
-        proj_dist = [p.distance(proj_points[i]) for i, p in enumerate(points)]
-        # Find normalized distance (0->1)
-        data["NormDist"] = [d / self.vector_length for d in proj_vector_dist]
-        # Determine bins of each feature
-        edges = np.linspace(0, 1, Sett.projBins+1)
-        labels = np.arange(0, Sett.projBins)
-        data["DistBin"] = pd.cut(data["NormDist"], labels=labels, bins=edges, include_lowest=True).astype('int')
 
-        # Assign data to DF and save the dataframe:
+        # Get linear references of projections, then interpolate coordinates and get normalized references.
+        proj_vector_dist = [self.vector.project(p) for p in points.geoms]
+        proj_points = [self.vector.interpolate(d) for d in proj_vector_dist]
+        data["NormDist"] = [d / self.vector_length for d in proj_vector_dist]
+
+        # Based on projection, assign bins for features on the channel
+        data["DistBin"] = pd.cut(data.loc[:, "NormDist"], labels=np.arange(0, Sett.projBins), bins=np.linspace(0, 1, Sett.projBins+1), include_lowest=True).astype('int')
+        # Format output, plus a sanity check on results
         data["VectPoint"] = [(round(p.x, 3), round(p.y, 3)) for p in proj_points]
-        data["ProjDist"] = proj_dist
+        data["ProjDist"] = [v.distance(p) for (v, p) in zip(points.geoms, proj_points)]
+        system.save_to_file(data, self.sampledir, f'{channel.name}.csv', append=False)
         self.data = data
         self.test_projection(channel.name)
-        channel_string = f'{channel.name}.csv'
-        system.save_to_file(data, self.sampledir, channel_string, append=False)
         return data
 
     def find_counts(self, channel_name, datadir):
@@ -524,8 +512,8 @@ class Normalize:
         # Find groups of each sample based on samplenames
         samples = norm_counts.columns.tolist()
         groups = set({s.casefold(): s.split('_')[0] for s in samples}.values())
-        cols = ["{}_All".format(g) for g in groups]
-        averages = pd.DataFrame(index=norm_counts.index, columns=cols)
+        # cols = ["{}_All".format(g) for g in groups]
+        averages = pd.DataFrame(index=norm_counts.index)
         for grp in groups:  # For each group found in data
             namer = "{}_".format(grp)
             group_data = norm_counts.loc[:, norm_counts.columns.str.startswith(namer)]
@@ -659,7 +647,7 @@ class DefineWidths:
         cols = ['NormDist', 'ProjDist', 'hand']
         data = self.data.sort_values(by='NormDist').loc[:, cols]
         # Create series to hold width results
-        res = pd.Series(name=self.name, index=pd.RangeIndex(stop=len(edges)))
+        res = pd.Series(name=self.name, index=pd.RangeIndex(stop=len(edges)), dtype=np.float64)
         # Loop segments and get widths:
         for ind, _ in enumerate(edges[:-1]):
             d_index = data.loc[(data.NormDist >= edges[ind]) & (data.NormDist < edges[ind+1])].index

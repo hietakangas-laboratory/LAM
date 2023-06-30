@@ -187,15 +187,13 @@ class MakePlot:
         tytop = ytop*1.35
         ax = plt.gca()
         ax.set_ylim(top=tytop)
-        yaxis = [tytop, tytop]
 
         # Create secondary axis for significance plotting
         ax2 = plt.twinx()
         lkws = {'alpha': 0.85}
         xmin, xtop = stats.index.min(), stats.index.max()
         ax2.plot((xmin, xtop), (0, 0), linestyle='dashed', color='grey', linewidth=0.85, **lkws)
-        # Find top of original y-axis and create a buffer for twin to
-        # create a prettier plot
+        # Find top of original y-axis and create a buffer for twin to create a prettier plot
         bottom_add = 2.75*-Sett.ylim
         ax2.set_ylim(bottom=bottom_add, top=Sett.ylim)
         ax2.set_yticks(np.arange(0, Sett.ylim, 10))
@@ -215,10 +213,10 @@ class MakePlot:
                 logvals.loc[ind] = np.log2(y_val[ind].astype(np.float64))
             # Create twin axis with -log2 P-values
             ax2.plot(x_val, np.negative(logvals), color='dimgrey', linewidth=1.5, **lkws)
-            ax2.set_ylabel('P value\n(-log2)')
+            ax2.set_ylabel('\n-log2(p)', loc='top')  # , labelpad=0.05)
         # Create significance stars and color fills
         for index, row in stats.iterrows():
-            plot_significance(index, row, ax2, yaxis, yheight=0)
+            plot_significance(index, row, ax2, (tytop, tytop), yheight=0)
         # Add info on sliding window to plot
         if 'windowed' in kws:
             comment = "Window: lead {}, trail {}".format(Sett.lead, Sett.trail)
@@ -486,11 +484,11 @@ class Plotting:
         # Construct a dataframe with averages:
         avg_data = pd.DataFrame()
         for grp, data in grouped:
-            temp = pd.Series(data.mean(), name=grp[1])
-            temp['Channel'] = grp[0]
-            avg_data = avg_data.append(temp)
+            temp = data.select_dtypes(include=np.number).mean().rename(grp[1])
+            temp.at['Channel'] = grp[0]
+            avg_data = pd.concat([avg_data, temp], axis=1, ignore_index=False)
         # Create plot
-        plotter = MakePlot(avg_data, handle, 'Cluster Heatmaps - Groups')
+        plotter = MakePlot(avg_data.T, handle, 'Cluster Heatmaps - Groups')
         plotter(pfunc.heatmap, 'centerline', 'ticks', 'title', 'labels', 'peaks', **new_kws)
 
         # CLUSTER LINEPLOT
@@ -615,7 +613,7 @@ class Plotting:
         f_title = "{} = {}".format(stats.title, titlep)
         # Plot variable
         plotter = MakePlot(plot_data, handle, f_title, sec_data=stats)
-        ylabel = get_unit(data_name[-1])
+        ylabel = get_unit(data_name[2]) if len(data_name) == 3 else get_unit(data_name[-1])
         p_kws = {'col': None, 'row': None, 'ylabel': ylabel, 'label_first_only': True, 'gridspec': {'bottom': 0.2},
                  'melt': {'id_vars': ['Sample Group'], 'var_name': 'Linear Position', 'value_name': 'Value'}}
         if Sett.windowed:
@@ -757,6 +755,6 @@ def plot_significance(index, row, ax, yaxis, yheight, fill=Sett.fill, stars=Sett
     elif row[6] is True:  # ctrl is lesser
         p_str, color = significance_marker(row[4], MakePlot.GRcolors)
     if fill:
-        ax.fill_between(xaxis, yaxis, color=color, alpha=0.35, zorder=0)
+        ax.fill_between(xaxis, yaxis[1], y2=(0, 0), color=color, alpha=0.35, zorder=0)
     if stars:
         ax.annotate(p_str, (index, yheight), fontsize=8, ha='center')
