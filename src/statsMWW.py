@@ -205,40 +205,25 @@ class TotalStats:
 
 def get_stats(row, row2, ind, stat_data):
     """Compare respective bins of both groups."""
-    unqs = np.unique(np.hstack((row, row2))).size
+    def mww(alt, r1=row, r2=row2):
+        return ss.mannwhitneyu(r1, r2, alternative=alt)
 
-    # If data rows are different, get stats
-    if (row.any() and row2.any()) and not np.array_equal(np.unique(row), np.unique(row2)) and unqs > 1:
-
-        with warnings.catch_warnings():
-            warnings.simplefilter('ignore', category=RuntimeWarning)
-            # Whether ctrl is greater
-            stat, pval = ss.mannwhitneyu(row, row2, alternative='greater')
-            stat_data.iat[ind, 0], stat_data.iat[ind, 2] = stat, pval
-            # Whether ctrl is lesser
-            __, pval = ss.mannwhitneyu(row, row2, alternative='less')
-            stat_data.iat[ind, 5] = pval
-            # Whether significant difference exists
-            __, pval = ss.mannwhitneyu(row, row2, alternative='two-sided')
-            stat_data.iat[ind, 8] = pval
-
-    else:  # If rows are same. input NaNs
-        stat_data.iat[ind, 0], stat_data.iat[ind, 2] = np.nan, np.nan
-        stat_data.iat[ind, 5] = np.nan
-        stat_data.iat[ind, 8] = np.nan
+    if any([np.isnan(row).all(), np.isnan(row2).all()]):
+        stat_data.iloc[ind, [0, 2, 5, 8]] = np.nan
+    else:
+        results = map(mww, ['greater', 'less', 'two-sided'])
+        stat_data.iloc[ind, [0, 2]] = next(results)
+        stat_data.iloc[ind, 5] = next(results).pvalue
+        stat_data.iloc[ind, 8] = next(results).pvalue
     return stat_data
 
 
 def correct(stat_data, p_vals, corr_ind, rej_ind):
     """Correct for multipletesting."""
-
-    vals = p_vals.values  # Get P-values
-
-    with warnings.catch_warnings():  # Correct
-        warnings.simplefilter('ignore', category=RuntimeWarning)
-        reject, corr_p, _, _ = multi.multipletests(vals, method='fdr_bh', alpha=Sett.alpha)
-
+    tested = ~p_vals.isna().values
+    reject, corr_p, _, _ = multi.multipletests(p_vals[tested].values, method='fdr_bh', alpha=Sett.alpha)
     # Add corrected values to DF
-    stat_data[stat_data.columns[corr_ind]] = corr_p
-    stat_data[stat_data.columns[rej_ind]] = reject
+    stat_data.iloc[tested, corr_ind] = corr_p
+    stat_data.iloc[tested, rej_ind] = reject
+    stat_data.iloc[~tested, rej_ind] = False
     return stat_data
