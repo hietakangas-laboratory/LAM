@@ -68,7 +68,7 @@ def change_settings(parser):
     # ADJUSTMENT OF SETTINGS BASED ON PARSED ARGUMENTS:
     # Work directory, i.e. analysis directory
     if parser.path:
-        Sett.workdir = pl.Path(parser.path)
+        Sett.workdir = parser.path
     print(f'Work directory: {Sett.workdir}')
 
     # Primary options
