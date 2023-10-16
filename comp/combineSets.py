@@ -95,7 +95,7 @@ def combine(path):
         diff = sample_names - samples
 
         if diff:  # If missing samples
-            print(f"Missing samples in {data_sets.keys()[ind]}:")
+            print(f"Missing samples in {list( data_sets.keys() )[ind]}:")
             print(f"  {n}" for n in diff)
 
         # Gather vector data:
