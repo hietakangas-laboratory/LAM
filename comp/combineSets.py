@@ -96,7 +96,7 @@ def combine(path):
 
         if diff:  # If missing samples
             print(f"Missing samples in {list( data_sets.keys() )[ind]}:")
-            print(f"  {n}" for n in diff)
+            for n in diff: print(f"  {n}")
 
         # Gather vector data:
         vect_pat = re.compile('^vector\.csv', re.I)  # Search pattern
